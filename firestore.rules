@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      // Fetch the requesting user's document to check their role
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+    
+    // Check if the requester is an Admin or Super Admin
+    function isAdmin() {
+      let userData = getUserData();
+      return userData.role == 'admin' || userData.role == 'super_admin';
+    }
+    
+    function isSuperAdmin() {
+      let userData = getUserData();
+      return userData.role == 'super_admin';
+    }
+
+    // Users collection
+    match /users/{uid} {
+      // Read: Authenticated users can read (needed for admin list), 
+      // strictly speaking teachers only need to read their own, but Admins need all.
+      allow read: if isAuthenticated();
+      
+      // Creation: allow if auth uid matches the doc uid
+      allow create: if isAuthenticated() && isOwner(uid);
+      
+      // Update:
+      // 1. Admin: Can approve pending users to 'teacher' role only.
+      // 2. Super Admin: Can do anything.
+      allow update: if isAuthenticated() && (
+        (isAdmin() && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isApproved', 'role', 'updatedAt']) &&
+         request.resource.data.role == 'teacher' &&
+         request.resource.data.isApproved == true
+        ) ||
+        isSuperAdmin()
+      );
+    }
+
+    // TeacherData collection
+    match /teacherData/{teacherUid} {
+      // Read: Owner or Admin
+      allow read: if isAuthenticated() && (isOwner(teacherUid) || isAdmin());
+      
+      // Write: Owner only (Admins are read-only for teacherData content)
+      allow write: if isAuthenticated() && isOwner(teacherUid);
+    }
+  }
+}
