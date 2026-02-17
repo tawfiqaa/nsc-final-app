@@ -146,10 +146,25 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const newSchedule: Schedule = {
             ...scheduleData,
             id: firestoreDoc(collection(db, 'temp')).id,
+            isActive: scheduleData.isActive !== undefined ? scheduleData.isActive : true,
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
         const updatedSchedules = [...schedules, newSchedule];
+        setSchedules(updatedSchedules);
+        await syncToFirestore(updatedSchedules, logs);
+    };
+
+    const addSchedules = async (scheduleDatas: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>[]) => {
+        const newSchedules: Schedule[] = scheduleDatas.map(scheduleData => ({
+            ...scheduleData,
+            id: firestoreDoc(collection(db, 'temp')).id,
+            isActive: scheduleData.isActive !== undefined ? scheduleData.isActive : true,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        }));
+
+        const updatedSchedules = [...schedules, ...newSchedules];
         setSchedules(updatedSchedules);
         await syncToFirestore(updatedSchedules, logs);
     };
@@ -163,6 +178,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const deleteSchedule = async (id: string) => {
+        // Hard delete as requested
         const updatedSchedules = schedules.filter(s => s.id !== id);
         setSchedules(updatedSchedules);
         await syncToFirestore(updatedSchedules, logs);
@@ -266,6 +282,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             logs,
             loading,
             addSchedule,
+            addSchedules,
             updateSchedule,
             deleteSchedule,
             markAttendance,

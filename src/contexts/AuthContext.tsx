@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createUserWithEmailAndPassword, User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, User as FirebaseUser, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase';
 import { AuthContextType, User } from '../types';
@@ -73,6 +73,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await signInWithEmailAndPassword(auth, email, password);
     };
 
+    const loginWithGoogle = async (idToken: string) => {
+        const credential = GoogleAuthProvider.credential(idToken);
+        const userCredential = await signInWithCredential(auth, credential);
+        const firebaseUser = userCredential.user;
+        const uid = firebaseUser.uid;
+
+        const docRef = doc(db, 'users', uid);
+        const docSnap = await getDoc(docRef);
+
+        let newUser: User;
+
+        if (!docSnap.exists()) {
+            // Create new user if not exists
+            const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(firebaseUser.email!.toLowerCase());
+            newUser = {
+                uid,
+                email: firebaseUser.email!,
+                name: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
+                role: isSuperAdmin ? 'super_admin' : 'pending',
+                isApproved: isSuperAdmin,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            };
+            await setDoc(docRef, newUser);
+            await setDoc(doc(db, 'teacherData', uid), {
+                ownerUid: uid,
+                schedules: [],
+                attendanceLogs: [],
+                updatedAt: Date.now(),
+            });
+        } else {
+            // Update existing user with name if missing? Or just load it.
+            // Let's just load it or ensure name is synced if valid.
+            const existingData = docSnap.data() as User;
+            // If name is missing in DB but exists in Google, maybe update?
+            // For now just use existing.
+            newUser = existingData;
+            if (!newUser.name && firebaseUser.displayName) {
+                await setDoc(docRef, { name: firebaseUser.displayName }, { merge: true });
+                newUser.name = firebaseUser.displayName;
+            }
+        }
+
+        setUser(newUser);
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(newUser));
+    };
+
     const register = async (email: string, password: string, name?: string) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const { uid } = userCredential.user;
@@ -112,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,6 +1,7 @@
 {
     "cli": {
-        "version": ">= 10.0.0"
+        "version": ">= 10.0.0",
+        "appVersionSource": "local"
     },
     "build": {
         "development": {
@@ -11,7 +12,8 @@
             "distribution": "internal",
             "android": {
                 "buildType": "apk"
-            }
+            },
+            "channel": "preview"
         },
         "production": {}
     },

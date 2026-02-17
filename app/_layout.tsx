@@ -1,7 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { LessonProvider } from '../src/contexts/LessonContext';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
@@ -17,7 +19,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const inAuthGroup = segments[0] === 'login';
     const atLogin = segments[0] === 'login';
     const atApproval = segments[0] === 'awaiting-approval';
 
@@ -71,11 +73,18 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    ...Ionicons.font,
+  });
+
   useEffect(() => {
-    // Hide splash screen after navigation is ready (simulated for now, usually done when fonts load etc)
-    // Use setTimeout for now to ensure rendering
-    setTimeout(() => SplashScreen.hideAsync(), 100);
-  }, []);
+    if (loaded || error || Platform.OS === 'web') {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, error]);
+
+  // On web, we rely on the CDN in +html.tsx, so we don't wait for 'loaded'
+  if (!loaded && Platform.OS !== 'web') return null;
 
   return (
     <ThemeProvider>

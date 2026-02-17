@@ -41,6 +41,9 @@ export default function Dashboard() {
   // Today's lessons (schedules that haven't been logged today)
   const todaysLessons = useMemo(() => {
     return schedules.filter(schedule => {
+      // Must be active
+      if (schedule.isActive === false) return false;
+
       // Must match day of week
       if (schedule.dayOfWeek !== todayDayOfWeek) return false;
 

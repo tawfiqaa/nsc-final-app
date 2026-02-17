@@ -3,12 +3,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { LogCard } from '../../../src/components/LogCard';
-import { ScheduleCard } from '../../../src/components/ScheduleCard';
-import { useTheme } from '../../../src/contexts/ThemeContext';
-import { db } from '../../../src/lib/firebase';
-import { AttendanceLog, Schedule, User } from '../../../src/types';
-import { exportToExcel, generateMonthlyReportData } from '../../../src/utils/export';
+import { LogCard } from '../../../../src/components/LogCard';
+import { ScheduleCard } from '../../../../src/components/ScheduleCard';
+import { useTheme } from '../../../../src/contexts/ThemeContext';
+import { db } from '../../../../src/lib/firebase';
+import { AttendanceLog, Schedule, User } from '../../../../src/types';
+import { exportToExcel, generateMonthlyReportData } from '../../../../src/utils/export';
 
 export default function TeacherDetailsScreen() {
     const { uid } = useLocalSearchParams<{ uid: string }>();

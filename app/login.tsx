@@ -1,17 +1,50 @@
-import React, { useState } from 'react';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ThemeToggle } from '../src/components/ThemeToggle';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTheme } from '../src/contexts/ThemeContext';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
     const [name, setName] = useState('');
-    const { login, register } = useAuth();
+    const { login, register, loginWithGoogle } = useAuth();
     const { colors } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
+
+    // Google Sign In Hook
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        webClientId: '907873961225-hminrogpgrunhgpbu4gnvso2qtcfv879.apps.googleusercontent.com',
+        androidClientId: '907873961225-hminrogpgrunhgpbu4gnvso2qtcfv879.apps.googleusercontent.com', // Use Web Client ID for proxy auth
+    });
+
+    useEffect(() => {
+        if (request) {
+            console.log("DEBUG: Google Auth Redirect URI:", request.redirectUri);
+        }
+    }, [request]);
+
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { id_token } = response.params;
+            if (id_token) {
+                setIsLoading(true);
+                loginWithGoogle(id_token)
+                    .then(() => {
+                        // Success handled by auth state change
+                    })
+                    .catch(e => {
+                        Alert.alert("Google Sign In Failed", e.message);
+                    })
+                    .finally(() => setIsLoading(false));
+            }
+        }
+    }, [response]);
 
     const handleAuth = async () => {
         if (!email || !password) {
@@ -104,6 +137,16 @@ export default function LoginScreen() {
                         )}
                     </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={[styles.googleButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+                        onPress={() => promptAsync()}
+                        disabled={!request || isLoading}
+                    >
+                        <Text style={[styles.googleButtonText, { color: colors.text }]}>
+                            Sign in with Google
+                        </Text>
+                    </TouchableOpacity>
+
                     <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)} style={styles.switchContainer}>
                         <Text style={[styles.switchText, { color: colors.secondaryText }]}>
                             {isRegistering ? 'Already have an account? ' : "Don't have an account? "}
@@ -184,5 +227,17 @@ const styles = StyleSheet.create({
     },
     switchText: {
         fontSize: 14,
+    },
+    googleButton: {
+        height: 50,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 16,
+        borderWidth: 1,
+    },
+    googleButtonText: {
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });

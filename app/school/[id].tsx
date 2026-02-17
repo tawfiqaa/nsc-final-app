@@ -1,6 +1,7 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -9,7 +10,8 @@ export default function SchoolDetailsScreen() {
     const { id } = useLocalSearchParams();
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
-    const { schedules, logs } = useLesson();
+    const { schedules, logs, deleteSchedule, toggleLogStatus, deleteLog } = useLesson();
+    const router = useRouter();
 
     const stats = useMemo(() => {
         // strict filter
@@ -67,11 +69,31 @@ export default function SchoolDetailsScreen() {
                 ) : (
                     stats.schoolSchedules.map(sched => (
                         <View key={sched.id} style={[styles.scheduleItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                            <Text style={{ color: colors.text, fontWeight: 'bold' }}>
-                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][sched.dayOfWeek]}
-                            </Text>
-                            <Text style={{ color: colors.text }}>{sched.startTime} ({sched.duration}h)</Text>
-                            <Text style={{ color: colors.secondaryText }}>{sched.distance}km</Text>
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ color: colors.text, fontWeight: 'bold' }}>
+                                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][sched.dayOfWeek]}
+                                    {sched.isActive === false && <Text style={{ color: colors.error }}> (Inactive)</Text>}
+                                </Text>
+                                <Text style={{ color: colors.text }}>{sched.startTime} ({sched.duration}h)</Text>
+                                <Text style={{ color: colors.secondaryText }}>{sched.distance}km</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <TouchableOpacity onPress={() => router.push({ pathname: '/add-lesson', params: { scheduleId: sched.id } })}>
+                                    <Ionicons name="pencil" size={20} color={colors.primary} />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => {
+                                    Alert.alert(
+                                        "Delete Schedule",
+                                        "Are you sure you want to delete this schedule? Past attendance logs will be preserved.",
+                                        [
+                                            { text: "Cancel", style: "cancel" },
+                                            { text: "Delete", style: "destructive", onPress: () => deleteSchedule(sched.id) }
+                                        ]
+                                    );
+                                }}>
+                                    <Ionicons name="trash-outline" size={20} color={colors.error} />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     ))
                 )}
@@ -82,7 +104,12 @@ export default function SchoolDetailsScreen() {
                     <Text style={[styles.empty, { color: colors.secondaryText }]}>No history yet.</Text>
                 ) : (
                     stats.schoolLogs.map(log => (
-                        <LogCard key={log.id} log={log} />
+                        <LogCard
+                            key={log.id}
+                            log={log}
+                            onToggle={() => toggleLogStatus(log.id)}
+                            onDelete={() => deleteLog(log.id)}
+                        />
                     ))
                 )}
 

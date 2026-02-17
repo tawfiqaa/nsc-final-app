@@ -138,20 +138,57 @@ export default function EditLessonScreen() {
 
                 <View style={styles.formGroup}>
                     <Text style={[styles.label, { color: colors.secondaryText }]}>Start Time</Text>
-                    <TouchableOpacity
-                        style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card }]}
-                        onPress={() => setShowTimePicker(true)}
-                    >
-                        <Text style={{ color: colors.text, fontSize: 16 }}>{format(startTime, 'HH:mm')}</Text>
-                    </TouchableOpacity>
-                    {showTimePicker && (
-                        <DateTimePicker
-                            value={startTime}
-                            mode="time"
-                            is24Hour={true}
-                            display="default"
-                            onChange={onTimeChange}
-                        />
+                    {Platform.OS === 'web' ? (
+                        <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
+                            {React.createElement('input', {
+                                type: 'time',
+                                value: format(startTime, 'HH:mm'),
+                                onChange: (e: any) => {
+                                    const [h, m] = e.target.value.split(':');
+                                    const d = new Date(startTime);
+                                    d.setHours(Number(h));
+                                    d.setMinutes(Number(m));
+                                    d.setSeconds(0);
+                                    onTimeChange(null, d);
+                                },
+                                onClick: (e: any) => {
+                                    try {
+                                        if (e.target.showPicker) e.target.showPicker();
+                                    } catch (err) {
+                                        console.log('showPicker not supported', err);
+                                    }
+                                },
+                                style: {
+                                    fontSize: 16,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: colors.text,
+                                    width: '100%',
+                                    height: '100%',
+                                    outline: 'none',
+                                    fontFamily: 'inherit',
+                                    cursor: 'pointer'
+                                }
+                            })}
+                        </View>
+                    ) : (
+                        <>
+                            <TouchableOpacity
+                                style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card }]}
+                                onPress={() => setShowTimePicker(true)}
+                            >
+                                <Text style={{ color: colors.text, fontSize: 16 }}>{format(startTime, 'HH:mm')}</Text>
+                            </TouchableOpacity>
+                            {showTimePicker && (
+                                <DateTimePicker
+                                    value={startTime}
+                                    mode="time"
+                                    is24Hour={true}
+                                    display="default"
+                                    onChange={onTimeChange}
+                                />
+                            )}
+                        </>
                     )}
                 </View>
 

@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLesson } from '../src/contexts/LessonContext';
 import { useTheme } from '../src/contexts/ThemeContext';
@@ -10,25 +10,42 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AddLessonScreen() {
     const router = useRouter();
-    const { addSchedule, addOneTimeLog } = useLesson();
+    const params = useLocalSearchParams();
+    const scheduleId = typeof params.scheduleId === 'string' ? params.scheduleId : undefined;
+
+    const { addSchedule, addSchedules, addOneTimeLog, updateSchedule, schedules } = useLesson();
     const { colors } = useTheme();
 
     const [isOneTime, setIsOneTime] = useState(false);
     const [school, setSchool] = useState('');
-    const [dayOfWeek, setDayOfWeek] = useState<number>(1); // Default Monday
-    // For Multi-day support, we could use an array of selected days. 
-    // The prompt asked: "option to make a school's lesson on multiple days".
-    // Schedule interface currently supports single `dayOfWeek`.
-    // We can either change Schedule to `days: number[]` or create multiple schedules.
-    // Creating multiple schedules is easier for the backend logic (each has its own ID, can be edited/deleted individually).
-    // Let's implement multi-select UI and create multiple schedules.
     const [selectedDays, setSelectedDays] = useState<number[]>([1]);
 
+    useEffect(() => {
+        if (scheduleId) {
+            const sched = schedules.find(s => s.id === scheduleId);
+            if (sched) {
+                setSchool(sched.school);
+                setSelectedDays([sched.dayOfWeek]);
+                const [h, m] = sched.startTime.split(':').map(Number);
+                const d = new Date();
+                d.setHours(h);
+                d.setMinutes(m);
+                setStartTime(d);
+                setDuration(sched.duration.toString());
+                setDistance(sched.distance.toString());
+                setInitialCount(sched.initialCount?.toString() || '');
+                setIsOneTime(false);
+            }
+        }
+    }, [scheduleId, schedules]);
+
     const [startTime, setStartTime] = useState(new Date());
+    const [oneTimeDate, setOneTimeDate] = useState(new Date());
     const [duration, setDuration] = useState('');
     const [distance, setDistance] = useState('');
     const [initialCount, setInitialCount] = useState('');
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const toggleDay = (index: number) => {
         if (selectedDays.includes(index)) {
@@ -57,32 +74,45 @@ export default function AddLessonScreen() {
         }
 
         try {
-            if (isOneTime) {
+            if (scheduleId) {
+                // Update Existing Schedule
+                // We only update the single schedule being edited.
+                // If user selected multiple days, we take the first one or warn?
+                // Let's assume user changes day by selecting ONE day.
+                const day = selectedDays[0];
+                await updateSchedule(scheduleId, {
+                    school: school.trim(),
+                    dayOfWeek: day,
+                    startTime: format(startTime, 'HH:mm'),
+                    duration: dur,
+                    distance: dist,
+                    initialCount: initialCount ? parseInt(initialCount) : 0,
+                    isActive: true // Revive if archived
+                });
+                Alert.alert('Success', 'Schedule updated.');
+            } else if (isOneTime) {
                 // One Time Event
                 await addOneTimeLog({
                     school: school.trim(),
-                    status: 'present', // Default to present as it's an "event"
+                    status: 'present',
                     hours: dur,
                     distance: dist,
-                    dateISO: new Date().toISOString(),
-                    localDayKey: new Date().toISOString().split('T')[0],
+                    dateISO: oneTimeDate.toISOString(),
+                    localDayKey: format(oneTimeDate, 'yyyy-MM-dd'),
                     isOneTime: true
                 });
                 Alert.alert('Success', 'One-time lesson logged.');
             } else {
                 // Recurring Schedule(s)
-                // Create one schedule per selected day
-                const promises = selectedDays.map(day =>
-                    addSchedule({
-                        school: school.trim(),
-                        dayOfWeek: day,
-                        startTime: format(startTime, 'HH:mm'),
-                        duration: dur,
-                        distance: dist,
-                        initialCount: initialCount ? parseInt(initialCount) : 0
-                    })
-                );
-                await Promise.all(promises);
+                const newSchedules = selectedDays.map(day => ({
+                    school: school.trim(),
+                    dayOfWeek: day,
+                    startTime: format(startTime, 'HH:mm'),
+                    duration: dur,
+                    distance: dist,
+                    initialCount: initialCount ? parseInt(initialCount) : 0
+                }));
+                await addSchedules(newSchedules);
                 Alert.alert('Success', `Saved ${selectedDays.length} schedule(s).`);
             }
             router.back();
@@ -104,17 +134,22 @@ export default function AddLessonScreen() {
 
                 <View style={styles.typeToggle}>
                     <TouchableOpacity
-                        style={[styles.toggleBtn, !isOneTime && { backgroundColor: colors.primary }]}
-                        onPress={() => setIsOneTime(false)}
+                        style={[styles.toggleBtn, !isOneTime && { backgroundColor: colors.primary }, scheduleId && { opacity: 0.5 }]}
+                        onPress={() => !scheduleId && setIsOneTime(false)}
+                        disabled={!!scheduleId}
                     >
-                        <Text style={[styles.toggleText, !isOneTime ? { color: '#fff' } : { color: colors.text }]}>Recurring</Text>
+                        <Text style={[styles.toggleText, !isOneTime ? { color: '#fff' } : { color: colors.text }]}>
+                            {scheduleId ? 'Editing Schedule' : 'Recurring'}
+                        </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.toggleBtn, isOneTime && { backgroundColor: colors.primary }]}
-                        onPress={() => setIsOneTime(true)}
-                    >
-                        <Text style={[styles.toggleText, isOneTime ? { color: '#fff' } : { color: colors.text }]}>One-Time</Text>
-                    </TouchableOpacity>
+                    {!scheduleId && (
+                        <TouchableOpacity
+                            style={[styles.toggleBtn, isOneTime && { backgroundColor: colors.primary }]}
+                            onPress={() => setIsOneTime(true)}
+                        >
+                            <Text style={[styles.toggleText, isOneTime ? { color: '#fff' } : { color: colors.text }]}>One-Time</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 <View style={styles.formGroup}>
@@ -155,26 +190,127 @@ export default function AddLessonScreen() {
                     </View>
                 )}
 
-                {!isOneTime && (
+                {isOneTime && (
                     <View style={styles.formGroup}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>Start Time</Text>
-                        <TouchableOpacity
-                            style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card }]}
-                            onPress={() => setShowTimePicker(true)}
-                        >
-                            <Text style={{ color: colors.text, fontSize: 16 }}>{format(startTime, 'HH:mm')}</Text>
-                        </TouchableOpacity>
-                        {showTimePicker && (
-                            <DateTimePicker
-                                value={startTime}
-                                mode="time"
-                                is24Hour={true}
-                                display="default"
-                                onChange={onTimeChange}
-                            />
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>Date</Text>
+                        {Platform.OS === 'web' ? (
+                            <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
+                                {React.createElement('input', {
+                                    type: 'date',
+                                    value: format(oneTimeDate, 'yyyy-MM-dd'),
+                                    onChange: (e: any) => {
+                                        const d = new Date(e.target.value);
+                                        // maintain time if needed, but for date picking usually reset or keep? 
+                                        // user picks date. standard is start of day or maintain current time? 
+                                        // let's just set the date part. props.oneTimeDate has some time.
+                                        // simple new Date(str) is UTC usually or local?
+                                        // 'yyyy-MM-dd' + 'T00:00:00'
+                                        if (!isNaN(d.getTime())) {
+                                            // Fix timezone offset issue manually or use date-fns parse?
+                                            // simple:
+                                            const [y, m, day] = e.target.value.split('-').map(Number);
+                                            const newDate = new Date(oneTimeDate);
+                                            newDate.setFullYear(y, m - 1, day);
+                                            setOneTimeDate(newDate);
+                                        }
+                                    },
+                                    onClick: (e: any) => {
+                                        try {
+                                            if (e.target.showPicker) e.target.showPicker();
+                                        } catch (err) { }
+                                    },
+                                    style: {
+                                        fontSize: 16,
+                                        border: 'none',
+                                        background: 'transparent',
+                                        color: colors.text,
+                                        width: '100%',
+                                        height: '100%',
+                                        outline: 'none',
+                                        fontFamily: 'inherit',
+                                        cursor: 'pointer'
+                                    }
+                                })}
+                            </View>
+                        ) : (
+                            <>
+                                <TouchableOpacity
+                                    style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card }]}
+                                    onPress={() => setShowDatePicker(true)}
+                                >
+                                    <Text style={{ color: colors.text, fontSize: 16 }}>{format(oneTimeDate, 'MMM dd, yyyy')}</Text>
+                                </TouchableOpacity>
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        value={oneTimeDate}
+                                        mode="date"
+                                        display="default"
+                                        onChange={(e, d) => {
+                                            setShowDatePicker(Platform.OS === 'ios');
+                                            if (d) setOneTimeDate(d);
+                                        }}
+                                    />
+                                )}
+                            </>
                         )}
                     </View>
                 )}
+
+                <View style={styles.formGroup}>
+                    <Text style={[styles.label, { color: colors.secondaryText }]}>Start Time</Text>
+                    {Platform.OS === 'web' ? (
+                        <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
+                            {React.createElement('input', {
+                                type: 'time',
+                                value: format(startTime, 'HH:mm'),
+                                onChange: (e: any) => {
+                                    const [h, m] = e.target.value.split(':');
+                                    const d = new Date(startTime);
+                                    d.setHours(Number(h));
+                                    d.setMinutes(Number(m));
+                                    d.setSeconds(0);
+                                    onTimeChange(null, d);
+                                },
+                                onClick: (e: any) => {
+                                    try {
+                                        if (e.target.showPicker) e.target.showPicker();
+                                    } catch (err) {
+                                        console.log('showPicker not supported', err);
+                                    }
+                                },
+                                style: {
+                                    fontSize: 16,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: colors.text,
+                                    width: '100%',
+                                    height: '100%',
+                                    outline: 'none',
+                                    fontFamily: 'inherit',
+                                    cursor: 'pointer'
+                                }
+                            })}
+                        </View>
+                    ) : (
+                        <>
+                            <TouchableOpacity
+                                style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card }]}
+                                onPress={() => setShowTimePicker(true)}
+                            >
+                                <Text style={{ color: colors.text, fontSize: 16 }}>{format(startTime, 'HH:mm')}</Text>
+                            </TouchableOpacity>
+                            {showTimePicker && (
+                                <DateTimePicker
+                                    value={startTime}
+                                    mode="time"
+                                    is24Hour={true}
+                                    display="default"
+                                    onChange={onTimeChange}
+                                />
+                            )}
+                        </>
+                    )}
+                </View>
 
                 <View style={styles.row}>
                     <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>

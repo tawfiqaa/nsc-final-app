@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "564646667323",
+    "project_id": "nsc-final-app",
+    "storage_bucket": "nsc-final-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:564646667323:android:ce24fd9145e9b62cf4681e",
+        "android_client_info": {
+          "package_name": "com.teachertracker.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwR7GW4ir-PayHXp1IqcUW3DOEEbXgRBY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

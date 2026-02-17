@@ -6,10 +6,12 @@ import { AttendanceStatus, Schedule } from '../types';
 
 interface ScheduleCardProps {
     schedule: Schedule;
-    onMark: (status: AttendanceStatus) => void;
+    onMark?: (status: AttendanceStatus) => void;
+    readOnly?: boolean;
+    lessonCount?: number;
 }
 
-export const ScheduleCard: React.FC<ScheduleCardProps> = ({ schedule, onMark }) => {
+export const ScheduleCard: React.FC<ScheduleCardProps> = ({ schedule, onMark, readOnly, lessonCount }) => {
     const { colors } = useTheme();
 
     return (
@@ -28,25 +30,33 @@ export const ScheduleCard: React.FC<ScheduleCardProps> = ({ schedule, onMark }) 
                     <Ionicons name="car-outline" size={16} color={colors.secondaryText} />
                     <Text style={[styles.detailText, { color: colors.secondaryText }]}>{schedule.distance}km</Text>
                 </View>
+                {typeof lessonCount !== 'undefined' && (
+                    <View style={styles.detailItem}>
+                        <Ionicons name="book-outline" size={16} color={colors.secondaryText} />
+                        <Text style={[styles.detailText, { color: colors.secondaryText }]}>{lessonCount} lessons</Text>
+                    </View>
+                )}
             </View>
 
-            <View style={styles.actions}>
-                <TouchableOpacity
-                    style={[styles.button, { borderColor: colors.error }]}
-                    onPress={() => onMark('absent')}
-                >
-                    <Ionicons name="close-circle" size={20} color={colors.error} />
-                    <Text style={[styles.buttonText, { color: colors.error }]}>Absent</Text>
-                </TouchableOpacity>
+            {!readOnly && (
+                <View style={styles.actions}>
+                    <TouchableOpacity
+                        style={[styles.button, { borderColor: colors.error }]}
+                        onPress={() => onMark?.('absent')}
+                    >
+                        <Ionicons name="close-circle" size={20} color={colors.error} />
+                        <Text style={[styles.buttonText, { color: colors.error }]}>Absent</Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[styles.button, { borderColor: colors.success, backgroundColor: colors.success + '10' }]}
-                    onPress={() => onMark('present')}
-                >
-                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                    <Text style={[styles.buttonText, { color: colors.success }]}>Present</Text>
-                </TouchableOpacity>
-            </View>
+                    <TouchableOpacity
+                        style={[styles.button, { borderColor: colors.success, backgroundColor: colors.success + '10' }]}
+                        onPress={() => onMark?.('present')}
+                    >
+                        <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                        <Text style={[styles.buttonText, { color: colors.success }]}>Present</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 };

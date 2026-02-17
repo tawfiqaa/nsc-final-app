@@ -18,6 +18,7 @@ export interface Schedule {
     duration: number; // hours (decimals allowed)
     distance: number; // km
     initialCount?: number;
+    isActive?: boolean; // Default true if undefined
     createdAt: number;
     updatedAt: number;
 }
@@ -62,6 +63,7 @@ export interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
+    loginWithGoogle: (idToken: string) => Promise<void>;
     register: (email: string, password: string, name?: string) => Promise<void>;
     logout: () => Promise<void>;
 }
@@ -71,6 +73,7 @@ export interface LessonContextType {
     logs: AttendanceLog[];
     loading: boolean;
     addSchedule: (schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+    addSchedules: (schedules: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
     updateSchedule: (id: string, updates: Partial<Schedule>) => Promise<void>;
     deleteSchedule: (id: string) => Promise<void>;
     markAttendance: (schedule: Schedule, status: AttendanceStatus, dateISO: string) => Promise<void>;
