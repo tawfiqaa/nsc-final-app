@@ -44,7 +44,16 @@ export default function SchoolDetailsScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
-                <Text style={[styles.header, { color: colors.text }]}>{schoolName}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, marginTop: 20 }}>
+                    <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.text, flex: 1 }}>{schoolName}</Text>
+                    <TouchableOpacity
+                        style={{ backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                        onPress={() => router.push({ pathname: '/add-lesson', params: { school: schoolName, mode: 'log' } })}
+                    >
+                        <Ionicons name="add-circle" size={20} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '600' }}>Add Past Lesson</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {/* Stats Grid */}
                 <View style={styles.grid}>
@@ -125,12 +134,7 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
     },
-    header: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        marginTop: 20,
-    },
+
     grid: {
         flexDirection: 'row',
         justifyContent: 'space-between',

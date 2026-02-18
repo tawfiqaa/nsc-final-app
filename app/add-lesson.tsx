@@ -12,6 +12,8 @@ export default function AddLessonScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const scheduleId = typeof params.scheduleId === 'string' ? params.scheduleId : undefined;
+    const schoolParam = typeof params.school === 'string' ? params.school : undefined;
+    const modeParam = typeof params.mode === 'string' ? params.mode : undefined;
 
     const { addSchedule, addSchedules, addOneTimeLog, updateSchedule, schedules } = useLesson();
     const { colors } = useTheme();
@@ -33,11 +35,15 @@ export default function AddLessonScreen() {
                 setStartTime(d);
                 setDuration(sched.duration.toString());
                 setDistance(sched.distance.toString());
-                setInitialCount(sched.initialCount?.toString() || '');
                 setIsOneTime(false);
             }
+        } else if (schoolParam) {
+            setSchool(schoolParam);
+            if (modeParam === 'log') {
+                setIsOneTime(true);
+            }
         }
-    }, [scheduleId, schedules]);
+    }, [scheduleId, schedules, schoolParam, modeParam]);
 
     const [startTime, setStartTime] = useState(new Date());
     const [oneTimeDate, setOneTimeDate] = useState(new Date());
@@ -86,7 +92,6 @@ export default function AddLessonScreen() {
                     startTime: format(startTime, 'HH:mm'),
                     duration: dur,
                     distance: dist,
-                    initialCount: initialCount ? parseInt(initialCount) : 0,
                     isActive: true // Revive if archived
                 });
                 Alert.alert('Success', 'Schedule updated.');
@@ -110,7 +115,6 @@ export default function AddLessonScreen() {
                     startTime: format(startTime, 'HH:mm'),
                     duration: dur,
                     distance: dist,
-                    initialCount: initialCount ? parseInt(initialCount) : 0
                 }));
                 await addSchedules(newSchedules);
                 Alert.alert('Success', `Saved ${selectedDays.length} schedule(s).`);
@@ -337,20 +341,7 @@ export default function AddLessonScreen() {
                     </View>
                 </View>
 
-                {!isOneTime && (
-                    <View style={styles.formGroup}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>Initial Lesson Count (Optional)</Text>
-                        <Text style={[styles.helper, { color: colors.secondaryText }]}>Already taught 5 lessons? Enter 5 here.</Text>
-                        <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-                            value={initialCount}
-                            onChangeText={setInitialCount}
-                            keyboardType="numeric"
-                            placeholder="0"
-                            placeholderTextColor={colors.secondaryText}
-                        />
-                    </View>
-                )}
+
 
             </ScrollView>
 
