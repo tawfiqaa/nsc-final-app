@@ -9,10 +9,11 @@ interface LogCardProps {
     log: AttendanceLog;
     onToggle?: () => void;
     onDelete?: () => void;
+    onEditNote?: () => void;
     readOnly?: boolean;
 }
 
-export const LogCard: React.FC<LogCardProps> = ({ log, onToggle, onDelete, readOnly }) => {
+export const LogCard: React.FC<LogCardProps> = ({ log, onToggle, onDelete, onEditNote, readOnly }) => {
     const { colors } = useTheme();
     const isPresent = log.status === 'present';
 
@@ -38,6 +39,13 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onToggle, onDelete, readO
                 </View>
             </View>
 
+            {log.notes ? (
+                <View style={styles.notesContainer}>
+                    <Ionicons name="document-text-outline" size={14} color={colors.secondaryText} />
+                    <Text style={[styles.notesText, { color: colors.secondaryText }]}>{log.notes}</Text>
+                </View>
+            ) : null}
+
             {!readOnly && (
                 <View style={styles.actions}>
                     <TouchableOpacity onPress={onToggle}>
@@ -50,6 +58,13 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onToggle, onDelete, readO
                             Undo
                         </Text>
                     </TouchableOpacity>
+                    {onEditNote && (
+                        <TouchableOpacity onPress={onEditNote}>
+                            <Text style={[styles.actionLink, { color: colors.primary }]}>
+                                {log.notes ? 'Edit Note' : 'Add Note'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
         </View>
@@ -100,5 +115,19 @@ const styles = StyleSheet.create({
     actionLink: {
         fontSize: 12,
         fontWeight: '600',
+    },
+    notesContainer: {
+        flexDirection: 'row',
+        marginTop: 8,
+        paddingTop: 8,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: '#ccc',
+        alignItems: 'flex-start',
+    },
+    notesText: {
+        fontSize: 13,
+        marginLeft: 6,
+        flex: 1,
+        fontStyle: 'italic',
     },
 });

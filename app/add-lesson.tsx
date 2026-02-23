@@ -50,6 +50,7 @@ export default function AddLessonScreen() {
     const [duration, setDuration] = useState('');
     const [distance, setDistance] = useState('');
     const [initialCount, setInitialCount] = useState('');
+    const [notes, setNotes] = useState('');
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -104,6 +105,7 @@ export default function AddLessonScreen() {
                     distance: dist,
                     dateISO: oneTimeDate.toISOString(),
                     localDayKey: format(oneTimeDate, 'yyyy-MM-dd'),
+                    notes: notes.trim() ? notes.trim() : undefined,
                     isOneTime: true
                 });
                 Alert.alert('Success', 'One-time lesson logged.');
@@ -340,6 +342,21 @@ export default function AddLessonScreen() {
                         />
                     </View>
                 </View>
+
+                {isOneTime && (
+                    <View style={styles.formGroup}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>Notes (Optional)</Text>
+                        <TextInput
+                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, minHeight: 80, paddingVertical: 12 }]}
+                            value={notes}
+                            onChangeText={setNotes}
+                            placeholder="e.g. Covered Chapter 4"
+                            placeholderTextColor={colors.secondaryText}
+                            multiline
+                            textAlignVertical="top"
+                        />
+                    </View>
+                )}
 
 
 

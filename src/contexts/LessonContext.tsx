@@ -184,7 +184,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         await syncToFirestore(updatedSchedules, logs);
     };
 
-    const markAttendance = async (schedule: Schedule, status: AttendanceStatus, dateISO: string) => {
+    const markAttendance = async (schedule: Schedule, status: AttendanceStatus, dateISO: string, notes?: string) => {
         const todayKey = new Date(dateISO).toISOString().split('T')[0];
 
         const newLog: AttendanceLog = {
@@ -196,6 +196,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             status: status,
             hours: status === 'present' ? schedule.duration : 0,
             distance: status === 'present' ? schedule.distance : 0,
+            notes: notes,
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
@@ -272,6 +273,20 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         await syncToFirestore(schedules, updatedLogs);
     };
 
+    const updateLogNotes = async (logId: string, notes: string) => {
+        const logIndex = logs.findIndex(l => l.id === logId);
+        if (logIndex === -1) return;
+
+        const newLogs = [...logs];
+        newLogs[logIndex] = {
+            ...newLogs[logIndex],
+            notes: notes,
+            updatedAt: Date.now(),
+        };
+        setLogs(newLogs);
+        await syncToFirestore(schedules, newLogs);
+    };
+
     const refresh = async () => {
         // Force re-fetch logic if needed, mostly handled by snapshot
     };
@@ -288,6 +303,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             markAttendance,
             addOneTimeLog,
             toggleLogStatus,
+            updateLogNotes,
             deleteLog,
             refresh,
             setTargetUid

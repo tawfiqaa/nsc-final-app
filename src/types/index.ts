@@ -36,6 +36,7 @@ export interface AttendanceLog {
     hours: number;       // 0 if absent else duration
     distance: number;    // 0 if absent else distance
     isOneTime?: boolean;
+    notes?: string;
     createdAt: number;
     updatedAt: number;
 }
@@ -76,9 +77,10 @@ export interface LessonContextType {
     addSchedules: (schedules: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
     updateSchedule: (id: string, updates: Partial<Schedule>) => Promise<void>;
     deleteSchedule: (id: string) => Promise<void>;
-    markAttendance: (schedule: Schedule, status: AttendanceStatus, dateISO: string) => Promise<void>;
+    markAttendance: (schedule: Schedule, status: AttendanceStatus, dateISO: string, notes?: string) => Promise<void>;
     addOneTimeLog: (log: Omit<AttendanceLog, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
     toggleLogStatus: (logId: string) => Promise<void>;
+    updateLogNotes: (logId: string, notes: string) => Promise<void>;
     deleteLog: (logId: string) => Promise<void>;
     refresh: () => Promise<void>;
     setTargetUid: (uid: string) => void;

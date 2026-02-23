@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { endOfMonth, format, getDay, isSameDay, startOfMonth } from 'date-fns';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
 import { ScheduleCard } from '../../src/components/ScheduleCard';
 import { StatsWidget } from '../../src/components/StatsWidget';
@@ -14,9 +14,13 @@ import { AttendanceStatus } from '../../src/types';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { schedules, logs, markAttendance, toggleLogStatus, deleteLog, refresh, loading } = useLesson();
+  const { schedules, logs, markAttendance, toggleLogStatus, deleteLog, refresh, loading, updateLogNotes } = useLesson();
   const { colors, theme } = useTheme();
   const router = useRouter();
+
+  const [markingSchedule, setMarkingSchedule] = useState<{ id: string, status: AttendanceStatus } | null>(null);
+  const [editingLog, setEditingLog] = useState<typeof logs[0] | null>(null);
+  const [notesInput, setNotesInput] = useState('');
 
   const today = new Date();
   const todayDayOfWeek = getDay(today);
@@ -61,16 +65,34 @@ export default function Dashboard() {
   const recentLogs = useMemo(() => {
     // 12 hours ago
     const cutoff = Date.now() - (12 * 60 * 60 * 1000);
-    return logs
+    return [...logs]
       .filter(log => log.updatedAt >= cutoff)
-      .sort((a, b) => b.updatedAt - a.updatedAt);
+      .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
   }, [logs]);
 
-  const handleMark = async (scheduleId: string, status: AttendanceStatus) => {
-    const schedule = schedules.find(s => s.id === scheduleId);
+  const handleMark = (scheduleId: string, status: AttendanceStatus) => {
+    setMarkingSchedule({ id: scheduleId, status });
+    setNotesInput('');
+  };
+
+  const confirmMark = async () => {
+    if (!markingSchedule) return;
+    const schedule = schedules.find(s => s.id === markingSchedule.id);
     if (schedule) {
-      await markAttendance(schedule, status, new Date().toISOString());
+      await markAttendance(schedule, markingSchedule.status, new Date().toISOString(), notesInput.trim());
     }
+    setMarkingSchedule(null);
+  };
+
+  const handleEditNote = (log: typeof logs[0]) => {
+    setEditingLog(log);
+    setNotesInput(log.notes || '');
+  };
+
+  const confirmEditNote = async () => {
+    if (!editingLog) return;
+    await updateLogNotes(editingLog.id, notesInput.trim());
+    setEditingLog(null);
   };
 
   return (
@@ -119,6 +141,7 @@ export default function Dashboard() {
               log={log}
               onToggle={() => toggleLogStatus(log.id)}
               onDelete={() => deleteLog(log.id)}
+              onEditNote={() => handleEditNote(log)}
             />
           ))
         )}
@@ -130,6 +153,56 @@ export default function Dashboard() {
       >
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
+
+      {/* Modal for Notes (Add/Edit) */}
+      <Modal
+        visible={!!markingSchedule || !!editingLog}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setMarkingSchedule(null);
+          setEditingLog(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {markingSchedule ? 'Lesson Notes (Optional)' : editingLog?.notes ? 'Edit Note' : 'Add Note'}
+            </Text>
+
+            <TextInput
+              style={[styles.textInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+              placeholder="e.g. Covered Chapter 3, student was late..."
+              placeholderTextColor={colors.secondaryText}
+              value={notesInput}
+              onChangeText={setNotesInput}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                onPress={() => {
+                  setMarkingSchedule(null);
+                  setEditingLog(null);
+                }}
+              >
+                <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                onPress={markingSchedule ? confirmMark : confirmEditNote}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -193,5 +266,45 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.27,
     shadowRadius: 4.65,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 16,
+    padding: 24,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 100,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
   },
 });

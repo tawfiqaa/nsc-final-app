@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function SchoolHistoryScreen() {
-    const { logs, toggleLogStatus, deleteLog } = useLesson();
+    const { logs, toggleLogStatus, deleteLog, updateLogNotes } = useLesson();
     const { colors } = useTheme();
     const params = useLocalSearchParams();
 
@@ -19,6 +19,20 @@ export default function SchoolHistoryScreen() {
     const [selectedSchool, setSelectedSchool] = useState(initialSchoolFilter);
     const [showFilter, setShowFilter] = useState(false);
 
+    const [editingLog, setEditingLog] = useState<typeof logs[0] | null>(null);
+    const [notesInput, setNotesInput] = useState('');
+
+    const handleEditNote = (log: typeof logs[0]) => {
+        setEditingLog(log);
+        setNotesInput(log.notes || '');
+    };
+
+    const confirmEditNote = async () => {
+        if (!editingLog) return;
+        await updateLogNotes(editingLog.id, notesInput.trim());
+        setEditingLog(null);
+    };
+
     const schools = useMemo(() => {
         const schoolSet = new Set(logs.map(l => l.school));
         return ['All Schools', ...Array.from(schoolSet).sort()];
@@ -29,7 +43,7 @@ export default function SchoolHistoryScreen() {
         if (selectedSchool !== 'All Schools') {
             filtered = filtered.filter(l => l.school === selectedSchool);
         }
-        return filtered.sort((a, b) => b.dateISO.localeCompare(a.dateISO));
+        return [...filtered].sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
     }, [logs, selectedSchool]);
 
     const totalLessons = filteredLogs.length;
@@ -59,6 +73,7 @@ export default function SchoolHistoryScreen() {
                         log={item}
                         onToggle={() => toggleLogStatus(item.id)}
                         onDelete={() => deleteLog(item.id)}
+                        onEditNote={() => handleEditNote(item)}
                     />
                 )}
                 contentContainerStyle={styles.list}
@@ -93,6 +108,50 @@ export default function SchoolHistoryScreen() {
                         ))}
                     </View>
                 </TouchableOpacity>
+            </Modal>
+
+            {/* Modal for Edit Note */}
+            <Modal
+                visible={!!editingLog}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setEditingLog(null)}
+            >
+                <View style={[styles.modalOverlay, { padding: 20 }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: undefined }]}>
+                        <Text style={[styles.modalTitle, { color: colors.text }]}>{editingLog?.notes ? 'Edit Note' : 'Add Note'}</Text>
+
+                        <TextInput
+                            style={[
+                                styles.textInput,
+                                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }
+                            ]}
+                            placeholder="e.g. Covered Chapter 3, student was late..."
+                            placeholderTextColor={colors.secondaryText}
+                            value={notesInput}
+                            onChangeText={setNotesInput}
+                            multiline
+                            numberOfLines={4}
+                            textAlignVertical="top"
+                        />
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                                onPress={() => setEditingLog(null)}
+                            >
+                                <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                                onPress={confirmEditNote}
+                            >
+                                <Text style={{ color: '#fff', fontWeight: '600' }}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
             </Modal>
         </View>
     );
@@ -164,5 +223,25 @@ const styles = StyleSheet.create({
     },
     filterItemText: {
         fontSize: 16,
-    }
+    },
+    textInput: {
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
+        minHeight: 100,
+        fontSize: 16,
+        marginBottom: 20,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 12,
+    },
+    modalBtn: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        minWidth: 80,
+        alignItems: 'center',
+    },
 });
