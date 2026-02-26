@@ -97,12 +97,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 updatedAt: Date.now(),
             };
             await setDoc(docRef, newUser);
-            await setDoc(doc(db, 'teacherData', uid), {
-                ownerUid: uid,
-                schedules: [],
-                attendanceLogs: [],
-                updatedAt: Date.now(),
-            });
+
+            const teacherDataRef = doc(db, 'teacherData', uid);
+            const teacherDataSnap = await getDoc(teacherDataRef);
+            if (!teacherDataSnap.exists()) {
+                await setDoc(teacherDataRef, {
+                    ownerUid: uid,
+                    schedules: [],
+                    attendanceLogs: [],
+                    updatedAt: Date.now(),
+                });
+            }
         } else {
             // Update existing user with name if missing? Or just load it.
             // Let's just load it or ensure name is synced if valid.
@@ -140,13 +145,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await setDoc(doc(db, 'users', uid), newUser);
 
         // Create empty teacherData doc if not super admin (or even if they are, just in case)
-        // Actually, prompt says "create empty teacherData/{uid} doc (optional but recommended)"
-        await setDoc(doc(db, 'teacherData', uid), {
-            ownerUid: uid,
-            schedules: [],
-            attendanceLogs: [],
-            updatedAt: Date.now(),
-        });
+        const teacherDataRef = doc(db, 'teacherData', uid);
+        const teacherDataSnap = await getDoc(teacherDataRef);
+        if (!teacherDataSnap.exists()) {
+            await setDoc(teacherDataRef, {
+                ownerUid: uid,
+                schedules: [],
+                attendanceLogs: [],
+                updatedAt: Date.now(),
+            });
+        }
 
         setUser(newUser);
         await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(newUser));

@@ -1,0 +1,125 @@
+﻿Fetching users...
+Users: [
+  {
+    "id": "CvYYrur6edWTIdNnmLmAx8g8FcM2",
+    "name": "Mahdi Mahajni",
+    "role": "teacher",
+    "updatedAt": 1770746131025,
+    "uid": "CvYYrur6edWTIdNnmLmAx8g8FcM2",
+    "createdAt": 1770746125176,
+    "isApproved": true,
+    "email": "qaed3474@gmail.com"
+  },
+  {
+    "id": "Ib7GmxoNYiXuWUElzOI80nvxadE3",
+    "updatedAt": 1770746950136,
+    "uid": "Ib7GmxoNYiXuWUElzOI80nvxadE3",
+    "name": "Abdallah khutaba",
+    "role": "admin",
+    "isApproved": true,
+    "email": "akhutaba@hotmail.com",
+    "createdAt": 1770746870582
+  },
+  {
+    "id": "RuZDFFr0JyeiOXVl4bMPPiMkWHI3",
+    "uid": "RuZDFFr0JyeiOXVl4bMPPiMkWHI3",
+    "updatedAt": 1771028299266,
+    "name": "Fouad Nara",
+    "role": "teacher",
+    "isApproved": true,
+    "email": "fznara@gmail.com",
+    "createdAt": 1770902387908
+  },
+  {
+    "id": "bVlpsbT1noWohUiIZypHxI1kgZ73",
+    "name": "Tawfiq",
+    "role": "super_admin",
+    "uid": "bVlpsbT1noWohUiIZypHxI1kgZ73",
+    "updatedAt": 1770470608417,
+    "createdAt": 1770470608417,
+    "isApproved": true,
+    "email": "tawfiq.a.a@gmail.com"
+  },
+  {
+    "id": "koGbOAZArgMBtnqQWqfGByQA8gK2",
+    "createdAt": 1770814326213,
+    "isApproved": true,
+    "email": "crawlerrobo@gmail.com",
+    "name": "hzpbxa",
+    "role": "teacher",
+    "uid": "koGbOAZArgMBtnqQWqfGByQA8gK2",
+    "updatedAt": 1770852237330
+  },
+  {
+    "id": "nHWiAsRSKdfy6F8SGQGU2XsjVpB3",
+    "createdAt": 1770746938758,
+    "isApproved": true,
+    "email": "shirinahmad2000@gmail.com",
+    "name": "Shirin",
+    "role": "admin",
+    "uid": "nHWiAsRSKdfy6F8SGQGU2XsjVpB3",
+    "updatedAt": 1770746947664
+  },
+  {
+    "id": "rO37ZQt5g5PaCFP5ZKvICMHXbXl1",
+    "createdAt": 1770471527257,
+    "email": "tawfiq5meet@gmail.com",
+    "isApproved": true,
+    "role": "teacher",
+    "name": "test account",
+    "uid": "rO37ZQt5g5PaCFP5ZKvICMHXbXl1",
+    "updatedAt": 1772107734790
+  }
+]
+
+Fetching teacherData...
+TeacherData overview: [
+  {
+    "id": "CvYYrur6edWTIdNnmLmAx8g8FcM2",
+    "ownerUid": "CvYYrur6edWTIdNnmLmAx8g8FcM2",
+    "schedulesCount": 2,
+    "logsCount": 0
+  },
+  {
+    "id": "Ib7GmxoNYiXuWUElzOI80nvxadE3",
+    "ownerUid": "Ib7GmxoNYiXuWUElzOI80nvxadE3",
+    "schedulesCount": 0,
+    "logsCount": 0
+  },
+  {
+    "id": "RuZDFFr0JyeiOXVl4bMPPiMkWHI3",
+    "ownerUid": "RuZDFFr0JyeiOXVl4bMPPiMkWHI3",
+    "schedulesCount": 0,
+    "logsCount": 0
+  },
+  {
+    "id": "SvWPqmzqeFUOEgZi2sNpALFCqWI2",
+    "ownerUid": "SvWPqmzqeFUOEgZi2sNpALFCqWI2",
+    "schedulesCount": 0,
+    "logsCount": 0
+  },
+  {
+    "id": "bVlpsbT1noWohUiIZypHxI1kgZ73",
+    "ownerUid": "bVlpsbT1noWohUiIZypHxI1kgZ73",
+    "schedulesCount": 0,
+    "logsCount": 0
+  },
+  {
+    "id": "koGbOAZArgMBtnqQWqfGByQA8gK2",
+    "ownerUid": "koGbOAZArgMBtnqQWqfGByQA8gK2",
+    "schedulesCount": 0,
+    "logsCount": 0
+  },
+  {
+    "id": "nHWiAsRSKdfy6F8SGQGU2XsjVpB3",
+    "ownerUid": "nHWiAsRSKdfy6F8SGQGU2XsjVpB3",
+    "schedulesCount": 0,
+    "logsCount": 0
+  },
+  {
+    "id": "rO37ZQt5g5PaCFP5ZKvICMHXbXl1",
+    "ownerUid": "rO37ZQt5g5PaCFP5ZKvICMHXbXl1",
+    "schedulesCount": 13,
+    "logsCount": 7
+  }
+]

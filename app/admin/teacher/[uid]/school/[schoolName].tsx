@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,6 +15,7 @@ export default function SchoolLessonsScreen() {
 
     const [teacher, setTeacher] = useState<User | null>(null);
     const [schoolLogs, setSchoolLogs] = useState<AttendanceLog[]>([]);
+    const [schoolPhotos, setSchoolPhotos] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
     const decodedSchoolName = schoolName ? decodeURIComponent(schoolName) : '';
@@ -44,6 +45,9 @@ export default function SchoolLessonsScreen() {
                 // Sort by date desc
                 filtered.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
                 setSchoolLogs(filtered);
+
+                const galleries = data.schoolGalleries || {};
+                setSchoolPhotos(galleries[targetSchool] || []);
             }
         } catch (e) {
             console.error(e);
@@ -63,16 +67,26 @@ export default function SchoolLessonsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <Stack.Screen options={{ headerShown: false }} />
             <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
-                <View>
+                <View style={{ flex: 1 }}>
                     <Text style={[styles.title, { color: colors.text }]}>{decodedSchoolName}</Text>
                     <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
                         {teacher ? `Lessons by ${teacher.name || teacher.email}` : 'Loading...'}
                     </Text>
                 </View>
+                {schoolPhotos.length > 0 && (
+                    <TouchableOpacity
+                        style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border }}
+                        onPress={() => router.push({ pathname: '/admin/teacher/[uid]/school/[schoolName]/gallery' as any, params: { uid, schoolName } })}
+                    >
+                        <Ionicons name="images-outline" size={20} color={colors.text} />
+                        <Text style={{ color: colors.text, fontWeight: '600' }}>Gallery ({schoolPhotos.length})</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <FlatList

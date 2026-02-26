@@ -61,13 +61,13 @@ function RootLayoutNav() {
     <Stack screenOptions={{
       headerStyle: { backgroundColor: colors.background },
       headerTintColor: colors.text,
-      contentStyle: { backgroundColor: colors.background }
+      contentStyle: { backgroundColor: colors.background },
+      headerBackTitle: '',
+      headerTitle: ''
     }}>
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="awaiting-approval" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="admin" options={{ headerShown: false }} />
-      <Stack.Screen name="school" options={{ headerShown: false }} />
       <Stack.Screen name="add-lesson" options={{ title: 'Add Lesson', presentation: 'modal' }} />
       <Stack.Screen name="edit-lesson" options={{ title: 'Edit Lesson', presentation: 'modal' }} />
     </Stack>

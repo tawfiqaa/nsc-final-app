@@ -45,6 +45,7 @@ export interface TeacherData {
     ownerUid: string;
     schedules: Schedule[];
     attendanceLogs: AttendanceLog[];
+    schoolGalleries?: Record<string, string[]>;
     updatedAt: number;
 }
 
@@ -72,6 +73,7 @@ export interface AuthContextType {
 export interface LessonContextType {
     schedules: Schedule[];
     logs: AttendanceLog[];
+    schoolGalleries: Record<string, string[]>;
     loading: boolean;
     addSchedule: (schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
     addSchedules: (schedules: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
@@ -82,6 +84,7 @@ export interface LessonContextType {
     toggleLogStatus: (logId: string) => Promise<void>;
     updateLogNotes: (logId: string, notes: string) => Promise<void>;
     deleteLog: (logId: string) => Promise<void>;
+    addSchoolPhoto: (schoolName: string, localUri: string) => Promise<void>;
     refresh: () => Promise<void>;
     setTargetUid: (uid: string) => void;
 }

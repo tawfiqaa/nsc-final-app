@@ -28,16 +28,15 @@ export default function SchoolsScreen() {
             }
         });
 
-        // Count logs (attended + missed = total lessons 'given' or 'interacted with')
-        // Prompt says "how many lessons have we done so far?" -> imply Past lessons.
-        // Logic: Total Lessons = Initial Count + All Logs (Present or Absent) for that school.
+        // Count logs (attended only)
         logs.forEach(l => {
-            if (!schoolMap.has(l.school)) {
-                // For one-time events that might not have a schedule anymore
-                schoolMap.set(l.school, { name: l.school, lessonCount: 0 });
+            if (l.status === 'present') {
+                if (!schoolMap.has(l.school)) {
+                    schoolMap.set(l.school, { name: l.school, lessonCount: 0 });
+                }
+                const data = schoolMap.get(l.school)!;
+                data.lessonCount += 1;
             }
-            const data = schoolMap.get(l.school)!;
-            data.lessonCount += 1;
         });
 
         return Array.from(schoolMap.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -64,7 +63,7 @@ export default function SchoolsScreen() {
                 </View>
                 <View style={styles.info}>
                     <Text style={[styles.schoolName, { color: colors.text }]}>{item.name}</Text>
-                    <Text style={[styles.stats, { color: colors.secondaryText }]}>{item.lessonCount} Total Lessons</Text>
+                    <Text style={[styles.stats, { color: colors.secondaryText }]}>{item.lessonCount} {item.lessonCount === 1 ? 'Lesson' : 'Lessons'}</Text>
                 </View>
             </TouchableOpacity>
 

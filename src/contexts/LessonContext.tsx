@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, doc, doc as firestoreDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
 import { AttendanceLog, AttendanceStatus, LessonContextType, Schedule, TeacherData } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 import { useAuth } from './AuthContext';
@@ -20,6 +21,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const { user } = useAuth();
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [logs, setLogs] = useState<AttendanceLog[]>([]);
+    const [schoolGalleries, setSchoolGalleries] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(true);
     const [targetUid, setTargetUid] = useState<string | null>(null);
 
@@ -28,6 +30,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (!user) {
             setSchedules([]);
             setLogs([]);
+            setSchoolGalleries({});
             setLoading(false);
             return;
         }
@@ -54,6 +57,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                         const data: TeacherData = JSON.parse(cached);
                         setSchedules(data.schedules || []);
                         setLogs(data.attendanceLogs || []);
+                        setSchoolGalleries(data.schoolGalleries || {});
                     }
                 } catch (e) {
                     console.error('Failed to load cached teacher data', e);
@@ -68,6 +72,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                         const data = docSnap.data() as TeacherData;
                         const serverSchedules = data.schedules || [];
                         const serverLogs = data.attendanceLogs || [];
+                        const serverGalleries = data.schoolGalleries || {};
 
                         if (isOwnData) {
                             // Merge logic: Last write wins based on updatedAt
@@ -81,17 +86,20 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                             setSchedules(serverSchedules);
                             setLogs(serverLogs);
+                            setSchoolGalleries(serverGalleries);
 
                             await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, JSON.stringify({
                                 ownerUid: targetUid,
                                 schedules: serverSchedules,
                                 attendanceLogs: serverLogs,
+                                schoolGalleries: serverGalleries,
                                 updatedAt: Date.now()
                             }));
                         } else {
                             // Admin viewing others: just show server data
                             setSchedules(serverSchedules);
                             setLogs(serverLogs);
+                            setSchoolGalleries(serverGalleries);
                         }
                     } else if (isOwnData) {
                         // Create if missing
@@ -99,6 +107,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                             ownerUid: targetUid,
                             schedules: [],
                             attendanceLogs: [],
+                            schoolGalleries: {},
                             updatedAt: Date.now()
                         });
                     }
@@ -121,23 +130,28 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, [user, targetUid]);
 
     // Helper to sync to Firestore
-    const syncToFirestore = async (newSchedules: Schedule[], newLogs: AttendanceLog[]) => {
+    const syncToFirestore = async (updates: Partial<TeacherData>) => {
         if (!user || !targetUid || user.uid !== targetUid) return;
 
-        const data: TeacherData = {
-            ownerUid: user.uid,
-            schedules: newSchedules,
-            attendanceLogs: newLogs,
+        const dataToMerge: Partial<TeacherData> = {
+            ...updates,
             updatedAt: Date.now()
         };
 
         // Optimistic update local storage
-        await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, JSON.stringify(data));
+        try {
+            const cached = await AsyncStorage.getItem(STORAGE_KEYS.TEACHER_DATA);
+            const currentData: TeacherData = cached ? JSON.parse(cached) : { ownerUid: user.uid, schedules: [], attendanceLogs: [], schoolGalleries: {}, updatedAt: Date.now() };
+            const merged = { ...currentData, ...dataToMerge };
+            await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, JSON.stringify(merged));
+        } catch (e) {
+            console.error('Cache sync failed', e);
+        }
 
         try {
-            await setDoc(doc(db, 'teacherData', user.uid), data);
+            await setDoc(doc(db, 'teacherData', user.uid), dataToMerge, { merge: true });
         } catch (e) {
-            console.error('Sync failed, data saved locally', e);
+            console.error('Firestore sync failed', e);
             // In a real app, add to mutation queue here
         }
     };
@@ -150,9 +164,11 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
-        const updatedSchedules = [...schedules, newSchedule];
-        setSchedules(updatedSchedules);
-        await syncToFirestore(updatedSchedules, logs);
+        setSchedules(prev => {
+            const updatedSchedules = [...prev, newSchedule];
+            syncToFirestore({ schedules: updatedSchedules });
+            return updatedSchedules;
+        });
     };
 
     const addSchedules = async (scheduleDatas: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>[]) => {
@@ -164,24 +180,30 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         }));
 
-        const updatedSchedules = [...schedules, ...newSchedules];
-        setSchedules(updatedSchedules);
-        await syncToFirestore(updatedSchedules, logs);
+        setSchedules(prev => {
+            const updatedSchedules = [...prev, ...newSchedules];
+            syncToFirestore({ schedules: updatedSchedules });
+            return updatedSchedules;
+        });
     };
 
     const updateSchedule = async (id: string, updates: Partial<Schedule>) => {
-        const updatedSchedules = schedules.map(s =>
-            s.id === id ? { ...s, ...updates, updatedAt: Date.now() } : s
-        );
-        setSchedules(updatedSchedules);
-        await syncToFirestore(updatedSchedules, logs);
+        setSchedules(prev => {
+            const updatedSchedules = prev.map(s =>
+                s.id === id ? { ...s, ...updates, updatedAt: Date.now() } : s
+            );
+            syncToFirestore({ schedules: updatedSchedules });
+            return updatedSchedules;
+        });
     };
 
     const deleteSchedule = async (id: string) => {
         // Hard delete as requested
-        const updatedSchedules = schedules.filter(s => s.id !== id);
-        setSchedules(updatedSchedules);
-        await syncToFirestore(updatedSchedules, logs);
+        setSchedules(prev => {
+            const updatedSchedules = prev.filter(s => s.id !== id);
+            syncToFirestore({ schedules: updatedSchedules });
+            return updatedSchedules;
+        });
     };
 
     const markAttendance = async (schedule: Schedule, status: AttendanceStatus, dateISO: string, notes?: string) => {
@@ -201,9 +223,11 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         };
 
-        const updatedLogs = [...logs, newLog];
-        setLogs(updatedLogs);
-        await syncToFirestore(schedules, updatedLogs);
+        setLogs(prev => {
+            const updatedLogs = [...prev, newLog];
+            syncToFirestore({ attendanceLogs: updatedLogs });
+            return updatedLogs;
+        });
     };
 
     const addOneTimeLog = async (logData: Omit<AttendanceLog, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -213,78 +237,97 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
-        const updatedLogs = [...logs, newLog];
-        setLogs(updatedLogs);
-        await syncToFirestore(schedules, updatedLogs);
+        setLogs(prev => {
+            const updatedLogs = [...prev, newLog];
+            syncToFirestore({ attendanceLogs: updatedLogs });
+            return updatedLogs;
+        });
     };
 
     const toggleLogStatus = async (logId: string) => {
-        // Find log
-        const logIndex = logs.findIndex(l => l.id === logId);
-        if (logIndex === -1) return;
+        setLogs(prev => {
+            const logIndex = prev.findIndex(l => l.id === logId);
+            if (logIndex === -1) return prev;
 
-        const oldLog = logs[logIndex];
-        const newStatus: AttendanceStatus = oldLog.status === 'present' ? 'absent' : 'present';
+            const oldLog = prev[logIndex];
+            const newStatus: AttendanceStatus = oldLog.status === 'present' ? 'absent' : 'present';
 
-        // We need the original schedule to know duration/distance if we are reverting to present
-        // If it's a one-time log, we might lose that info if we zeroed it out. 
-        // Assuming for now we can find schedule or we stored it. 
-        // The prompt says "toggle... which recomputes hours/distance". 
-        // If we zeroed it, we can't easily recover unless we look up schedule.
+            let newHours = 0;
+            let newDistance = 0;
 
-        let newHours = 0;
-        let newDistance = 0;
-
-        if (newStatus === 'present') {
-            if (oldLog.scheduleId) {
-                const sched = schedules.find(s => s.id === oldLog.scheduleId);
-                if (sched) {
-                    newHours = sched.duration;
-                    newDistance = sched.distance;
+            if (newStatus === 'present') {
+                if (oldLog.scheduleId) {
+                    const sched = schedules.find(s => s.id === oldLog.scheduleId);
+                    if (sched) {
+                        newHours = sched.duration;
+                        newDistance = sched.distance;
+                    }
                 }
-            } else {
-                // For one-time logs, we can't easily recover duration/distance if they were zeroed out.
-                // Ideally we should store 'intendedDuration' in the log.
-                // For this MVP, if we toggle a one-time log to 'present', we might not recover the hours.
-                // We will skip updating hours/distance for one-time logs when toggling to present, 
-                // effectively just marking it as 'attended' but with 0 stats, unless we store it.
-                // To fix this properly requires schema change. 
-                // For now, let's just set them to 0 if we can't find a schedule.
             }
-        }
 
-        const updatedLog: AttendanceLog = {
-            ...oldLog,
-            status: newStatus,
-            hours: newHours,
-            distance: newDistance,
-            updatedAt: Date.now()
-        };
+            const updatedLog: AttendanceLog = {
+                ...oldLog,
+                status: newStatus,
+                hours: newHours,
+                distance: newDistance,
+                updatedAt: Date.now()
+            };
 
-        const newLogs = [...logs];
-        newLogs[logIndex] = updatedLog;
-        setLogs(newLogs);
-        await syncToFirestore(schedules, newLogs);
+            const newLogs = [...prev];
+            newLogs[logIndex] = updatedLog;
+            syncToFirestore({ attendanceLogs: newLogs });
+            return newLogs;
+        });
     };
 
     const deleteLog = async (logId: string) => {
-        const updatedLogs = logs.filter(l => l.id !== logId);
-        setLogs(updatedLogs);
-        await syncToFirestore(schedules, updatedLogs);
+        setLogs(prev => {
+            const updatedLogs = prev.filter(l => l.id !== logId);
+            syncToFirestore({ attendanceLogs: updatedLogs });
+            return updatedLogs;
+        });
     };
 
     const updateLogNotes = async (logId: string, notes: string) => {
-        const logIndex = logs.findIndex(l => l.id === logId);
-        if (logIndex === -1) return;
+        setLogs(prev => {
+            const logIndex = prev.findIndex(l => l.id === logId);
+            if (logIndex === -1) return prev;
 
-        const newLogs = [...logs];
-        newLogs[logIndex] = {
-            ...newLogs[logIndex],
-            notes: notes,
-            updatedAt: Date.now(),
-        };
-        setLogs(newLogs);
-        await syncToFirestore(schedules, newLogs);
+            const newLogs = [...prev];
+            newLogs[logIndex] = {
+                ...newLogs[logIndex],
+                notes: notes,
+                updatedAt: Date.now(),
+            };
+            syncToFirestore({ attendanceLogs: newLogs });
+            return newLogs;
+        });
+    };
+
+    const addSchoolPhoto = async (schoolName: string, localUri: string) => {
+        if (!user || user.uid !== targetUid) return;
+        try {
+            const response = await fetch(localUri);
+            const blob = await response.blob();
+            // We use Date.now() as part of filename to avoid collisions 
+            const filename = `${Date.now()}_${localUri.split('/').pop() || 'photo.jpg'}`;
+            const fileRef = ref(storage, `users/${user.uid}/galleries/${schoolName}/${filename}`);
+            await uploadBytes(fileRef, blob);
+            const downloadUrl = await getDownloadURL(fileRef);
+
+            setSchoolGalleries(prev => {
+                const newGalleries = { ...prev };
+                if (!newGalleries[schoolName]) {
+                    newGalleries[schoolName] = [];
+                }
+                newGalleries[schoolName] = [...newGalleries[schoolName], downloadUrl];
+                syncToFirestore({ schoolGalleries: newGalleries });
+                return newGalleries;
+            });
+        } catch (error) {
+            console.error("Upload failed", error);
+            throw error;
+        }
     };
 
     const refresh = async () => {
@@ -295,6 +338,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         <LessonContext.Provider value={{
             schedules,
             logs,
+            schoolGalleries,
             loading,
             addSchedule,
             addSchedules,
@@ -305,6 +349,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             toggleLogStatus,
             updateLogNotes,
             deleteLog,
+            addSchoolPhoto,
             refresh,
             setTargetUid
         }}>

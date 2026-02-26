@@ -3,6 +3,7 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
 // @ts-ignore
 import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 // Replace the following with your app's Firebase project configuration
 // For a real app, these should come from your environment variables or app.config.js
@@ -31,5 +32,6 @@ try {
 
 export const auth = authInstance;
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 export default app;

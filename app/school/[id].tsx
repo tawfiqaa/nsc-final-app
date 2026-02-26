@@ -62,28 +62,29 @@ export default function SchoolDetailsScreen() {
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, marginTop: 20 }}>
                     <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.text, flex: 1 }}>{schoolName}</Text>
-                    <TouchableOpacity
-                        style={{ backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                        onPress={() => router.push({ pathname: '/add-lesson', params: { school: schoolName, mode: 'log' } })}
-                    >
-                        <Ionicons name="add-circle" size={20} color="#fff" />
-                        <Text style={{ color: '#fff', fontWeight: '600' }}>Add Past Lesson</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity
+                            style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border }}
+                            onPress={() => router.push({ pathname: '/school/[id]/gallery' as any, params: { id: schoolName } })}
+                        >
+                            <Ionicons name="images-outline" size={20} color={colors.text} />
+                            <Text style={{ color: colors.text, fontWeight: '600' }}>Gallery</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={{ backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                            onPress={() => router.push({ pathname: '/add-lesson', params: { school: schoolName, mode: 'log' } })}
+                        >
+                            <Ionicons name="add-circle" size={20} color="#fff" />
+                            <Text style={{ color: '#fff', fontWeight: '600' }}>Add Past Lesson</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Stats Grid */}
                 <View style={styles.grid}>
                     <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={[styles.statValue, { color: colors.primary }]}>{stats.totalLessons}</Text>
-                        <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Total Lessons</Text>
-                    </View>
-                    <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={[styles.statValue, { color: colors.success }]}>{stats.attendedCount}</Text>
-                        <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Attended</Text>
-                    </View>
-                    <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={[styles.statValue, { color: colors.error }]}>{stats.missedCount}</Text>
-                        <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Missed</Text>
+                        <Text style={[styles.statValue, { color: colors.primary }]}>{stats.attendedCount}</Text>
+                        <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Lessons</Text>
                     </View>
                 </View>
 

@@ -281,6 +281,7 @@ export default function AddLessonScreen() {
                         <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
                             {React.createElement('input', {
                                 type: 'time',
+                                lang: 'en-GB', // Forces 24-hour format in supported browsers
                                 value: format(startTime, 'HH:mm'),
                                 onChange: (e: any) => {
                                     const [h, m] = e.target.value.split(':');
