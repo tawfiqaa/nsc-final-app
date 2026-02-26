@@ -14,8 +14,8 @@ import { AttendanceStatus } from '../../src/types';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { schedules, logs, markAttendance, toggleLogStatus, deleteLog, refresh, loading, updateLogNotes } = useLesson();
-  const { colors, theme } = useTheme();
+  const { schedules, logs, markAttendance, deleteLog, refresh, loading, updateLogNotes } = useLesson();
+  const { colors } = useTheme();
   const router = useRouter();
 
   const [markingSchedule, setMarkingSchedule] = useState<{ id: string, status: AttendanceStatus } | null>(null);
@@ -23,12 +23,12 @@ export default function Dashboard() {
   const [notesInput, setNotesInput] = useState('');
 
   const today = new Date();
-  const todayDayOfWeek = getDay(today);
 
   // Filter logs for this month
   const monthlyStats = useMemo(() => {
-    const start = startOfMonth(today);
-    const end = endOfMonth(today);
+    const now = new Date();
+    const start = startOfMonth(now);
+    const end = endOfMonth(now);
 
     // Simple filter by dateISO string check, robust enough for ISO format
     const monthLogs = logs.filter(log => {
@@ -44,6 +44,9 @@ export default function Dashboard() {
 
   // Today's lessons (schedules that haven't been logged today)
   const todaysLessons = useMemo(() => {
+    const now = new Date();
+    const todayDayOfWeek = getDay(now);
+
     return schedules.filter(schedule => {
       // Must be active
       if (schedule.isActive === false) return false;
@@ -54,12 +57,12 @@ export default function Dashboard() {
       // Must not be already logged today
       const isLogged = logs.some(log =>
         log.scheduleId === schedule.id &&
-        isSameDay(new Date(log.dateISO), today)
+        isSameDay(new Date(log.dateISO), now)
       );
 
       return !isLogged;
     });
-  }, [schedules, logs, todayDayOfWeek]);
+  }, [schedules, logs]);
 
   // Recently updated logs (last 12 hours)
   const recentLogs = useMemo(() => {
@@ -118,7 +121,7 @@ export default function Dashboard() {
           <StatsWidget title="Distance (Mo)" value={monthlyStats.totalDistance.toFixed(1)} unit="km" />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Lessons</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Today&apos;s Lessons</Text>
         {todaysLessons.length === 0 ? (
           <Text style={[styles.emptyText, { color: colors.secondaryText }]}>No more lessons today.</Text>
         ) : (

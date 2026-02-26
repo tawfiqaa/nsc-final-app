@@ -15,7 +15,7 @@ export default function AddLessonScreen() {
     const schoolParam = typeof params.school === 'string' ? params.school : undefined;
     const modeParam = typeof params.mode === 'string' ? params.mode : undefined;
 
-    const { addSchedule, addSchedules, addOneTimeLog, updateSchedule, schedules } = useLesson();
+    const { addSchedules, addOneTimeLog, updateSchedule, schedules } = useLesson();
     const { colors } = useTheme();
 
     const [isOneTime, setIsOneTime] = useState(false);
@@ -51,7 +51,6 @@ export default function AddLessonScreen() {
     const [oneTimeDate, setOneTimeDate] = useState(new Date());
     const [duration, setDuration] = useState('');
     const [distance, setDistance] = useState('');
-    const [initialCount, setInitialCount] = useState('');
     const [notes, setNotes] = useState('');
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -236,7 +235,9 @@ export default function AddLessonScreen() {
                                     onClick: (e: any) => {
                                         try {
                                             if (e.target.showPicker) e.target.showPicker();
-                                        } catch (err) { }
+                                        } catch {
+                                            // Handle silently or log
+                                        }
                                     },
                                     style: {
                                         fontSize: 16,

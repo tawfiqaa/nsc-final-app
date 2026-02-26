@@ -1,0 +1,51 @@
+C:\projects\final app\.expo\types\router.d.ts
+  1:1 Warn - Unused eslint-disable directive (no problems were reported). (null)
+
+C:\projects\final app\app\(tabs)\index.tsx
+  17:44 Warn - 'toggleLogStatus' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  18:19 Warn - 'theme' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  43:6 Warn - React Hook useMemo has a missing dependency: 'today'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+  62:6 Warn - React Hook useMemo has a missing dependency: 'today'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+  121:74 Error - `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`. (react/no-unescaped-entities)
+
+C:\projects\final app\app\(tabs)\school-history.tsx
+  10:19 Warn - 'toggleLogStatus' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+
+C:\projects\final app\app\(tabs)\settings.tsx
+  55:18 Warn - 'e' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+C:\projects\final app\app\_layout.tsx
+  22:11 Warn - 'inAuthGroup' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  23:11 Warn - 'atLogin' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  24:11 Warn - 'atApproval' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  44:6 Warn - React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+
+C:\projects\final app\app\add-lesson.tsx
+  18:13 Warn - 'addSchedule' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  54:12 Warn - 'initialCount' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  54:26 Warn - 'setInitialCount' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  239:50 Warn - 'err' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+C:\projects\final app\app\admin\teacher\[uid]\index.tsx
+  58:18 Warn - 'e' is defined but never used. (@typescript-eslint/no-unused-vars)
+  81:18 Warn - 'e' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+C:\projects\final app\app\edit-lesson.tsx
+  71:18 Warn - 'e' is defined but never used. (@typescript-eslint/no-unused-vars)
+  87:34 Warn - 'e' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+C:\projects\final app\app\login.tsx
+  47:8 Warn - React Hook useEffect has a missing dependency: 'loginWithGoogle'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+
+C:\projects\final app\app\school\[id].tsx
+  13:46 Warn - 'toggleLogStatus' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+
+C:\projects\final app\app\school\[id]\gallery.tsx
+  45:22 Warn - 'error' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+C:\projects\final app\scripts\fix-web-icons.js
+  6:31 Error - '__dirname' is not defined. (no-undef)
+  57:15 Warn - 'targetPathSimple' is assigned a value but never used. (no-unused-vars)
+
+C:\projects\final app\src\lib\firebase.ts
+  28:10 Warn - 'e' is defined but never used. (@typescript-eslint/no-unused-vars)

@@ -44,7 +44,7 @@ export default function LoginScreen() {
                     .finally(() => setIsLoading(false));
             }
         }
-    }, [response]);
+    }, [response, loginWithGoogle]);
 
     const handleAuth = async () => {
         if (!email || !password) {

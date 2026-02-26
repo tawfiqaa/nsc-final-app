@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -53,11 +54,7 @@ function fixIcons() {
         const targetName = `${name}.${hash}${ext}`;
         const targetPath = path.join(TARGET_DIR, targetName);
 
-        // Also copy just as the original name just in case
-        const targetPathSimple = path.join(TARGET_DIR, font);
-
         fs.copyFileSync(sourcePath, targetPath);
-        // fs.copyFileSync(sourcePath, targetPathSimple); // Optional, but helps if hash checking is skipped
 
         console.log(`Copied ${font} -> ${targetName}`);
         copyCount++;

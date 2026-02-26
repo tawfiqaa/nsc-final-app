@@ -55,7 +55,8 @@ export default function TeacherDetailsScreen() {
             const data = generateMonthlyReportData(teacher, logs, schedules);
             const fileName = `${(teacher.name || 'teacher').replace(/\s+/g, '_')}_Monthly_Report.xlsx`;
             await exportToExcel(data, fileName);
-        } catch (e) {
+        } catch (error) {
+            console.error(error);
             Alert.alert("Export Failed", "Could not generate report");
         }
     };
@@ -78,7 +79,8 @@ export default function TeacherDetailsScreen() {
 
             const fileName = `${(teacher.name || 'teacher').replace(/\s+/g, '_')}_Full_History.xlsx`;
             await exportToExcel(allData, fileName);
-        } catch (e) {
+        } catch (error) {
+            console.error(error);
             Alert.alert("Export Failed", "Could not generate report");
         }
     };

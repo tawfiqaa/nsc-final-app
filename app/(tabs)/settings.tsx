@@ -52,7 +52,8 @@ export default function SettingsScreen() {
             await updateDoc(doc(db, 'users', user.uid), { name: tempName });
             setEditingName(false);
             Alert.alert("Success", "Name updated successfully");
-        } catch (e: any) {
+        } catch (error: any) {
+            console.error(error);
             Alert.alert("Error", "Could not update name");
         }
     };

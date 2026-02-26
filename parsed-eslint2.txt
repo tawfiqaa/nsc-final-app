@@ -1,0 +1,11 @@
+C:\projects\final app\.expo\types\router.d.ts
+  1:1 Warn - Unused eslint-disable directive (no problems were reported). (null)
+
+C:\projects\final app\app\add-lesson.tsx
+  238:50 Warn - 'error' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+C:\projects\final app\app\login.tsx
+  47:8 Warn - React Hook useEffect has a missing dependency: 'loginWithGoogle'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+
+C:\projects\final app\scripts\fix-web-icons.js
+  7:31 Error - '__dirname' is not defined. (no-undef)

@@ -7,7 +7,7 @@ import { useLesson } from '../../src/contexts/LessonContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function SchoolHistoryScreen() {
-    const { logs, toggleLogStatus, deleteLog, updateLogNotes } = useLesson();
+    const { logs, deleteLog, updateLogNotes } = useLesson();
     const { colors } = useTheme();
     const params = useLocalSearchParams();
 

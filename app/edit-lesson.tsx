@@ -68,7 +68,8 @@ export default function EditLessonScreen() {
                 distance: dist,
             });
             router.back();
-        } catch (e) {
+        } catch (error) {
+            console.error(error);
             Alert.alert('Error', 'Failed to update lesson');
         }
     };
@@ -84,7 +85,8 @@ export default function EditLessonScreen() {
                         try {
                             if (id) await deleteSchedule(id);
                             router.back();
-                        } catch (e) {
+                        } catch (error) {
+                            console.error(error);
                             Alert.alert("Error", "Failed to delete");
                         }
                     }

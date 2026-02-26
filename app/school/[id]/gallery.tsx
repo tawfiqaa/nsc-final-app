@@ -43,6 +43,7 @@ export default function SchoolGalleryScreen() {
             try {
                 await addSchoolPhoto(schoolName, uri);
             } catch (error) {
+                console.error(error);
                 Alert.alert("Upload Failed", "There was an error uploading your photo.");
             } finally {
                 setUploading(false);

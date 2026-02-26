@@ -10,7 +10,7 @@ export default function SchoolDetailsScreen() {
     const { id } = useLocalSearchParams();
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
-    const { schedules, logs, deleteSchedule, toggleLogStatus, deleteLog, updateLogNotes } = useLesson();
+    const { schedules, logs, deleteSchedule, deleteLog, updateLogNotes } = useLesson();
     const router = useRouter();
 
     const [editingLog, setEditingLog] = React.useState<typeof logs[0] | null>(null);

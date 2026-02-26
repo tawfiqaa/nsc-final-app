@@ -19,10 +19,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === 'login';
-    const atLogin = segments[0] === 'login';
-    const atApproval = segments[0] === 'awaiting-approval';
-
     if (!user) {
       // If not logged in and not at login, go to login
       if (segments[0] !== 'login') {
@@ -41,7 +37,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [user, loading, segments]);
+  }, [user, loading, segments, router]);
 
   if (loading) {
     return (
