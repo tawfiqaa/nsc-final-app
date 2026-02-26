@@ -21,6 +21,7 @@ export default function AddLessonScreen() {
     const [isOneTime, setIsOneTime] = useState(false);
     const [school, setSchool] = useState('');
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
 
     const isContextMode = !!(schoolParam && modeParam === 'log');
 
@@ -43,6 +44,17 @@ export default function AddLessonScreen() {
             setSchool(schoolParam);
             if (modeParam === 'log') {
                 setIsOneTime(true);
+                // Try to find the default schedule for this school to auto-fill details
+                const defaultSched = schedules.find(s => s.school === schoolParam);
+                if (defaultSched) {
+                    const [h, m] = defaultSched.startTime.split(':').map(Number);
+                    const d = new Date();
+                    d.setHours(h);
+                    d.setMinutes(m);
+                    setStartTime(d);
+                    setDuration(defaultSched.duration.toString());
+                    setDistance(defaultSched.distance.toString());
+                }
             }
         }
     }, [scheduleId, schedules, schoolParam, modeParam]);
@@ -66,6 +78,8 @@ export default function AddLessonScreen() {
     };
 
     const handleSave = async () => {
+        if (isSaving) return;
+
         if (!school.trim()) {
             Alert.alert('Validation Error', 'School name is required');
             return;
@@ -86,6 +100,7 @@ export default function AddLessonScreen() {
         }
 
         try {
+            setIsSaving(true);
             if (scheduleId) {
                 // Update Existing Schedule
                 // We only update the single schedule being edited.
@@ -129,6 +144,8 @@ export default function AddLessonScreen() {
             router.back();
         } catch (e: any) {
             Alert.alert('Error', e.message || 'Failed to add lesson');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -146,9 +163,9 @@ export default function AddLessonScreen() {
                 {!isContextMode && (
                     <View style={styles.typeToggle}>
                         <TouchableOpacity
-                            style={[styles.toggleBtn, !isOneTime && { backgroundColor: colors.primary }, scheduleId && { opacity: 0.5 }]}
-                            onPress={() => !scheduleId && setIsOneTime(false)}
-                            disabled={!!scheduleId}
+                            style={[styles.toggleBtn, !isOneTime && { backgroundColor: colors.primary }, (scheduleId || isSaving) && { opacity: 0.5 }]}
+                            onPress={() => !scheduleId && !isSaving && setIsOneTime(false)}
+                            disabled={!!scheduleId || isSaving}
                         >
                             <Text style={[styles.toggleText, !isOneTime ? { color: '#fff' } : { color: colors.text }]}>
                                 {scheduleId ? 'Editing Schedule' : 'Recurring'}
@@ -156,8 +173,9 @@ export default function AddLessonScreen() {
                         </TouchableOpacity>
                         {!scheduleId && (
                             <TouchableOpacity
-                                style={[styles.toggleBtn, isOneTime && { backgroundColor: colors.primary }]}
-                                onPress={() => setIsOneTime(true)}
+                                style={[styles.toggleBtn, isOneTime && { backgroundColor: colors.primary }, isSaving && { opacity: 0.5 }]}
+                                onPress={() => !isSaving && setIsOneTime(true)}
+                                disabled={isSaving}
                             >
                                 <Text style={[styles.toggleText, isOneTime ? { color: '#fff' } : { color: colors.text }]}>One-Time</Text>
                             </TouchableOpacity>
@@ -379,10 +397,13 @@ export default function AddLessonScreen() {
 
             <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
                 <TouchableOpacity
-                    style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                    style={[styles.saveButton, { backgroundColor: colors.primary }, isSaving && { opacity: 0.7 }]}
                     onPress={handleSave}
+                    disabled={isSaving}
                 >
-                    <Text style={styles.saveButtonText}>{isOneTime ? 'Log One-Time Lesson' : 'Save Schedule(s)'}</Text>
+                    <Text style={styles.saveButtonText}>
+                        {isSaving ? 'Saving...' : (isOneTime ? 'Log One-Time Lesson' : 'Save Schedule(s)')}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </View>

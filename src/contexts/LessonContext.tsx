@@ -44,7 +44,8 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (!user || !targetUid) return;
 
         const isOwnData = user.uid === targetUid;
-        let unsubscribe: () => void;
+        let unsubscribe: (() => void) | undefined;
+        let isMounted = true;
 
         const loadData = async () => {
             setLoading(true);
@@ -55,9 +56,11 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     const cached = await AsyncStorage.getItem(STORAGE_KEYS.TEACHER_DATA);
                     if (cached) {
                         const data: TeacherData = JSON.parse(cached);
-                        setSchedules(data.schedules || []);
-                        setLogs(data.attendanceLogs || []);
-                        setSchoolGalleries(data.schoolGalleries || {});
+                        if (isMounted) {
+                            setSchedules(data.schedules || []);
+                            setLogs(data.attendanceLogs || []);
+                            setSchoolGalleries(data.schoolGalleries || {});
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to load cached teacher data', e);
@@ -67,7 +70,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             // 2. Subscribe to Firestore
             try {
                 const docRef = doc(db, 'teacherData', targetUid);
-                unsubscribe = onSnapshot(docRef, async (docSnap) => {
+                const unsub = onSnapshot(docRef, async (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data() as TeacherData;
                         const serverSchedules = data.schedules || [];
@@ -116,6 +119,12 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     console.error("Firestore subscription error", error);
                     setLoading(false);
                 });
+
+                if (!isMounted) {
+                    unsub();
+                } else {
+                    unsubscribe = unsub;
+                }
             } catch (error) {
                 console.error("Error setting up subscription", error);
                 setLoading(false);
@@ -125,6 +134,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         loadData();
 
         return () => {
+            isMounted = false;
             if (unsubscribe) unsubscribe();
         };
     }, [user, targetUid]);
@@ -133,7 +143,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const syncToFirestore = async (updates: Partial<TeacherData>) => {
         if (!user || !targetUid || user.uid !== targetUid) return;
 
-        const dataToMerge: Partial<TeacherData> = {
+        let dataToMerge: Partial<TeacherData> = {
             ...updates,
             updatedAt: Date.now()
         };
@@ -144,6 +154,11 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const currentData: TeacherData = cached ? JSON.parse(cached) : { ownerUid: user.uid, schedules: [], attendanceLogs: [], schoolGalleries: {}, updatedAt: Date.now() };
             const merged = { ...currentData, ...dataToMerge };
             await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, JSON.stringify(merged));
+
+            // Critical fix for data wiping: send the fully merged local state to Firebase
+            // instead of just the partial updates. This forces Firebase to always accept
+            // our unsync'd local data whenever we re-establish a sync.
+            dataToMerge = merged;
         } catch (e) {
             console.error('Cache sync failed', e);
         }
