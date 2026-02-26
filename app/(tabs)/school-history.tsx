@@ -46,7 +46,7 @@ export default function SchoolHistoryScreen() {
         return [...filtered].sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
     }, [logs, selectedSchool]);
 
-    const totalLessons = filteredLogs.length;
+    const totalLessons = filteredLogs.filter(l => l.status === 'present').length;
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -71,7 +71,6 @@ export default function SchoolHistoryScreen() {
                 renderItem={({ item }) => (
                     <LogCard
                         log={item}
-                        onToggle={() => toggleLogStatus(item.id)}
                         onDelete={() => deleteLog(item.id)}
                         onEditNote={() => handleEditNote(item)}
                     />

@@ -20,16 +20,12 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Auth with persistence
 let authInstance;
-if (getApps().length === 0) {
-    try {
-        authInstance = initializeAuth(app, {
-            persistence: getReactNativePersistence(AsyncStorage)
-        });
-    } catch (e) {
-        // Fallback if already initialized or error
-        authInstance = getAuth(app);
-    }
-} else {
+try {
+    authInstance = initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage)
+    });
+} catch (e) {
+    // Fallback if already initialized
     authInstance = getAuth(app);
 }
 

@@ -37,16 +37,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isOwner(uid);
       
       // Update:
-      // 1. Admin: Can approve pending users to 'teacher' role only.
-      // 2. Super Admin: Can do anything.
-      allow update: if isAuthenticated() && (
-        (isAdmin() && 
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isApproved', 'role', 'updatedAt']) &&
-         request.resource.data.role == 'teacher' &&
-         request.resource.data.isApproved == true
-        ) ||
-        isSuperAdmin()
-      );
+      allow update: if isAuthenticated() && isSuperAdmin();
     }
 
     // TeacherData collection

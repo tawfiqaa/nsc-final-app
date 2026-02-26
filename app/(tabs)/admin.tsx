@@ -83,7 +83,7 @@ export default function AdminScreen() {
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.userInfo}>
                     <Text style={[styles.email, { color: colors.text }]}>
-                        {item.name ? `${item.name} (${item.email})` : item.email}
+                        {item.name || item.email}
                         {isMe && " (You)"}
                     </Text>
                     <View style={styles.badges}>

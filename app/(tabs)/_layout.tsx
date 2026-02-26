@@ -30,6 +30,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          href: (user.role === 'teacher' || user.role === 'super_admin') ? '/' : null,
           title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
@@ -42,6 +43,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="schools"
         options={{
+          href: (user.role === 'teacher' || user.role === 'super_admin') ? '/schools' : null,
           title: 'My Schools',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="school-outline" size={size} color={color} />
@@ -52,6 +54,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="school-history"
         options={{
+          href: (user.role === 'teacher' || user.role === 'super_admin') ? '/school-history' : null,
           title: 'History',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" size={size} color={color} />

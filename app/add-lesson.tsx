@@ -20,7 +20,9 @@ export default function AddLessonScreen() {
 
     const [isOneTime, setIsOneTime] = useState(false);
     const [school, setSchool] = useState('');
-    const [selectedDays, setSelectedDays] = useState<number[]>([1]);
+    const [selectedDays, setSelectedDays] = useState<number[]>([]);
+
+    const isContextMode = !!(schoolParam && modeParam === 'log');
 
     useEffect(() => {
         if (scheduleId) {
@@ -67,6 +69,10 @@ export default function AddLessonScreen() {
     const handleSave = async () => {
         if (!school.trim()) {
             Alert.alert('Validation Error', 'School name is required');
+            return;
+        }
+        if (!isOneTime && selectedDays.length === 0) {
+            Alert.alert('Validation Error', 'Please select at least one day.');
             return;
         }
         const dur = parseFloat(duration);
@@ -138,34 +144,41 @@ export default function AddLessonScreen() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
 
-                <View style={styles.typeToggle}>
-                    <TouchableOpacity
-                        style={[styles.toggleBtn, !isOneTime && { backgroundColor: colors.primary }, scheduleId && { opacity: 0.5 }]}
-                        onPress={() => !scheduleId && setIsOneTime(false)}
-                        disabled={!!scheduleId}
-                    >
-                        <Text style={[styles.toggleText, !isOneTime ? { color: '#fff' } : { color: colors.text }]}>
-                            {scheduleId ? 'Editing Schedule' : 'Recurring'}
-                        </Text>
-                    </TouchableOpacity>
-                    {!scheduleId && (
+                {!isContextMode && (
+                    <View style={styles.typeToggle}>
                         <TouchableOpacity
-                            style={[styles.toggleBtn, isOneTime && { backgroundColor: colors.primary }]}
-                            onPress={() => setIsOneTime(true)}
+                            style={[styles.toggleBtn, !isOneTime && { backgroundColor: colors.primary }, scheduleId && { opacity: 0.5 }]}
+                            onPress={() => !scheduleId && setIsOneTime(false)}
+                            disabled={!!scheduleId}
                         >
-                            <Text style={[styles.toggleText, isOneTime ? { color: '#fff' } : { color: colors.text }]}>One-Time</Text>
+                            <Text style={[styles.toggleText, !isOneTime ? { color: '#fff' } : { color: colors.text }]}>
+                                {scheduleId ? 'Editing Schedule' : 'Recurring'}
+                            </Text>
                         </TouchableOpacity>
-                    )}
-                </View>
+                        {!scheduleId && (
+                            <TouchableOpacity
+                                style={[styles.toggleBtn, isOneTime && { backgroundColor: colors.primary }]}
+                                onPress={() => setIsOneTime(true)}
+                            >
+                                <Text style={[styles.toggleText, isOneTime ? { color: '#fff' } : { color: colors.text }]}>One-Time</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
 
                 <View style={styles.formGroup}>
                     <Text style={[styles.label, { color: colors.secondaryText }]}>School Name</Text>
                     <TextInput
-                        style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+                        style={[
+                            styles.input,
+                            { color: colors.text, borderColor: colors.border, backgroundColor: colors.card },
+                            isContextMode && { opacity: 0.6 }
+                        ]}
                         value={school}
                         onChangeText={setSchool}
                         placeholder="e.g. Lincoln High"
                         placeholderTextColor={colors.secondaryText}
+                        editable={!isContextMode}
                     />
                 </View>
 

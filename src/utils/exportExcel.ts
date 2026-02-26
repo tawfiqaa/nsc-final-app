@@ -8,12 +8,10 @@ import { AttendanceLog, Schedule, User } from '../types';
 interface ExportRow {
     "Date": string;
     "School": string;
-    "Start Time": string;
-    "Status": string;
     "Hours": number;
     "Distance (KM)": number;
-    "Type": string;
-    "Schedule Name/Id": string;
+    "Status": string;
+    "Notes": string;
 }
 
 interface ExportOptions {
@@ -34,18 +32,14 @@ export const buildExportRows = ({ logs, schedules, month, year }: { logs: Attend
     // Create rows
     return monthlyLogs.map(log => {
         const d = new Date(log.dateISO);
-        // Find schedule name if available
-        const sched = log.scheduleId ? schedules.find(s => s.id === log.scheduleId) : null;
 
         return {
             "Date": format(d, 'yyyy-MM-dd'),
             "School": log.school,
-            "Start Time": format(d, 'HH:mm'),
-            "Status": log.status,
             "Hours": log.hours,
             "Distance (KM)": log.distance,
-            "Type": log.isOneTime ? 'One-Time' : 'Scheduled',
-            "Schedule Name/Id": log.scheduleId || 'N/A'
+            "Status": log.status,
+            "Notes": log.notes || ''
         };
     });
 };

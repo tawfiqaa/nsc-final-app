@@ -7,13 +7,13 @@ import { AttendanceLog } from '../types';
 
 interface LogCardProps {
     log: AttendanceLog;
-    onToggle?: () => void;
     onDelete?: () => void;
     onEditNote?: () => void;
     readOnly?: boolean;
+    deleteType?: 'text' | 'icon';
 }
 
-export const LogCard: React.FC<LogCardProps> = ({ log, onToggle, onDelete, onEditNote, readOnly }) => {
+export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, readOnly, deleteType = 'text' }) => {
     const { colors } = useTheme();
     const isPresent = log.status === 'present';
 
@@ -48,15 +48,14 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onToggle, onDelete, onEdi
 
             {!readOnly && (
                 <View style={styles.actions}>
-                    <TouchableOpacity onPress={onToggle}>
-                        <Text style={[styles.actionLink, { color: colors.primary }]}>
-                            Toggle Status
-                        </Text>
-                    </TouchableOpacity>
                     <TouchableOpacity onPress={onDelete}>
-                        <Text style={[styles.actionLink, { color: colors.error }]}>
-                            Undo
-                        </Text>
+                        {deleteType === 'icon' ? (
+                            <Ionicons name="trash-outline" size={20} color={colors.error} />
+                        ) : (
+                            <Text style={[styles.actionLink, { color: colors.error }]}>
+                                Undo
+                            </Text>
+                        )}
                     </TouchableOpacity>
                     {onEditNote && (
                         <TouchableOpacity onPress={onEditNote}>

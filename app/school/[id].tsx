@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -10,13 +10,29 @@ export default function SchoolDetailsScreen() {
     const { id } = useLocalSearchParams();
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
-    const { schedules, logs, deleteSchedule, toggleLogStatus, deleteLog } = useLesson();
+    const { schedules, logs, deleteSchedule, toggleLogStatus, deleteLog, updateLogNotes } = useLesson();
     const router = useRouter();
+
+    const [editingLog, setEditingLog] = React.useState<typeof logs[0] | null>(null);
+    const [notesInput, setNotesInput] = React.useState('');
+
+    const handleEditNote = (log: typeof logs[0]) => {
+        setEditingLog(log);
+        setNotesInput(log.notes || '');
+    };
+
+    const confirmEditNote = async () => {
+        if (!editingLog) return;
+        await updateLogNotes(editingLog.id, notesInput.trim());
+        setEditingLog(null);
+    };
 
     const stats = useMemo(() => {
         // strict filter
         const schoolSchedules = schedules.filter(s => s.school === schoolName);
-        const schoolLogs = logs.filter(l => l.school === schoolName);
+        const schoolLogs = logs
+            .filter(l => l.school === schoolName)
+            .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
 
         const initialCountTotal = schoolSchedules.reduce((acc, curr) => acc + (curr.initialCount || 0), 0);
 
@@ -116,13 +132,63 @@ export default function SchoolDetailsScreen() {
                         <LogCard
                             key={log.id}
                             log={log}
-                            onToggle={() => toggleLogStatus(log.id)}
-                            onDelete={() => deleteLog(log.id)}
+                            onDelete={() => {
+                                Alert.alert("Confirm Deletion", "Are you sure you want to delete this log?", [
+                                    { text: "Cancel", style: "cancel" },
+                                    { text: "Delete", style: "destructive", onPress: () => deleteLog(log.id) }
+                                ]);
+                            }}
+                            onEditNote={() => handleEditNote(log)}
+                            deleteType="icon"
                         />
                     ))
                 )}
 
             </ScrollView>
+
+            {/* Modal for Edit Note */}
+            <Modal
+                visible={!!editingLog}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setEditingLog(null)}
+            >
+                <View style={[styles.modalOverlay, { padding: 20 }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: undefined }]}>
+                        <Text style={[styles.modalTitle, { color: colors.text }]}>{editingLog?.notes ? 'Edit Note' : 'Add Note'}</Text>
+
+                        <TextInput
+                            style={[
+                                styles.textInput,
+                                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }
+                            ]}
+                            placeholder="e.g. Covered Chapter 3, student was late..."
+                            placeholderTextColor={colors.secondaryText}
+                            value={notesInput}
+                            onChangeText={setNotesInput}
+                            multiline
+                            numberOfLines={4}
+                            textAlignVertical="top"
+                        />
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                                onPress={() => setEditingLog(null)}
+                            >
+                                <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                                onPress={confirmEditNote}
+                            >
+                                <Text style={{ color: '#fff', fontWeight: '600' }}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -171,5 +237,41 @@ const styles = StyleSheet.create({
     },
     empty: {
         fontStyle: 'italic',
-    }
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: 40,
+    },
+    modalContent: {
+        borderRadius: 16,
+        padding: 20,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    textInput: {
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
+        minHeight: 100,
+        fontSize: 16,
+        marginBottom: 20,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 12,
+    },
+    modalBtn: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        minWidth: 80,
+        alignItems: 'center',
+    },
 });

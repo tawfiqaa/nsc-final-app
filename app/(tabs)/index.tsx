@@ -139,7 +139,6 @@ export default function Dashboard() {
             <LogCard
               key={log.id}
               log={log}
-              onToggle={() => toggleLogStatus(log.id)}
               onDelete={() => deleteLog(log.id)}
               onEditNote={() => handleEditNote(log)}
             />
