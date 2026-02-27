@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, doc, doc as firestoreDoc, onSnapshot, setDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { db, storage } from '../lib/firebase';
 import { AttendanceLog, AttendanceStatus, LessonContextType, Schedule, TeacherData } from '../types';
@@ -153,12 +153,15 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const cached = await AsyncStorage.getItem(STORAGE_KEYS.TEACHER_DATA);
             const currentData: TeacherData = cached ? JSON.parse(cached) : { ownerUid: user.uid, schedules: [], attendanceLogs: [], schoolGalleries: {}, updatedAt: Date.now() };
             const merged = { ...currentData, ...dataToMerge };
-            await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, JSON.stringify(merged));
+            const jsonMerged = JSON.stringify(merged);
+            await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, jsonMerged);
 
             // Critical fix for data wiping: send the fully merged local state to Firebase
             // instead of just the partial updates. This forces Firebase to always accept
             // our unsync'd local data whenever we re-establish a sync.
-            dataToMerge = merged;
+            // Using JSON.parse(jsonMerged) also guarantees that all 'undefined' properties 
+            // are stripped out, as Firestore strictly rejects them and fails the sync silently.
+            dataToMerge = JSON.parse(jsonMerged);
         } catch (e) {
             console.error('Cache sync failed', e);
         }
@@ -345,6 +348,26 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
+    const deleteSchoolPhoto = async (schoolName: string, photoUrl: string) => {
+        if (!user || user.uid !== targetUid) return;
+        try {
+            const fileRef = ref(storage, photoUrl);
+            await deleteObject(fileRef);
+
+            setSchoolGalleries(prev => {
+                const newGalleries = { ...prev };
+                if (newGalleries[schoolName]) {
+                    newGalleries[schoolName] = newGalleries[schoolName].filter(url => url !== photoUrl);
+                    syncToFirestore({ schoolGalleries: newGalleries });
+                }
+                return newGalleries;
+            });
+        } catch (error) {
+            console.error("Delete failed", error);
+            throw error;
+        }
+    };
+
     const refresh = async () => {
         // Force re-fetch logic if needed, mostly handled by snapshot
     };
@@ -365,6 +388,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updateLogNotes,
             deleteLog,
             addSchoolPhoto,
+            deleteSchoolPhoto,
             refresh,
             setTargetUid
         }}>

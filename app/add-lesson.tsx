@@ -118,13 +118,19 @@ export default function AddLessonScreen() {
                 Alert.alert('Success', 'Schedule updated.');
             } else if (isOneTime) {
                 // One Time Event
+                const finalDateTime = new Date(oneTimeDate);
+                finalDateTime.setHours(startTime.getHours());
+                finalDateTime.setMinutes(startTime.getMinutes());
+                finalDateTime.setSeconds(0);
+                finalDateTime.setMilliseconds(0);
+
                 await addOneTimeLog({
                     school: school.trim(),
                     status: 'present',
                     hours: dur,
                     distance: dist,
-                    dateISO: oneTimeDate.toISOString(),
-                    localDayKey: format(oneTimeDate, 'yyyy-MM-dd'),
+                    dateISO: finalDateTime.toISOString(),
+                    localDayKey: format(finalDateTime, 'yyyy-MM-dd'),
                     notes: notes.trim() ? notes.trim() : undefined,
                     isOneTime: true
                 });

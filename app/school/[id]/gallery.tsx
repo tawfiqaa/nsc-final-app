@@ -15,7 +15,7 @@ export default function SchoolGalleryScreen() {
     const { id } = useLocalSearchParams();
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
-    const { schoolGalleries, addSchoolPhoto } = useLesson();
+    const { schoolGalleries, addSchoolPhoto, deleteSchoolPhoto } = useLesson();
 
     const [uploading, setUploading] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -49,6 +49,31 @@ export default function SchoolGalleryScreen() {
                 setUploading(false);
             }
         }
+    };
+
+    const handleDeletePhoto = (url: string) => {
+        Alert.alert(
+            "Delete Photo",
+            "Are you sure you want to delete this photo?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            setUploading(true);
+                            await deleteSchoolPhoto(schoolName, url);
+                            setSelectedImage(null);
+                        } catch (error) {
+                            Alert.alert("Error", "Failed to delete photo.");
+                        } finally {
+                            setUploading(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     return (
@@ -113,6 +138,14 @@ export default function SchoolGalleryScreen() {
                     >
                         <Ionicons name="close" size={30} color="#fff" />
                     </TouchableOpacity>
+                    {selectedImage && (
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => handleDeletePhoto(selectedImage)}
+                        >
+                            <Ionicons name="trash" size={30} color="#ff4444" />
+                        </TouchableOpacity>
+                    )}
                     {selectedImage && (
                         <Image
                             source={{ uri: selectedImage }}
@@ -199,6 +232,13 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 50,
         right: 20,
+        zIndex: 10,
+        padding: 10,
+    },
+    deleteButton: {
+        position: 'absolute',
+        top: 50,
+        left: 20,
         zIndex: 10,
         padding: 10,
     },
