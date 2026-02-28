@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, doc, doc as firestoreDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, doc as firestoreDoc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { db, storage } from '../lib/firebase';
@@ -44,14 +44,14 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (!user || !targetUid) return;
 
         const isOwnData = user.uid === targetUid;
-        let unsubscribe: (() => void) | undefined;
+        const unsubs: (() => void)[] = [];
         let isMounted = true;
 
         const loadData = async () => {
             setLoading(true);
 
             // 1. Load from cache if viewing own data
-            if (isOwnData) {
+            if (isOwnData && !user.migratedToV2) {
                 try {
                     const cached = await AsyncStorage.getItem(STORAGE_KEYS.TEACHER_DATA);
                     if (cached) {
@@ -69,65 +69,93 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
             // 2. Subscribe to Firestore
             try {
-                const docRef = doc(db, 'teacherData', targetUid);
-                const unsub = onSnapshot(docRef, async (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data() as TeacherData;
-                        const serverSchedules = data.schedules || [];
-                        const serverLogs = data.attendanceLogs || [];
-                        const serverGalleries = data.schoolGalleries || {};
+                if (user.migratedToV2) {
+                    // --- V2 Subcollections ---
+                    const schedulesRef = collection(db, 'users', targetUid, 'schedules');
+                    const lessonsRef = collection(db, 'users', targetUid, 'lessons');
+                    const schoolsRef = collection(db, 'users', targetUid, 'schools');
 
-                        if (isOwnData) {
-                            // Merge logic: Last write wins based on updatedAt
-                            // We need access to current state, usually cumbersome in useEffect
-                            // For simplicity in this prompt, we'll trust the server if it's newer or we force a merge 
-                            // But to support "offline edits", we really should be careful.
-                            // Simplified strategy: 
-                            // If we have pending mutations (not impl fully here yet), keep ours.
-                            // Else take server.
-                            // Since we don't have a complex queue here yet, we will just update state and cache.
+                    // Optimize logs query: last 90 days (approx)
+                    const ninetyDaysAgo = new Date();
+                    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+                    const lessonsQuery = query(lessonsRef, where('createdAt', '>=', ninetyDaysAgo.getTime()));
 
-                            setSchedules(serverSchedules);
-                            setLogs(serverLogs);
-                            setSchoolGalleries(serverGalleries);
+                    // We will not cache V2 in AsyncStorage for now, rely on Firestore offline persistence 
+                    // or implement a separate V2 cache later if needed for Expo.
 
-                            await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, JSON.stringify({
-                                ownerUid: targetUid,
-                                schedules: serverSchedules,
-                                attendanceLogs: serverLogs,
-                                schoolGalleries: serverGalleries,
-                                updatedAt: Date.now()
-                            }));
-                        } else {
-                            // Admin viewing others: just show server data
-                            setSchedules(serverSchedules);
-                            setLogs(serverLogs);
-                            setSchoolGalleries(serverGalleries);
-                        }
-                    } else if (isOwnData) {
-                        // Create if missing
-                        await setDoc(docRef, {
-                            ownerUid: targetUid,
-                            schedules: [],
-                            attendanceLogs: [],
-                            schoolGalleries: {},
-                            updatedAt: Date.now()
+                    const unsubSchedules = onSnapshot(schedulesRef, (snap) => {
+                        const loadedSchedules: Schedule[] = [];
+                        snap.forEach(d => loadedSchedules.push(d.data() as Schedule));
+                        if (isMounted) setSchedules(loadedSchedules);
+                    });
+                    unsubs.push(unsubSchedules);
+
+                    // Note: We query lessons, but if they need full history we might need pagination.
+                    // For now, this limits to 90 days.
+                    const unsubLessons = onSnapshot(lessonsQuery, (snap) => {
+                        const loadedLogs: AttendanceLog[] = [];
+                        snap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
+                        if (isMounted) setLogs(loadedLogs);
+                    });
+                    unsubs.push(unsubLessons);
+
+                    const unsubSchools = onSnapshot(schoolsRef, (snap) => {
+                        const mappedGalleries: Record<string, string[]> = {};
+                        snap.forEach(d => {
+                            const data = d.data();
+                            mappedGalleries[data.name] = data.gallery || [];
                         });
-                    }
-                    setLoading(false);
-                }, (error) => {
-                    console.error("Firestore subscription error", error);
-                    setLoading(false);
-                });
+                        if (isMounted) setSchoolGalleries(mappedGalleries);
+                    });
+                    unsubs.push(unsubSchools);
+                    if (isMounted) setLoading(false);
 
-                if (!isMounted) {
-                    unsub();
                 } else {
-                    unsubscribe = unsub;
+                    // --- Legacy TeacherData ---
+                    const docRef = doc(db, 'teacherData', targetUid);
+                    const unsub = onSnapshot(docRef, async (docSnap) => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data() as TeacherData;
+                            const serverSchedules = data.schedules || [];
+                            const serverLogs = data.attendanceLogs || [];
+                            const serverGalleries = data.schoolGalleries || {};
+
+                            if (isOwnData) {
+                                setSchedules(serverSchedules);
+                                setLogs(serverLogs);
+                                setSchoolGalleries(serverGalleries);
+
+                                await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, JSON.stringify({
+                                    ownerUid: targetUid,
+                                    schedules: serverSchedules,
+                                    attendanceLogs: serverLogs,
+                                    schoolGalleries: serverGalleries,
+                                    updatedAt: Date.now()
+                                }));
+                            } else {
+                                setSchedules(serverSchedules);
+                                setLogs(serverLogs);
+                                setSchoolGalleries(serverGalleries);
+                            }
+                        } else if (isOwnData) {
+                            await setDoc(docRef, {
+                                ownerUid: targetUid,
+                                schedules: [],
+                                attendanceLogs: [],
+                                schoolGalleries: {},
+                                updatedAt: Date.now()
+                            });
+                        }
+                        if (isMounted) setLoading(false);
+                    }, (error) => {
+                        console.error("Firestore subscription error", error);
+                        if (isMounted) setLoading(false);
+                    });
+                    unsubs.push(unsub);
                 }
             } catch (error) {
                 console.error("Error setting up subscription", error);
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
@@ -135,7 +163,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         return () => {
             isMounted = false;
-            if (unsubscribe) unsubscribe();
+            unsubs.forEach(unsub => unsub());
         };
     }, [user, targetUid]);
 
@@ -143,7 +171,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const syncToFirestore = async (updates: Partial<TeacherData>) => {
         if (!user || !targetUid || user.uid !== targetUid) return;
 
-        let dataToMerge: Partial<TeacherData> = {
+        const dataToMerge: Partial<TeacherData> = {
             ...updates,
             updatedAt: Date.now()
         };
@@ -151,26 +179,22 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Optimistic update local storage
         try {
             const cached = await AsyncStorage.getItem(STORAGE_KEYS.TEACHER_DATA);
-            const currentData: TeacherData = cached ? JSON.parse(cached) : { ownerUid: user.uid, schedules: [], attendanceLogs: [], schoolGalleries: {}, updatedAt: Date.now() };
-            const merged = { ...currentData, ...dataToMerge };
-            const jsonMerged = JSON.stringify(merged);
-            await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, jsonMerged);
-
-            // Critical fix for data wiping: send the fully merged local state to Firebase
-            // instead of just the partial updates. This forces Firebase to always accept
-            // our unsync'd local data whenever we re-establish a sync.
-            // Using JSON.parse(jsonMerged) also guarantees that all 'undefined' properties 
-            // are stripped out, as Firestore strictly rejects them and fails the sync silently.
-            dataToMerge = JSON.parse(jsonMerged);
+            if (cached) {
+                const currentData: TeacherData = JSON.parse(cached);
+                const merged = { ...currentData, ...dataToMerge };
+                await AsyncStorage.setItem(STORAGE_KEYS.TEACHER_DATA, JSON.stringify(merged));
+            }
         } catch (e) {
             console.error('Cache sync failed', e);
         }
 
         try {
-            await setDoc(doc(db, 'teacherData', user.uid), dataToMerge, { merge: true });
+            // Only send the specific updates to Firestore, not the full cache.
+            // JSON.parse(JSON.stringify()) strips out any `undefined` values that Firestore rejects.
+            const cleanDataToMerge = JSON.parse(JSON.stringify(dataToMerge));
+            await setDoc(doc(db, 'teacherData', user.uid), cleanDataToMerge, { merge: true });
         } catch (e) {
             console.error('Firestore sync failed', e);
-            // In a real app, add to mutation queue here
         }
     };
 
@@ -182,11 +206,16 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
-        setSchedules(prev => {
-            const updatedSchedules = [...prev, newSchedule];
-            syncToFirestore({ schedules: updatedSchedules });
-            return updatedSchedules;
-        });
+
+        if (user?.migratedToV2) {
+            await setDoc(doc(db, 'users', targetUid!, 'schedules', newSchedule.id), newSchedule);
+        } else {
+            setSchedules(prev => {
+                const updatedSchedules = [...prev, newSchedule];
+                syncToFirestore({ schedules: updatedSchedules });
+                return updatedSchedules;
+            });
+        }
     };
 
     const addSchedules = async (scheduleDatas: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>[]) => {
@@ -198,30 +227,43 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         }));
 
-        setSchedules(prev => {
-            const updatedSchedules = [...prev, ...newSchedules];
-            syncToFirestore({ schedules: updatedSchedules });
-            return updatedSchedules;
-        });
+        if (user?.migratedToV2) {
+            // Should theoretically use batch for multiple, but loop is okay for small arrays since we're offline capable
+            await Promise.all(newSchedules.map(ns => setDoc(doc(db, 'users', targetUid!, 'schedules', ns.id), ns)));
+        } else {
+            setSchedules(prev => {
+                const updatedSchedules = [...prev, ...newSchedules];
+                syncToFirestore({ schedules: updatedSchedules });
+                return updatedSchedules;
+            });
+        }
     };
 
     const updateSchedule = async (id: string, updates: Partial<Schedule>) => {
-        setSchedules(prev => {
-            const updatedSchedules = prev.map(s =>
-                s.id === id ? { ...s, ...updates, updatedAt: Date.now() } : s
-            );
-            syncToFirestore({ schedules: updatedSchedules });
-            return updatedSchedules;
-        });
+        if (user?.migratedToV2) {
+            await setDoc(doc(db, 'users', targetUid!, 'schedules', id), { ...updates, updatedAt: Date.now() }, { merge: true });
+        } else {
+            setSchedules(prev => {
+                const updatedSchedules = prev.map(s =>
+                    s.id === id ? { ...s, ...updates, updatedAt: Date.now() } : s
+                );
+                syncToFirestore({ schedules: updatedSchedules });
+                return updatedSchedules;
+            });
+        }
     };
 
     const deleteSchedule = async (id: string) => {
         // Hard delete as requested
-        setSchedules(prev => {
-            const updatedSchedules = prev.filter(s => s.id !== id);
-            syncToFirestore({ schedules: updatedSchedules });
-            return updatedSchedules;
-        });
+        if (user?.migratedToV2) {
+            await deleteDoc(doc(db, 'users', targetUid!, 'schedules', id));
+        } else {
+            setSchedules(prev => {
+                const updatedSchedules = prev.filter(s => s.id !== id);
+                syncToFirestore({ schedules: updatedSchedules });
+                return updatedSchedules;
+            });
+        }
     };
 
     const markAttendance = async (schedule: Schedule, status: AttendanceStatus, dateISO: string, notes?: string) => {
@@ -241,11 +283,15 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         };
 
-        setLogs(prev => {
-            const updatedLogs = [...prev, newLog];
-            syncToFirestore({ attendanceLogs: updatedLogs });
-            return updatedLogs;
-        });
+        if (user?.migratedToV2) {
+            await setDoc(doc(db, 'users', targetUid!, 'lessons', newLog.id), newLog);
+        } else {
+            setLogs(prev => {
+                const updatedLogs = [...prev, newLog];
+                syncToFirestore({ attendanceLogs: updatedLogs });
+                return updatedLogs;
+            });
+        }
     };
 
     const addOneTimeLog = async (logData: Omit<AttendanceLog, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -255,71 +301,89 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
-        setLogs(prev => {
-            const updatedLogs = [...prev, newLog];
-            syncToFirestore({ attendanceLogs: updatedLogs });
-            return updatedLogs;
-        });
+
+        if (user?.migratedToV2) {
+            await setDoc(doc(db, 'users', targetUid!, 'lessons', newLog.id), newLog);
+        } else {
+            setLogs(prev => {
+                const updatedLogs = [...prev, newLog];
+                syncToFirestore({ attendanceLogs: updatedLogs });
+                return updatedLogs;
+            });
+        }
     };
 
     const toggleLogStatus = async (logId: string) => {
-        setLogs(prev => {
-            const logIndex = prev.findIndex(l => l.id === logId);
-            if (logIndex === -1) return prev;
+        const oldLog = logs.find(l => l.id === logId);
+        if (!oldLog) return;
 
-            const oldLog = prev[logIndex];
-            const newStatus: AttendanceStatus = oldLog.status === 'present' ? 'absent' : 'present';
+        const newStatus: AttendanceStatus = oldLog.status === 'present' ? 'absent' : 'present';
 
-            let newHours = 0;
-            let newDistance = 0;
+        let newHours = 0;
+        let newDistance = 0;
 
-            if (newStatus === 'present') {
-                if (oldLog.scheduleId) {
-                    const sched = schedules.find(s => s.id === oldLog.scheduleId);
-                    if (sched) {
-                        newHours = sched.duration;
-                        newDistance = sched.distance;
-                    }
+        if (newStatus === 'present') {
+            if (oldLog.scheduleId) {
+                const sched = schedules.find(s => s.id === oldLog.scheduleId);
+                if (sched) {
+                    newHours = sched.duration;
+                    newDistance = sched.distance;
                 }
             }
+        }
 
-            const updatedLog: AttendanceLog = {
-                ...oldLog,
-                status: newStatus,
-                hours: newHours,
-                distance: newDistance,
-                updatedAt: Date.now()
-            };
+        const updatedLog: AttendanceLog = {
+            ...oldLog,
+            status: newStatus,
+            hours: newHours,
+            distance: newDistance,
+            updatedAt: Date.now()
+        };
 
-            const newLogs = [...prev];
-            newLogs[logIndex] = updatedLog;
-            syncToFirestore({ attendanceLogs: newLogs });
-            return newLogs;
-        });
+        if (user?.migratedToV2) {
+            await setDoc(doc(db, 'users', targetUid!, 'lessons', logId), updatedLog, { merge: true });
+        } else {
+            setLogs(prev => {
+                const logIndex = prev.findIndex(l => l.id === logId);
+                if (logIndex === -1) return prev;
+                const newLogs = [...prev];
+                newLogs[logIndex] = updatedLog;
+                syncToFirestore({ attendanceLogs: newLogs });
+                return newLogs;
+            });
+        }
     };
 
     const deleteLog = async (logId: string) => {
-        setLogs(prev => {
-            const updatedLogs = prev.filter(l => l.id !== logId);
-            syncToFirestore({ attendanceLogs: updatedLogs });
-            return updatedLogs;
-        });
+        if (user?.migratedToV2) {
+            await deleteDoc(doc(db, 'users', targetUid!, 'lessons', logId));
+        } else {
+            setLogs(prev => {
+                const updatedLogs = prev.filter(l => l.id !== logId);
+                syncToFirestore({ attendanceLogs: updatedLogs });
+                return updatedLogs;
+            });
+        }
     };
 
     const updateLogNotes = async (logId: string, notes: string) => {
-        setLogs(prev => {
-            const logIndex = prev.findIndex(l => l.id === logId);
-            if (logIndex === -1) return prev;
+        if (user?.migratedToV2) {
+            await setDoc(doc(db, 'users', targetUid!, 'lessons', logId), { notes, updatedAt: Date.now() }, { merge: true });
+        } else {
+            setLogs(prev => {
+                const logIndex = prev.findIndex(l => l.id === logId);
+                if (logIndex === -1) return prev;
 
-            const newLogs = [...prev];
-            newLogs[logIndex] = {
-                ...newLogs[logIndex],
-                notes: notes,
-                updatedAt: Date.now(),
-            };
-            syncToFirestore({ attendanceLogs: newLogs });
-            return newLogs;
-        });
+                const newLogs = [...prev];
+                newLogs[logIndex] = {
+                    ...newLogs[logIndex],
+                    notes: notes,
+                    updatedAt: Date.now(),
+                };
+                syncToFirestore({ attendanceLogs: newLogs });
+                return newLogs;
+            });
+        }
     };
 
     const addSchoolPhoto = async (schoolName: string, localUri: string) => {
@@ -333,15 +397,22 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             await uploadBytes(fileRef, blob);
             const downloadUrl = await getDownloadURL(fileRef);
 
-            setSchoolGalleries(prev => {
-                const newGalleries = { ...prev };
-                if (!newGalleries[schoolName]) {
-                    newGalleries[schoolName] = [];
-                }
-                newGalleries[schoolName] = [...newGalleries[schoolName], downloadUrl];
-                syncToFirestore({ schoolGalleries: newGalleries });
-                return newGalleries;
-            });
+            if (user?.migratedToV2) {
+                // V2: Add to users/{uid}/schools/{schoolName}
+                const newGalleries = { ...schoolGalleries };
+                const updatedGallery = [...(newGalleries[schoolName] || []), downloadUrl];
+                await setDoc(doc(db, 'users', targetUid!, 'schools', schoolName), { name: schoolName, gallery: updatedGallery, updatedAt: Date.now() }, { merge: true });
+            } else {
+                setSchoolGalleries(prev => {
+                    const newGalleries = { ...prev };
+                    if (!newGalleries[schoolName]) {
+                        newGalleries[schoolName] = [];
+                    }
+                    newGalleries[schoolName] = [...newGalleries[schoolName], downloadUrl];
+                    syncToFirestore({ schoolGalleries: newGalleries });
+                    return newGalleries;
+                });
+            }
         } catch (error) {
             console.error("Upload failed", error);
             throw error;
@@ -354,14 +425,22 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const fileRef = ref(storage, photoUrl);
             await deleteObject(fileRef);
 
-            setSchoolGalleries(prev => {
-                const newGalleries = { ...prev };
+            if (user?.migratedToV2) {
+                const newGalleries = { ...schoolGalleries };
                 if (newGalleries[schoolName]) {
-                    newGalleries[schoolName] = newGalleries[schoolName].filter(url => url !== photoUrl);
-                    syncToFirestore({ schoolGalleries: newGalleries });
+                    const updatedGallery = newGalleries[schoolName].filter(url => url !== photoUrl);
+                    await setDoc(doc(db, 'users', targetUid!, 'schools', schoolName), { gallery: updatedGallery, updatedAt: Date.now() }, { merge: true });
                 }
-                return newGalleries;
-            });
+            } else {
+                setSchoolGalleries(prev => {
+                    const newGalleries = { ...prev };
+                    if (newGalleries[schoolName]) {
+                        newGalleries[schoolName] = newGalleries[schoolName].filter(url => url !== photoUrl);
+                        syncToFirestore({ schoolGalleries: newGalleries });
+                    }
+                    return newGalleries;
+                });
+            }
         } catch (error) {
             console.error("Delete failed", error);
             throw error;

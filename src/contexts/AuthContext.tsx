@@ -93,21 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 name: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
                 role: isSuperAdmin ? 'super_admin' : 'pending',
                 isApproved: isSuperAdmin,
+                migratedToV2: true,
+                migrationVersion: 2,
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
             };
             await setDoc(docRef, newUser);
 
-            const teacherDataRef = doc(db, 'teacherData', uid);
-            const teacherDataSnap = await getDoc(teacherDataRef);
-            if (!teacherDataSnap.exists()) {
-                await setDoc(teacherDataRef, {
-                    ownerUid: uid,
-                    schedules: [],
-                    attendanceLogs: [],
-                    updatedAt: Date.now(),
-                });
-            }
+            // We don't need to create empty teacherData doc for V2 users
+            // unless we really want to, but it's not strictly necessary. 
+            // We'll leave it out for V2 to cleanly cut over.
         } else {
             // Update existing user with name if missing? Or just load it.
             // Let's just load it or ensure name is synced if valid.
@@ -138,23 +133,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: name || email.split('@')[0], // Default to part of email if no name
             role: isSuperAdmin ? 'super_admin' : 'pending',
             isApproved: isSuperAdmin, // Auto-approve super admin
+            migratedToV2: true,
+            migrationVersion: 2,
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
 
         await setDoc(doc(db, 'users', uid), newUser);
 
-        // Create empty teacherData doc if not super admin (or even if they are, just in case)
-        const teacherDataRef = doc(db, 'teacherData', uid);
-        const teacherDataSnap = await getDoc(teacherDataRef);
-        if (!teacherDataSnap.exists()) {
-            await setDoc(teacherDataRef, {
-                ownerUid: uid,
-                schedules: [],
-                attendanceLogs: [],
-                updatedAt: Date.now(),
-            });
-        }
+        // Empty teacherData is not needed for new V2 users
 
         setUser(newUser);
         await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(newUser));

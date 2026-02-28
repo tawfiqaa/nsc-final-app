@@ -6,6 +6,17 @@ export interface User {
     name?: string;
     role: UserRole;
     isApproved: boolean;
+    migratedToV2?: boolean;
+    migrationVersion?: number;
+    migratedAt?: any; // Firestore Timestamp or number depending on usage
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface School {
+    id: string;
+    name: string;
+    gallery?: string[];
     createdAt: number;
     updatedAt: number;
 }
