@@ -106,7 +106,27 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                     // Note: We query lessons, but if they need full history we might need pagination.
                     // For now, this limits to 90 days.
-                    const unsubLessons = onSnapshot(lessonsQuery, (snap) => {
+                    const unsubLessons = onSnapshot(lessonsQuery, async (snap) => {
+                        if (snap.empty) {
+                            // Defensive fallback: check if legacy data exists in V1
+                            try {
+                                const legacySnap = await getDoc(doc(db, 'teacherData', targetUid));
+                                const legacyData = legacySnap.data() as TeacherData | undefined;
+                                if (legacyData && ((legacyData.attendanceLogs && legacyData.attendanceLogs.length > 0) || (legacyData.schedules && legacyData.schedules.length > 0))) {
+                                    console.warn(`[FAILSAFE] User ${targetUid} flagged as migrated, but V2 lessons empty. Reading from V1.`);
+                                    if (isMounted) {
+                                        setLogs(legacyData.attendanceLogs || []);
+                                        setSchedules(legacyData.schedules || []);
+                                        setSchoolGalleries(legacyData.schoolGalleries || {});
+                                        setIsTargetMigrated(false); // Force context into V1 mutation mode
+                                    }
+                                    return;
+                                }
+                            } catch (e) {
+                                console.error('Fallback check failed:', e);
+                            }
+                        }
+
                         const loadedLogs: AttendanceLog[] = [];
                         snap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
                         if (isMounted) setLogs(loadedLogs);

@@ -140,10 +140,22 @@ async function migrateAllUsers() {
             const lessonsCountSnap = await db.collection('users').doc(uid).collection('lessons').count().get();
             const lessonsCount = lessonsCountSnap.data().count;
 
-            console.log(`  - Verification: legacy logs=${logs.length}, migrated lessons subcollection=${lessonsCount}`);
+            const schedulesCountSnap = await db.collection('users').doc(uid).collection('schedules').count().get();
+            const schedulesCount = schedulesCountSnap.data().count;
 
-            if (lessonsCount === logs.length) {
-                // Safe: Sizes match
+            const schoolsCountSnap = await db.collection('users').doc(uid).collection('schools').count().get();
+            const schoolsCount = schoolsCountSnap.data().count;
+
+            const legacySchoolsCount = Object.keys(galleries).length;
+
+            console.log(`  - Verification: legacy (logs=${logs.length}, scheds=${schedules.length}, schools=${legacySchoolsCount}), V2 lessons=${lessonsCount}`);
+
+            const sizesMatch = (lessonsCount === logs.length) && (schedulesCount === schedules.length) && (schoolsCount === legacySchoolsCount);
+            const legacyHadData = logs.length > 0 || schedules.length > 0 || legacySchoolsCount > 0;
+            const v2HasData = lessonsCount > 0 || schedulesCount > 0 || schoolsCount > 0;
+
+            if (sizesMatch && (!legacyHadData || v2HasData)) {
+                // Safe: Sizes match perfectly, and if they had legacy data we made sure V2 actually has data too
                 console.log(`  - Verification passed! Marking user as migrated.`);
                 await db.collection('users').doc(uid).update({
                     migratedToV2: true,
@@ -153,7 +165,7 @@ async function migrateAllUsers() {
                 stats.logsMigrated += logs.length;
                 stats.processed++;
             } else {
-                console.error(`  - VERIFICATION FAILED: Mismatch for user ${uid}. Expected ${logs.length} lessons, found ${lessonsCount}. User NOT marked as migrated.`);
+                console.error(`  - VERIFICATION FAILED: Mismatch for user ${uid}. User NOT marked as migrated.`);
                 stats.mismatches++;
             }
 
