@@ -32,11 +32,11 @@ async function migrateAllUsers() {
     console.log(" Starting Firestore V2 Migration...");
     console.log("======================================");
 
-    const usersSnap = await db.collection('users').where('migratedToV2', '!=', true).get();
+    const usersSnap = await db.collection('users').get();
 
-    console.log(`Found ${usersSnap.size} user(s) to process.`);
+    console.log(`Found ${usersSnap.size} user(s) to check for migration.`);
     if (usersSnap.empty) {
-        console.log("All users are already migrated.");
+        console.log("No users found.");
         process.exit(0);
     }
 
@@ -60,6 +60,14 @@ async function migrateAllUsers() {
             const galleries = legacyData.schoolGalleries || {};
 
             console.log(`  - Found: ${logs.length} logs, ${schedules.length} schedules, ${Object.keys(galleries).length} schools`);
+
+            const earlyLessonsCountSnap = await db.collection('users').doc(uid).collection('lessons').count().get();
+            const earlyLessonsCount = earlyLessonsCountSnap.data().count;
+            if (earlyLessonsCount === logs.length && logs.length > 0) {
+                console.log(`  - Already fully migrated (${earlyLessonsCount} lessons). Skipping to save writes.`);
+                stats.skipped++;
+                continue;
+            }
 
             let batch = db.batch();
             let opCount = 0;

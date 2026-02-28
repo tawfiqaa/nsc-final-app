@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, deleteDoc, doc, doc as firestoreDoc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { db, storage } from '../lib/firebase';
@@ -24,6 +24,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [schoolGalleries, setSchoolGalleries] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(true);
     const [targetUid, setTargetUid] = useState<string | null>(null);
+    const [isTargetMigrated, setIsTargetMigrated] = useState<boolean>(false);
 
     // Initial load logic
     useEffect(() => {
@@ -69,7 +70,20 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
             // 2. Subscribe to Firestore
             try {
-                if (user.migratedToV2) {
+                let targetMigrated = user.migratedToV2;
+                if (!isOwnData) {
+                    const targetUserSnap = await getDoc(doc(db, 'users', targetUid));
+                    if (targetUserSnap.exists()) {
+                        targetMigrated = targetUserSnap.data().migratedToV2 === true;
+                    } else {
+                        targetMigrated = false;
+                    }
+                }
+                if (isMounted) {
+                    setIsTargetMigrated(targetMigrated || false);
+                }
+
+                if (targetMigrated) {
                     // --- V2 Subcollections ---
                     const schedulesRef = collection(db, 'users', targetUid, 'schedules');
                     const lessonsRef = collection(db, 'users', targetUid, 'lessons');
@@ -207,7 +221,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         };
 
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'schedules', newSchedule.id), newSchedule);
         } else {
             setSchedules(prev => {
@@ -227,7 +241,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         }));
 
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             // Should theoretically use batch for multiple, but loop is okay for small arrays since we're offline capable
             await Promise.all(newSchedules.map(ns => setDoc(doc(db, 'users', targetUid!, 'schedules', ns.id), ns)));
         } else {
@@ -240,7 +254,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const updateSchedule = async (id: string, updates: Partial<Schedule>) => {
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'schedules', id), { ...updates, updatedAt: Date.now() }, { merge: true });
         } else {
             setSchedules(prev => {
@@ -255,7 +269,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const deleteSchedule = async (id: string) => {
         // Hard delete as requested
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             await deleteDoc(doc(db, 'users', targetUid!, 'schedules', id));
         } else {
             setSchedules(prev => {
@@ -283,7 +297,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         };
 
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', newLog.id), newLog);
         } else {
             setLogs(prev => {
@@ -302,7 +316,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         };
 
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', newLog.id), newLog);
         } else {
             setLogs(prev => {
@@ -340,7 +354,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now()
         };
 
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', logId), updatedLog, { merge: true });
         } else {
             setLogs(prev => {
@@ -355,7 +369,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const deleteLog = async (logId: string) => {
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             await deleteDoc(doc(db, 'users', targetUid!, 'lessons', logId));
         } else {
             setLogs(prev => {
@@ -367,7 +381,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const updateLogNotes = async (logId: string, notes: string) => {
-        if (user?.migratedToV2) {
+        if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', logId), { notes, updatedAt: Date.now() }, { merge: true });
         } else {
             setLogs(prev => {
@@ -397,7 +411,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             await uploadBytes(fileRef, blob);
             const downloadUrl = await getDownloadURL(fileRef);
 
-            if (user?.migratedToV2) {
+            if (isTargetMigrated) {
                 // V2: Add to users/{uid}/schools/{schoolName}
                 const newGalleries = { ...schoolGalleries };
                 const updatedGallery = [...(newGalleries[schoolName] || []), downloadUrl];
