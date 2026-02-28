@@ -312,7 +312,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             status: status,
             hours: status === 'present' ? schedule.duration : 0,
             distance: status === 'present' ? schedule.distance : 0,
-            notes: notes,
+            notes: notes || '', // Handle undefined notes here
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
@@ -331,10 +331,17 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const addOneTimeLog = async (logData: Omit<AttendanceLog, 'id' | 'createdAt' | 'updatedAt'>) => {
         const newLog: AttendanceLog = {
             ...logData,
+            notes: logData.notes || '', // Fallback to empty string avoiding undefined
             id: firestoreDoc(collection(db, 'temp')).id,
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
+        // Clean any accidental undefined values
+        Object.keys(newLog).forEach(key => {
+            if (newLog[key as keyof AttendanceLog] === undefined) {
+                delete newLog[key as keyof AttendanceLog];
+            }
+        });
 
         if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', newLog.id), newLog);
