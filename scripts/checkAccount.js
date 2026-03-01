@@ -20,24 +20,15 @@ async function checkAccount() {
 
     for (const doc of usersSnap.docs) {
         const uid = doc.id;
+        const data = doc.data();
         console.log(`Found UID: ${uid}`);
-
-        // Check V1
-        const v1Snap = await db.collection('teacherData').doc(uid).get();
-        const v1Logs = v1Snap.exists ? (v1Snap.data().attendanceLogs?.length || 0) : 0;
-        console.log(`V1 logs: ${v1Logs}`);
+        console.log(`Email: ${data.email}`);
+        console.log(`migratedToV2 flag: ${data.migratedToV2}`);
+        console.log(`migrationVersion: ${data.migrationVersion}`);
 
         // Check V2
         const v2Snap = await db.collection('users').doc(uid).collection('lessons').count().get();
-        console.log(`V2 lessons: ${v2Snap.data().count}`);
-
-        // Check V2 Schedules
-        const v2Schedules = await db.collection('users').doc(uid).collection('schedules').count().get();
-        console.log(`V2 schedules: ${v2Schedules.data().count}`);
-
-        // Check migration status
-        const migratedToV2 = doc.data().migratedToV2;
-        console.log(`migratedToV2 flag: ${migratedToV2}`);
+        console.log(`V2 lessons subcollection count: ${v2Snap.data().count}`);
     }
 }
 checkAccount().catch(console.error);
