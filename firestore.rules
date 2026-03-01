@@ -62,6 +62,10 @@ service cloud.firestore {
           allow read, write: if isAuthenticated() && isOwner(uid);
         }
       }
+
+      match /settings/{settingId} {
+        allow read, write: if isAuthenticated() && isOwner(uid);
+      }
     }
 
     // TeacherData collection

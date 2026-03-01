@@ -66,6 +66,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="add-lesson" options={{ title: 'Add Lesson', presentation: 'modal' }} />
       <Stack.Screen name="edit-lesson" options={{ title: 'Edit Lesson', presentation: 'modal' }} />
+      <Stack.Screen name="payroll" options={{ title: 'Payroll Report', headerTitle: 'Payroll Report' }} />
     </Stack>
   );
 }

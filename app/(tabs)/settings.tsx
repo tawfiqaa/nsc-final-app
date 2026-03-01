@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import { doc, updateDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -15,6 +16,7 @@ export default function SettingsScreen() {
     const { user, logout } = useAuth();
     const { schedules, logs } = useLesson();
     const { colors } = useTheme();
+    const router = useRouter();
     const [editingName, setEditingName] = useState(false);
     const [tempName, setTempName] = useState(user?.name || '');
     const [exportDate, setExportDate] = useState(new Date());
@@ -130,10 +132,20 @@ export default function SettingsScreen() {
                             <ActivityIndicator size="small" color={colors.primary} />
                         ) : (
                             <>
-                                <Text style={[styles.label, { color: colors.primary, fontWeight: 'bold' }]}>Export Excel Report</Text>
+                                <Text style={[styles.label, { color: colors.primary, fontWeight: 'bold' }]}>Quick Monthly Export</Text>
                                 <Ionicons name="download-outline" size={24} color={colors.primary} style={{ marginLeft: 8 }} />
                             </>
                         )}
+                    </TouchableOpacity>
+
+                    <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1, marginVertical: 16 }} />
+
+                    <TouchableOpacity
+                        style={[styles.row, { justifyContent: 'center' }]}
+                        onPress={() => router.push('/payroll' as any)}
+                    >
+                        <Text style={[styles.label, { color: colors.primary, fontWeight: 'bold' }]}>Payroll / Reimbursement</Text>
+                        <Ionicons name="calculator-outline" size={24} color={colors.primary} style={{ marginLeft: 8 }} />
                     </TouchableOpacity>
                 </View>
 

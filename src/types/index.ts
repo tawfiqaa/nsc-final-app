@@ -78,6 +78,13 @@ export interface TeacherData {
     updatedAt: number;
 }
 
+export interface PayrollSettings {
+    hourlyRate: number;
+    kmRate: number;
+    currency: string; // default "ILS"
+    updatedAt?: any; // serverTimestamp
+}
+
 export interface ThemeContextType {
     theme: 'light' | 'dark';
     toggleTheme: () => void;
