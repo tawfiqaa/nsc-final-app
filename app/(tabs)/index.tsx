@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { endOfMonth, format, getDay, isSameDay, startOfMonth } from 'date-fns';
 import { useRouter } from 'expo-router';
+import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useMemo, useState } from 'react';
 import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
@@ -10,7 +11,8 @@ import { ThemeToggle } from '../../src/components/ThemeToggle';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { AttendanceStatus } from '../../src/types';
+import { db } from '../../src/lib/firebase';
+import { AttendanceStatus, PayrollSettings } from '../../src/types';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -21,8 +23,28 @@ export default function Dashboard() {
   const [markingSchedule, setMarkingSchedule] = useState<{ id: string, status: AttendanceStatus } | null>(null);
   const [editingLog, setEditingLog] = useState<typeof logs[0] | null>(null);
   const [notesInput, setNotesInput] = useState('');
+  const [payrollSettings, setPayrollSettings] = useState<PayrollSettings | null>(null);
 
   const today = new Date();
+
+  // Load Payroll Settings (Real-time sync)
+  React.useEffect(() => {
+    if (!user) {
+      setPayrollSettings(null);
+      return;
+    }
+    const docRef = doc(db, 'users', user.uid, 'settings', 'payroll');
+    const unsub = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setPayrollSettings(docSnap.data() as PayrollSettings);
+      } else {
+        setPayrollSettings(null);
+      }
+    }, (error) => {
+      console.error('Error listening to payroll settings', error);
+    });
+    return () => unsub();
+  }, [user]);
 
   // Filter logs for this month
   const monthlyStats = useMemo(() => {
@@ -30,7 +52,6 @@ export default function Dashboard() {
     const start = startOfMonth(now);
     const end = endOfMonth(now);
 
-    // Simple filter by dateISO string check, robust enough for ISO format
     const monthLogs = logs.filter(log => {
       const d = new Date(log.dateISO);
       return d >= start && d <= end && log.status === 'present';
@@ -39,8 +60,13 @@ export default function Dashboard() {
     const totalHours = monthLogs.reduce((acc, log) => acc + log.hours, 0);
     const totalDistance = monthLogs.reduce((acc, log) => acc + log.distance, 0);
 
-    return { totalHours, totalDistance };
-  }, [logs]);
+    const hourlyRate = payrollSettings?.hourlyRate || 0;
+    const kmRate = payrollSettings?.kmRate || 0;
+    const totalPay = (totalHours * hourlyRate) + (totalDistance * kmRate);
+    const ratesMissing = !payrollSettings || (hourlyRate === 0 && kmRate === 0);
+
+    return { totalHours, totalDistance, totalPay, ratesMissing };
+  }, [logs, payrollSettings]);
 
   // Today's lessons (schedules that haven't been logged today)
   const todaysLessons = useMemo(() => {
@@ -119,6 +145,22 @@ export default function Dashboard() {
         <View style={styles.statsRow}>
           <StatsWidget title="Hours (Mo)" value={monthlyStats.totalHours.toFixed(1)} unit="h" />
           <StatsWidget title="Distance (Mo)" value={monthlyStats.totalDistance.toFixed(1)} unit="km" />
+        </View>
+
+        <View style={{ alignItems: 'center', marginBottom: 24 }}>
+          <TouchableOpacity
+            style={[styles.totalCardHome, { backgroundColor: colors.card, borderColor: colors.primary, borderWidth: 1 }]}
+            onPress={() => router.push('/payroll' as any)}
+          >
+            <Text style={[styles.totalLabelHome, { color: colors.secondaryText }]}>TOTAL (MO)</Text>
+            <Text style={[styles.totalValueHome, { color: colors.primary }]}>
+              {monthlyStats.ratesMissing ? 'SET RATES' : `${payrollSettings?.currency || 'ILS'} ${monthlyStats.totalPay.toFixed(0)}`}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Text style={{ color: colors.secondaryText, fontSize: 11 }}>Tap to view details</Text>
+              <Ionicons name="chevron-forward" size={12} color={colors.secondaryText} style={{ marginLeft: 4 }} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Today&apos;s Lessons</Text>
@@ -242,8 +284,30 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 16,
     justifyContent: 'space-between',
+  },
+  totalCardHome: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  totalLabelHome: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  totalValueHome: {
+    fontSize: 28,
+    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: 20,

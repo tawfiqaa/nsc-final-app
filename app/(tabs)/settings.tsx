@@ -137,16 +137,6 @@ export default function SettingsScreen() {
                             </>
                         )}
                     </TouchableOpacity>
-
-                    <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1, marginVertical: 16 }} />
-
-                    <TouchableOpacity
-                        style={[styles.row, { justifyContent: 'center' }]}
-                        onPress={() => router.push('/payroll' as any)}
-                    >
-                        <Text style={[styles.label, { color: colors.primary, fontWeight: 'bold' }]}>Payroll / Reimbursement</Text>
-                        <Ionicons name="calculator-outline" size={24} color={colors.primary} style={{ marginLeft: 8 }} />
-                    </TouchableOpacity>
                 </View>
 
                 <View style={[styles.section, { backgroundColor: colors.card }]}>
