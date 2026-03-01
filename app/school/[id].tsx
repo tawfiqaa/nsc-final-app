@@ -62,31 +62,31 @@ export default function SchoolDetailsScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, marginTop: 20 }}>
-                    <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.text, flex: 1 }}>{schoolName}</Text>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ marginBottom: 20, marginTop: 20 }}>
+                    <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.text, marginBottom: 12 }}>{schoolName}</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                         <TouchableOpacity
                             style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border }}
                             onPress={() => router.push({ pathname: '/school/[id]/gallery' as any, params: { id: schoolName } })}
                         >
-                            <Ionicons name="images-outline" size={20} color={colors.text} />
-                            <Text style={{ color: colors.text, fontWeight: '600' }}>Gallery</Text>
+                            <Ionicons name="images-outline" size={18} color={colors.text} />
+                            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>Gallery</Text>
                         </TouchableOpacity>
                         {user?.migratedToV2 && (
                             <TouchableOpacity
                                 style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border }}
                                 onPress={() => router.push({ pathname: '/school/[id]/students' as any, params: { id: schoolName } })}
                             >
-                                <Ionicons name="people-outline" size={20} color={colors.text} />
-                                <Text style={{ color: colors.text, fontWeight: '600' }}>Students</Text>
+                                <Ionicons name="people-outline" size={18} color={colors.text} />
+                                <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>Students</Text>
                             </TouchableOpacity>
                         )}
                         <TouchableOpacity
                             style={{ backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
                             onPress={() => router.push({ pathname: '/add-lesson', params: { school: schoolName, mode: 'log' } })}
                         >
-                            <Ionicons name="add-circle" size={20} color="#fff" />
-                            <Text style={{ color: '#fff', fontWeight: '600' }}>Add Past Lesson</Text>
+                            <Ionicons name="add-circle" size={18} color="#fff" />
+                            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Add Past Lesson</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
