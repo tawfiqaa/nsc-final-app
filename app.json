@@ -2,7 +2,7 @@
   "expo": {
     "name": "TeacherTracker",
     "slug": "TeacherTracker",
-    "version": "1.1.1",
+    "version": "1.0.1",
     "orientation": "portrait",
     "updates": {
       "url": "https://u.expo.dev/2140d059-9907-4d61-8a91-7e8f46908732"
