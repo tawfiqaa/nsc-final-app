@@ -1,3 +1,21 @@
+export interface Student {
+    id: string; // Document ID (UUID or generated)
+    fullName: string;
+    isActive: boolean; // Default true
+    createdAt: number;
+    notes?: string;
+}
+
+export type AttendanceRecordStatus = 'unmarked' | 'present' | 'absent' | 'late' | 'excused';
+
+export interface AttendanceRecord {
+    id: string; // Maps to studentId
+    status: AttendanceRecordStatus;
+    note?: string;
+    markedAt?: number | any; // serverTimestamp or numeric
+    updatedAt: number;
+}
+
 export type UserRole = 'super_admin' | 'admin' | 'teacher' | 'pending';
 
 export interface User {
@@ -99,4 +117,5 @@ export interface LessonContextType {
     deleteSchoolPhoto: (schoolName: string, photoUrl: string) => Promise<void>;
     refresh: () => Promise<void>;
     setTargetUid: (uid: string) => void;
+    saveAttendance: (lessonId: string, records: AttendanceRecord[]) => Promise<void>;
 }

@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AttendanceLog } from '../types';
 
@@ -15,6 +17,8 @@ interface LogCardProps {
 
 export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, readOnly, deleteType = 'text' }) => {
     const { colors } = useTheme();
+    const { user } = useAuth();
+    const router = useRouter();
     const isPresent = log.status === 'present';
 
     return (
@@ -57,6 +61,11 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
                             </Text>
                         )}
                     </TouchableOpacity>
+                    {user?.migratedToV2 && (
+                        <TouchableOpacity onPress={() => router.push({ pathname: '/lesson/[id]' as any, params: { id: log.id } })}>
+                            <Text style={[styles.actionLink, { color: colors.text }]}>Attendance</Text>
+                        </TouchableOpacity>
+                    )}
                     {onEditNote && (
                         <TouchableOpacity onPress={onEditNote}>
                             <Text style={[styles.actionLink, { color: colors.primary }]}>

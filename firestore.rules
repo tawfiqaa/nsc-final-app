@@ -48,11 +48,19 @@ service cloud.firestore {
       match /lessons/{lessonId} {
         allow read: if isAuthenticated() && (isOwner(uid) || isAdmin());
         allow write: if isAuthenticated() && isOwner(uid);
+        
+        match /attendance/{studentId} {
+          allow read, write: if isAuthenticated() && isOwner(uid);
+        }
       }
       
       match /schools/{schoolId} {
         allow read: if isAuthenticated() && (isOwner(uid) || isAdmin());
         allow write: if isAuthenticated() && isOwner(uid);
+        
+        match /students/{studentId} {
+          allow read, write: if isAuthenticated() && isOwner(uid);
+        }
       }
     }
 

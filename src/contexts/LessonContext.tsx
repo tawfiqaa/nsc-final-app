@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { db, storage } from '../lib/firebase';
-import { AttendanceLog, AttendanceStatus, LessonContextType, Schedule, TeacherData } from '../types';
+import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, TeacherData } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 import { useAuth } from './AuthContext';
 
@@ -492,6 +492,38 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Force re-fetch logic if needed, mostly handled by snapshot
     };
 
+    const saveAttendance = async (lessonId: string, records: AttendanceRecord[]) => {
+        if (!user || user.uid !== targetUid || !isTargetMigrated || records.length === 0) return;
+
+        try {
+            const batch = writeBatch(db);
+            const now = Date.now();
+
+            records.forEach(record => {
+                const docRef = doc(db, 'users', targetUid, 'lessons', lessonId, 'attendance', record.id);
+                const dataToSave: any = {
+                    status: record.status,
+                    updatedAt: now,
+                };
+
+                if (record.note !== undefined) {
+                    dataToSave.note = record.note;
+                }
+
+                // Set markedAt with serverTimestamp only for new/changed status
+                // We assume UI sends only dirty records, so all of these are changed.
+                dataToSave.markedAt = serverTimestamp();
+
+                batch.set(docRef, dataToSave, { merge: true });
+            });
+
+            await batch.commit();
+        } catch (error) {
+            console.error("Failed to save attendance records:", error);
+            throw error;
+        }
+    };
+
     return (
         <LessonContext.Provider value={{
             schedules,
@@ -510,7 +542,8 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             addSchoolPhoto,
             deleteSchoolPhoto,
             refresh,
-            setTargetUid
+            setTargetUid,
+            saveAttendance,
         }}>
             {children}
         </LessonContext.Provider>

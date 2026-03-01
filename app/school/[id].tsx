@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 
@@ -10,6 +11,7 @@ export default function SchoolDetailsScreen() {
     const { id } = useLocalSearchParams();
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
+    const { user } = useAuth();
     const { schedules, logs, deleteSchedule, deleteLog, updateLogNotes } = useLesson();
     const router = useRouter();
 
@@ -70,6 +72,15 @@ export default function SchoolDetailsScreen() {
                             <Ionicons name="images-outline" size={20} color={colors.text} />
                             <Text style={{ color: colors.text, fontWeight: '600' }}>Gallery</Text>
                         </TouchableOpacity>
+                        {user?.migratedToV2 && (
+                            <TouchableOpacity
+                                style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border }}
+                                onPress={() => router.push({ pathname: '/school/[id]/students' as any, params: { id: schoolName } })}
+                            >
+                                <Ionicons name="people-outline" size={20} color={colors.text} />
+                                <Text style={{ color: colors.text, fontWeight: '600' }}>Students</Text>
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity
                             style={{ backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
                             onPress={() => router.push({ pathname: '/add-lesson', params: { school: schoolName, mode: 'log' } })}

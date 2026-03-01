@@ -43,3 +43,8 @@ app-example
 /android
 
 .vercel
+
+# sensitive files
+.env
+scripts/service-account.json
+repomix-output.xml
