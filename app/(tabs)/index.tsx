@@ -90,12 +90,22 @@ export default function Dashboard() {
     });
   }, [schedules, logs]);
 
-  // Recently updated logs (last 12 hours)
+  // Recently updated logs (last 12 hours OR upcoming one-time lessons)
+  // This is a UI-only filter for the Dashboard feed. It does NOT delete data from Firestore.
   const recentLogs = useMemo(() => {
-    // 12 hours ago
-    const cutoff = Date.now() - (12 * 60 * 60 * 1000);
+    const now = new Date();
+    const cutoff = now.getTime() - (12 * 60 * 60 * 1000);
+
     return [...logs]
-      .filter(log => log.updatedAt >= cutoff)
+      .filter(log => {
+        const lessonDate = new Date(log.dateISO);
+        // Rule 1: Always show one-time lessons if they are for today or the future
+        if (log.isOneTime && (isSameDay(lessonDate, now) || lessonDate > now)) {
+          return true;
+        }
+        // Rule 2: Show ANY lesson (recurring or one-time) if it was updated in the last 12 hours
+        return log.updatedAt >= cutoff;
+      })
       .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
   }, [logs]);
 
