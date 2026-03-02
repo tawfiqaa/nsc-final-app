@@ -524,6 +524,61 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
+    const deleteStudent = async (schoolId: string, studentId: string) => {
+        if (!user || user.uid !== targetUid || !isTargetMigrated) return;
+        try {
+            await deleteDoc(doc(db, 'users', targetUid!, 'schools', schoolId, 'students', studentId));
+        } catch (error) {
+            console.error("Failed to delete student:", error);
+            throw error;
+        }
+    };
+
+    const deleteSchool = async (schoolName: string) => {
+        if (!user || user.uid !== targetUid) return;
+        try {
+            if (isTargetMigrated) {
+                const schoolSchedules = schedules.filter(s => s.school === schoolName);
+                const schoolLogs = logs.filter(l => l.school === schoolName);
+                const batch = writeBatch(db);
+
+                // Delete all schedules related to this school
+                schoolSchedules.forEach(s => batch.delete(doc(db, 'users', targetUid!, 'schedules', s.id)));
+
+                // Delete all lesson logs related to this school
+                schoolLogs.forEach(l => batch.delete(doc(db, 'users', targetUid!, 'lessons', l.id)));
+
+                // Note: Cleaning up sub-collections like 'students' and 'attendance' records
+                // would require fetching all document IDs first from the client.
+                // We'll focus on the primary school document which contains the gallery links.
+                batch.delete(doc(db, 'users', targetUid!, 'schools', schoolName));
+
+                await batch.commit();
+            } else {
+                // Legacy V1 cleanup
+                setSchedules(prev => {
+                    const updated = prev.filter(s => s.school !== schoolName);
+                    syncToFirestore({ schedules: updated });
+                    return updated;
+                });
+                setLogs(prev => {
+                    const updated = prev.filter(l => l.school !== schoolName);
+                    syncToFirestore({ attendanceLogs: updated });
+                    return updated;
+                });
+                setSchoolGalleries(prev => {
+                    const updated = { ...prev };
+                    delete updated[schoolName];
+                    syncToFirestore({ schoolGalleries: updated });
+                    return updated;
+                });
+            }
+        } catch (error) {
+            console.error("Failed to delete school:", error);
+            throw error;
+        }
+    };
+
     return (
         <LessonContext.Provider value={{
             schedules,
@@ -539,6 +594,8 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             toggleLogStatus,
             updateLogNotes,
             deleteLog,
+            deleteStudent,
+            deleteSchool,
             addSchoolPhoto,
             deleteSchoolPhoto,
             refresh,

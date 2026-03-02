@@ -120,6 +120,8 @@ export interface LessonContextType {
     toggleLogStatus: (logId: string) => Promise<void>;
     updateLogNotes: (logId: string, notes: string) => Promise<void>;
     deleteLog: (logId: string) => Promise<void>;
+    deleteStudent: (schoolId: string, studentId: string) => Promise<void>;
+    deleteSchool: (schoolName: string) => Promise<void>;
     addSchoolPhoto: (schoolName: string, localUri: string) => Promise<void>;
     deleteSchoolPhoto: (schoolName: string, photoUrl: string) => Promise<void>;
     refresh: () => Promise<void>;

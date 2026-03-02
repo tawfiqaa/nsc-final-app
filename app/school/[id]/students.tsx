@@ -4,6 +4,7 @@ import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../../src/contexts/AuthContext';
+import { useLesson } from '../../../src/contexts/LessonContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 import { db } from '../../../src/lib/firebase';
 import { Student } from '../../../src/types';
@@ -13,6 +14,7 @@ export default function ManageStudentsScreen() {
     const schoolId = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
     const { user } = useAuth();
+    const { deleteStudent } = useLesson();
     const router = useRouter();
 
     const [students, setStudents] = useState<Student[]>([]);
@@ -60,33 +62,25 @@ export default function ManageStudentsScreen() {
         }
     };
 
-    const handleArchiveStudent = async (studentId: string) => {
+    const handleDeleteStudent = async (studentId: string, studentName: string) => {
         if (!user || !user.migratedToV2 || !schoolId) return;
-        Alert.alert('Archive Student', 'This will hide the student from the active roster. Proceed?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Archive', style: 'destructive', onPress: async () => {
-                    try {
-                        const studentRef = doc(db, 'users', user.uid, 'schools', schoolId, 'students', studentId);
-                        await setDoc(studentRef, { isActive: false }, { merge: true });
-                    } catch (error) {
-                        console.error('Failed to archive', error);
-                        Alert.alert('Error', 'Failed to archive student');
+        Alert.alert(
+            'Delete Student',
+            `Are you sure you want to permanently delete ${studentName}? This will remove all their data from this school's roster.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete', style: 'destructive', onPress: async () => {
+                        try {
+                            await deleteStudent(schoolId, studentId);
+                        } catch (error) {
+                            console.error('Failed to delete student', error);
+                            Alert.alert('Error', 'Failed to delete student');
+                        }
                     }
                 }
-            }
-        ]);
-    };
-
-    const handleRestoreStudent = async (studentId: string) => {
-        if (!user || !user.migratedToV2 || !schoolId) return;
-        try {
-            const studentRef = doc(db, 'users', user.uid, 'schools', schoolId, 'students', studentId);
-            await setDoc(studentRef, { isActive: true }, { merge: true });
-        } catch (error) {
-            console.error('Failed to restore', error);
-            Alert.alert('Error', 'Failed to restore student');
-        }
+            ]
+        );
     };
 
     // We render both active and archived for transparency, maybe separate sections.
@@ -96,15 +90,9 @@ export default function ManageStudentsScreen() {
     const renderStudent = ({ item }: { item: Student }) => (
         <View style={[styles.studentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.studentName, { color: colors.text }]}>{item.fullName}</Text>
-            {item.isActive ? (
-                <TouchableOpacity onPress={() => handleArchiveStudent(item.id)}>
-                    <Ionicons name="archive-outline" size={20} color={colors.secondaryText} />
-                </TouchableOpacity>
-            ) : (
-                <TouchableOpacity onPress={() => handleRestoreStudent(item.id)}>
-                    <Ionicons name="refresh-outline" size={20} color={colors.primary} />
-                </TouchableOpacity>
-            )}
+            <TouchableOpacity onPress={() => handleDeleteStudent(item.id, item.fullName)}>
+                <Ionicons name="trash-outline" size={20} color={colors.error || '#ff4444'} />
+            </TouchableOpacity>
         </View>
     );
 

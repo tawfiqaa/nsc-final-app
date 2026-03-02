@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -10,7 +10,7 @@ import { exportToExcel, generateSchoolHistoryData } from '../../src/utils/export
 export default function SchoolsScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
-    const { schedules, logs } = useLesson();
+    const { schedules, logs, deleteSchool } = useLesson();
     const router = useRouter();
 
     const schools = useMemo(() => {
@@ -52,6 +52,17 @@ export default function SchoolsScreen() {
         }
     };
 
+    const handleDeleteSchool = (schoolName: string) => {
+        Alert.alert(
+            "Delete School",
+            `Are you sure you want to permanently delete "${schoolName}" and all associated data?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Delete", style: "destructive", onPress: () => deleteSchool(schoolName) }
+            ]
+        );
+    };
+
     const renderItem = ({ item }: { item: { name: string, lessonCount: number } }) => (
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TouchableOpacity
@@ -72,6 +83,13 @@ export default function SchoolsScreen() {
                 onPress={() => handleExport(item.name)}
             >
                 <Ionicons name="download-outline" size={24} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                style={styles.exportBtn}
+                onPress={() => handleDeleteSchool(item.name)}
+            >
+                <Ionicons name="trash-outline" size={24} color={colors.error || '#ff4444'} />
             </TouchableOpacity>
         </View>
     );

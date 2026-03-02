@@ -12,7 +12,7 @@ export default function SchoolDetailsScreen() {
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
     const { user } = useAuth();
-    const { schedules, logs, deleteSchedule, deleteLog, updateLogNotes } = useLesson();
+    const { schedules, logs, deleteSchedule, deleteLog, updateLogNotes, deleteSchool } = useLesson();
     const router = useRouter();
 
     const [editingLog, setEditingLog] = React.useState<typeof logs[0] | null>(null);
@@ -59,6 +59,28 @@ export default function SchoolDetailsScreen() {
         };
     }, [schedules, logs, schoolName]);
 
+    const handleDeleteSchool = () => {
+        Alert.alert(
+            "Delete School",
+            `Are you sure you want to permanently delete "${schoolName}"? This will wipe all schedules, attendance logs, and student records for this school. This action cannot be undone.`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete Everything",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await deleteSchool(schoolName);
+                            router.replace('/(tabs)/schools');
+                        } catch (e) {
+                            Alert.alert("Error", "Failed to delete school.");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
@@ -87,6 +109,13 @@ export default function SchoolDetailsScreen() {
                         >
                             <Ionicons name="add-circle" size={18} color="#fff" />
                             <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Add Past Lesson</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={{ backgroundColor: '#440000', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#ff4444' }}
+                            onPress={handleDeleteSchool}
+                        >
+                            <Ionicons name="trash-outline" size={18} color="#ff4444" />
+                            <Text style={{ color: '#ff4444', fontWeight: '600', fontSize: 14 }}>Delete School</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -121,10 +150,10 @@ export default function SchoolDetailsScreen() {
                                 <TouchableOpacity onPress={() => {
                                     Alert.alert(
                                         "Delete Schedule",
-                                        "Are you sure you want to delete this schedule? Past attendance logs will be preserved.",
+                                        "Are you sure you want to delete this schedule? This will stop future lessons from appearing on the dashboard. Past attendance logs will be preserved unless you delete the entire school.",
                                         [
                                             { text: "Cancel", style: "cancel" },
-                                            { text: "Delete", style: "destructive", onPress: () => deleteSchedule(sched.id) }
+                                            { text: "Delete Schedule", style: "destructive", onPress: () => deleteSchedule(sched.id) }
                                         ]
                                     );
                                 }}>
