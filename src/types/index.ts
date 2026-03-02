@@ -18,15 +18,62 @@ export interface AttendanceRecord {
 
 export type UserRole = 'super_admin' | 'admin' | 'teacher' | 'pending';
 
+export type OrgRole = 'owner' | 'admin' | 'teacher';
+export type MembershipStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Organization {
+    id: string;
+    name: string;
+    createdAt: any;
+    createdBy: string;
+    joinCode: string;
+    isActive: boolean;
+}
+
+export interface OrgMembership {
+    uid: string;
+    role: OrgRole;
+    status: MembershipStatus;
+    requestedAt: any;
+    approvedAt?: any;
+    approvedBy?: string;
+    updatedAt: any;
+    displayName?: string;
+    email?: string;
+}
+
+export interface UserOrgMembership {
+    orgId: string;
+    orgName?: string;
+    role: OrgRole;
+    status: MembershipStatus;
+    requestedAt: any;
+    updatedAt: any;
+}
+
+export interface OrgContextType {
+    activeOrg: Organization | null;
+    activeOrgId: string | null;
+    membershipStatus: MembershipStatus | null;
+    membershipRole: OrgRole | null;
+    userOrgs: UserOrgMembership[];
+    orgLoading: boolean;
+    createOrg: (name: string) => Promise<string>;
+    joinOrg: (orgIdOrCode: string) => Promise<void>;
+    switchOrg: (orgId: string) => Promise<void>;
+}
+
 export interface User {
     uid: string;
     email: string;
     name?: string;
     role: UserRole;
     isApproved: boolean;
+    activeOrgId?: string;
+    isSuperAdmin?: boolean;
     migratedToV2?: boolean;
     migrationVersion?: number;
-    migratedAt?: any; // Firestore Timestamp or number depending on usage
+    migratedAt?: any;
     createdAt: number;
     updatedAt: number;
 }
@@ -50,6 +97,7 @@ export interface Schedule {
     isActive?: boolean; // Default true if undefined
     createdAt: number;
     updatedAt: number;
+    createdBy?: string;
 }
 
 export type AttendanceStatus = 'present' | 'absent';
@@ -68,6 +116,7 @@ export interface AttendanceLog {
     notes?: string;
     createdAt: number;
     updatedAt: number;
+    createdBy?: string;
 }
 
 export interface TeacherData {

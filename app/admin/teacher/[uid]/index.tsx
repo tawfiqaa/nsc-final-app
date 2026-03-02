@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../../../src/components/LogCard';
 import { ScheduleCard } from '../../../../src/components/ScheduleCard';
+import { useOrg } from '../../../../src/contexts/OrgContext';
 import { useTheme } from '../../../../src/contexts/ThemeContext';
 import { db } from '../../../../src/lib/firebase';
 import { AttendanceLog, Schedule, User } from '../../../../src/types';
@@ -14,6 +15,7 @@ export default function TeacherDetailsScreen() {
     const { uid } = useLocalSearchParams<{ uid: string }>();
     const router = useRouter();
     const { colors } = useTheme();
+    const { activeOrgId } = useOrg();
 
     const [teacher, setTeacher] = useState<User | null>(null);
     const [logs, setLogs] = useState<AttendanceLog[]>([]);
@@ -35,11 +37,32 @@ export default function TeacherDetailsScreen() {
             }
 
             // Fetch Teacher Data
-            const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
-            if (dataSnap.exists()) {
-                const data = dataSnap.data();
-                setLogs(data.attendanceLogs || []);
-                setSchedules(data.schedules || []);
+            if (activeOrgId) {
+                // Org Mode: Fetch from org collections
+                const logsRef = collection(db, 'orgs', activeOrgId, 'lessons');
+                const schedulesRef = collection(db, 'orgs', activeOrgId, 'schedules');
+
+                const [logsSnap, schedulesSnap] = await Promise.all([
+                    getDocs(query(logsRef, where('createdBy', '==', targetUid))),
+                    getDocs(query(schedulesRef, where('createdBy', '==', targetUid)))
+                ]);
+
+                const loadedLogs: AttendanceLog[] = [];
+                logsSnap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
+
+                const loadedSchedules: Schedule[] = [];
+                schedulesSnap.forEach(d => loadedSchedules.push(d.data() as Schedule));
+
+                setLogs(loadedLogs);
+                setSchedules(loadedSchedules);
+            } else {
+                // Legacy / V2 fallback
+                const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
+                if (dataSnap.exists()) {
+                    const data = dataSnap.data();
+                    setLogs(data.attendanceLogs || []);
+                    setSchedules(data.schedules || []);
+                }
             }
         } catch (e) {
             console.error(e);

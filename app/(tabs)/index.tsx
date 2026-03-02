@@ -10,6 +10,7 @@ import { StatsWidget } from '../../src/components/StatsWidget';
 import { ThemeToggle } from '../../src/components/ThemeToggle';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
+import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { db } from '../../src/lib/firebase';
 import { AttendanceStatus, PayrollSettings } from '../../src/types';
@@ -18,7 +19,20 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { schedules, logs, markAttendance, deleteLog, refresh, loading, updateLogNotes } = useLesson();
   const { colors } = useTheme();
+  const { membershipRole } = useOrg();
   const router = useRouter();
+
+  const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+  const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+  React.useEffect(() => {
+    if (isRestrictedAdmin) {
+      router.replace('/(tabs)/admin');
+    }
+  }, [isRestrictedAdmin]);
+
+  if (isRestrictedAdmin) return null; // Prevent flicker before redirect
 
   const [markingSchedule, setMarkingSchedule] = useState<{ id: string, status: AttendanceStatus } | null>(null);
   const [editingLog, setEditingLog] = useState<typeof logs[0] | null>(null);

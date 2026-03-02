@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { db, storage } from '../lib/firebase';
 import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, TeacherData } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 import { useAuth } from './AuthContext';
+import { useOrg } from './OrgContext';
 
 const LessonContext = createContext<LessonContextType | undefined>(undefined);
 
@@ -19,12 +20,16 @@ export const useLesson = () => {
 
 export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user } = useAuth();
+    const { activeOrgId, membershipStatus } = useOrg();
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [logs, setLogs] = useState<AttendanceLog[]>([]);
     const [schoolGalleries, setSchoolGalleries] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(true);
     const [targetUid, setTargetUid] = useState<string | null>(null);
     const [isTargetMigrated, setIsTargetMigrated] = useState<boolean>(false);
+
+    // Org mode: use orgs/{orgId}/... paths instead of users/{uid}/...
+    const orgMode = useMemo(() => !!activeOrgId && membershipStatus === 'approved', [activeOrgId, membershipStatus]);
 
     // Initial load logic
     useEffect(() => {
@@ -40,9 +45,63 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setTargetUid(user.uid);
     }, [user]);
 
-    // Load data when targetUid or user changes
+    // Load data when targetUid or user changes (or org changes)
     useEffect(() => {
-        if (!user || !targetUid) return;
+        if (!user) return;
+
+        // ── ORG MODE ──
+        if (orgMode && activeOrgId) {
+            const unsubs: (() => void)[] = [];
+            let isMounted = true;
+            setLoading(true);
+
+            const schedulesRef = collection(db, 'orgs', activeOrgId, 'schedules');
+            const lessonsRef = collection(db, 'orgs', activeOrgId, 'lessons');
+            const schoolsRef = collection(db, 'orgs', activeOrgId, 'schools');
+
+            // Each teacher sees only their own data within the org
+            const schedulesQuery = query(schedulesRef, where('createdBy', '==', user.uid));
+
+            const ninetyDaysAgo = new Date();
+            ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+            const lessonsQuery = query(lessonsRef,
+                where('createdBy', '==', user.uid),
+                where('createdAt', '>=', ninetyDaysAgo.getTime())
+            );
+
+            const schoolsQuery = query(schoolsRef, where('createdBy', '==', user.uid));
+
+            unsubs.push(onSnapshot(schedulesQuery, (snap) => {
+                const loaded: Schedule[] = [];
+                snap.forEach(d => loaded.push(d.data() as Schedule));
+                if (isMounted) setSchedules(loaded);
+            }));
+
+            unsubs.push(onSnapshot(lessonsQuery, (snap) => {
+                const loaded: AttendanceLog[] = [];
+                snap.forEach(d => loaded.push(d.data() as AttendanceLog));
+                if (isMounted) setLogs(loaded);
+            }));
+
+            unsubs.push(onSnapshot(schoolsQuery, (snap) => {
+                const mapped: Record<string, string[]> = {};
+                snap.forEach(d => {
+                    const data = d.data();
+                    mapped[data.name] = data.gallery || [];
+                });
+                if (isMounted) setSchoolGalleries(mapped);
+            }));
+
+            if (isMounted) setLoading(false);
+
+            return () => {
+                isMounted = false;
+                unsubs.forEach(u => u());
+            };
+        }
+
+        // ── LEGACY MODE (user-scoped V2/V1) ──
+        if (!targetUid) return;
 
         const isOwnData = user.uid === targetUid;
         const unsubs: (() => void)[] = [];
@@ -199,7 +258,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             isMounted = false;
             unsubs.forEach(unsub => unsub());
         };
-    }, [user, targetUid]);
+    }, [user, targetUid, orgMode, activeOrgId]);
 
     // Helper to sync to Firestore
     const syncToFirestore = async (updates: Partial<TeacherData>) => {
@@ -241,6 +300,10 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         };
 
+        if (orgMode && activeOrgId) {
+            await setDoc(doc(db, 'orgs', activeOrgId, 'schedules', newSchedule.id), { ...newSchedule, createdBy: user!.uid });
+            return;
+        }
         if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'schedules', newSchedule.id), newSchedule);
         } else {
@@ -261,8 +324,11 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         }));
 
+        if (orgMode && activeOrgId) {
+            await Promise.all(newSchedules.map(ns => setDoc(doc(db, 'orgs', activeOrgId, 'schedules', ns.id), { ...ns, createdBy: user!.uid })));
+            return;
+        }
         if (isTargetMigrated) {
-            // Should theoretically use batch for multiple, but loop is okay for small arrays since we're offline capable
             await Promise.all(newSchedules.map(ns => setDoc(doc(db, 'users', targetUid!, 'schedules', ns.id), ns)));
         } else {
             setSchedules(prev => {
@@ -274,6 +340,10 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const updateSchedule = async (id: string, updates: Partial<Schedule>) => {
+        if (orgMode && activeOrgId) {
+            await setDoc(doc(db, 'orgs', activeOrgId, 'schedules', id), { ...updates, updatedAt: Date.now() }, { merge: true });
+            return;
+        }
         if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'schedules', id), { ...updates, updatedAt: Date.now() }, { merge: true });
         } else {
@@ -289,6 +359,10 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const deleteSchedule = async (id: string) => {
         // Hard delete as requested
+        if (orgMode && activeOrgId) {
+            await deleteDoc(doc(db, 'orgs', activeOrgId, 'schedules', id));
+            return;
+        }
         if (isTargetMigrated) {
             await deleteDoc(doc(db, 'users', targetUid!, 'schedules', id));
         } else {
@@ -317,6 +391,10 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now(),
         };
 
+        if (orgMode && activeOrgId) {
+            await setDoc(doc(db, 'orgs', activeOrgId, 'lessons', newLog.id), { ...newLog, createdBy: user!.uid });
+            return;
+        }
         if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', newLog.id), newLog);
         } else {
@@ -343,6 +421,10 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
         });
 
+        if (orgMode && activeOrgId) {
+            await setDoc(doc(db, 'orgs', activeOrgId, 'lessons', newLog.id), { ...newLog, createdBy: user!.uid });
+            return;
+        }
         if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', newLog.id), newLog);
         } else {
@@ -381,6 +463,10 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedAt: Date.now()
         };
 
+        if (orgMode && activeOrgId) {
+            await setDoc(doc(db, 'orgs', activeOrgId, 'lessons', logId), updatedLog, { merge: true });
+            return;
+        }
         if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', logId), updatedLog, { merge: true });
         } else {
@@ -396,6 +482,10 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const deleteLog = async (logId: string) => {
+        if (orgMode && activeOrgId) {
+            await deleteDoc(doc(db, 'orgs', activeOrgId, 'lessons', logId));
+            return;
+        }
         if (isTargetMigrated) {
             await deleteDoc(doc(db, 'users', targetUid!, 'lessons', logId));
         } else {
@@ -408,6 +498,10 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const updateLogNotes = async (logId: string, notes: string) => {
+        if (orgMode && activeOrgId) {
+            await setDoc(doc(db, 'orgs', activeOrgId, 'lessons', logId), { notes, updatedAt: Date.now() }, { merge: true });
+            return;
+        }
         if (isTargetMigrated) {
             await setDoc(doc(db, 'users', targetUid!, 'lessons', logId), { notes, updatedAt: Date.now() }, { merge: true });
         } else {
@@ -428,20 +522,24 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const addSchoolPhoto = async (schoolName: string, localUri: string) => {
-        if (!user || user.uid !== targetUid) return;
+        if (!user) return;
+        if (!orgMode && user.uid !== targetUid) return;
         try {
             const response = await fetch(localUri);
             const blob = await response.blob();
-            // We use Date.now() as part of filename to avoid collisions 
             const filename = `${Date.now()}_${localUri.split('/').pop() || 'photo.jpg'}`;
-            const fileRef = ref(storage, `users/${user.uid}/galleries/${schoolName}/${filename}`);
+            const storagePath = orgMode && activeOrgId
+                ? `orgs/${activeOrgId}/galleries/${schoolName}/${filename}`
+                : `users/${user.uid}/galleries/${schoolName}/${filename}`;
+            const fileRef = ref(storage, storagePath);
             await uploadBytes(fileRef, blob);
             const downloadUrl = await getDownloadURL(fileRef);
 
-            if (isTargetMigrated) {
-                // V2: Add to users/{uid}/schools/{schoolName}
-                const newGalleries = { ...schoolGalleries };
-                const updatedGallery = [...(newGalleries[schoolName] || []), downloadUrl];
+            if (orgMode && activeOrgId) {
+                const updatedGallery = [...(schoolGalleries[schoolName] || []), downloadUrl];
+                await setDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolName), { name: schoolName, gallery: updatedGallery, createdBy: user!.uid, updatedAt: Date.now() }, { merge: true });
+            } else if (isTargetMigrated) {
+                const updatedGallery = [...(schoolGalleries[schoolName] || []), downloadUrl];
                 await setDoc(doc(db, 'users', targetUid!, 'schools', schoolName), { name: schoolName, gallery: updatedGallery, updatedAt: Date.now() }, { merge: true });
             } else {
                 setSchoolGalleries(prev => {
@@ -461,11 +559,17 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const deleteSchoolPhoto = async (schoolName: string, photoUrl: string) => {
-        if (!user || user.uid !== targetUid) return;
+        if (!user) return;
+        if (!orgMode && user.uid !== targetUid) return;
         try {
             const fileRef = ref(storage, photoUrl);
             await deleteObject(fileRef);
 
+            if (orgMode && activeOrgId) {
+                const updatedGallery = (schoolGalleries[schoolName] || []).filter(url => url !== photoUrl);
+                await setDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolName), { gallery: updatedGallery, updatedAt: Date.now() }, { merge: true });
+                return;
+            }
             if (user?.migratedToV2) {
                 const newGalleries = { ...schoolGalleries };
                 if (newGalleries[schoolName]) {
@@ -493,14 +597,16 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const saveAttendance = async (lessonId: string, records: AttendanceRecord[]) => {
-        if (!user || user.uid !== targetUid || !isTargetMigrated || records.length === 0) return;
+        if (!user || records.length === 0) return;
+        if (!orgMode && (user.uid !== targetUid || !isTargetMigrated)) return;
 
         try {
             const batch = writeBatch(db);
             const now = Date.now();
-
             records.forEach(record => {
-                const docRef = doc(db, 'users', targetUid, 'lessons', lessonId, 'attendance', record.id);
+                const docRef = orgMode && activeOrgId
+                    ? doc(db, 'orgs', activeOrgId, 'lessons', lessonId, 'attendance', record.id)
+                    : doc(db, 'users', targetUid!, 'lessons', lessonId, 'attendance', record.id);
                 const dataToSave: any = {
                     status: record.status,
                     updatedAt: now,
@@ -525,7 +631,12 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const deleteStudent = async (schoolId: string, studentId: string) => {
-        if (!user || user.uid !== targetUid || !isTargetMigrated) return;
+        if (!user) return;
+        if (orgMode && activeOrgId) {
+            await deleteDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolId, 'students', studentId));
+            return;
+        }
+        if (user.uid !== targetUid || !isTargetMigrated) return;
         try {
             await deleteDoc(doc(db, 'users', targetUid!, 'schools', schoolId, 'students', studentId));
         } catch (error) {
@@ -535,9 +646,18 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const deleteSchool = async (schoolName: string) => {
-        if (!user || user.uid !== targetUid) return;
+        if (!user) return;
+        if (!orgMode && user.uid !== targetUid) return;
         try {
-            if (isTargetMigrated) {
+            if (orgMode && activeOrgId) {
+                const schoolSchedules = schedules.filter(s => s.school === schoolName);
+                const schoolLogs = logs.filter(l => l.school === schoolName);
+                const batch = writeBatch(db);
+                schoolSchedules.forEach(s => batch.delete(doc(db, 'orgs', activeOrgId, 'schedules', s.id)));
+                schoolLogs.forEach(l => batch.delete(doc(db, 'orgs', activeOrgId, 'lessons', l.id)));
+                batch.delete(doc(db, 'orgs', activeOrgId, 'schools', schoolName));
+                await batch.commit();
+            } else if (isTargetMigrated) {
                 const schoolSchedules = schedules.filter(s => s.school === schoolName);
                 const schoolLogs = logs.filter(l => l.school === schoolName);
                 const batch = writeBatch(db);

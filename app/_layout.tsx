@@ -6,10 +6,12 @@ import { useEffect } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { LessonProvider } from '../src/contexts/LessonContext';
+import { OrgProvider, useOrg } from '../src/contexts/OrgContext';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 
-// Keep the splash screen visible while we fetch resources  -- Check if preventAutoHideAsync is available
 SplashScreen.preventAutoHideAsync();
+
+const ORG_FREE_ROUTES = ['org-onboarding', 'create-org', 'join-org', 'org-pending'];
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -20,18 +22,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (loading) return;
 
     if (!user) {
-      // If not logged in and not at login, go to login
       if (segments[0] !== 'login') {
         router.replace('/login');
       }
     } else {
-      // User is logged in
       if (!user.isApproved) {
         if (segments[0] !== 'awaiting-approval') {
           router.replace('/awaiting-approval');
         }
       } else {
-        // If logged in and approved
         if (segments[0] === 'login' || segments[0] === 'awaiting-approval') {
           router.replace('/(tabs)');
         }
@@ -40,6 +39,53 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [user, loading, segments, router]);
 
   if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+function OrgGuard({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const { activeOrgId, membershipStatus, orgLoading } = useOrg();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (orgLoading) return;
+    if (!user || !user.isApproved) return; // AuthGuard handles these
+
+    const currentRoute = segments[0] as string;
+
+    // Skip org checks for auth-related routes
+    if (currentRoute === 'login' || currentRoute === 'awaiting-approval') return;
+
+    // Super admin can bypass org requirement for now
+    if (user.isSuperAdmin) return;
+
+    if (!activeOrgId) {
+      // No active org → onboarding
+      if (!ORG_FREE_ROUTES.includes(currentRoute)) {
+        router.replace('/org-onboarding' as any);
+      }
+    } else if (membershipStatus === 'pending' || membershipStatus === 'rejected' || membershipStatus === null) {
+      // Org set but not approved
+      if (!ORG_FREE_ROUTES.includes(currentRoute)) {
+        router.replace('/org-pending' as any);
+      }
+    } else if (membershipStatus === 'approved') {
+      // Approved → redirect away from org screens
+      if (ORG_FREE_ROUTES.includes(currentRoute)) {
+        router.replace('/(tabs)');
+      }
+    }
+  }, [activeOrgId, membershipStatus, orgLoading, user, segments, router]);
+
+  if (orgLoading && user?.isApproved) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
@@ -63,6 +109,10 @@ function RootLayoutNav() {
     }}>
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="awaiting-approval" options={{ headerShown: false }} />
+      <Stack.Screen name="org-onboarding" options={{ headerShown: false }} />
+      <Stack.Screen name="create-org" options={{ title: 'Create Organization', presentation: 'modal' }} />
+      <Stack.Screen name="join-org" options={{ title: 'Join Organization', presentation: 'modal' }} />
+      <Stack.Screen name="org-pending" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="add-lesson" options={{ title: 'Add Lesson', presentation: 'modal' }} />
       <Stack.Screen name="edit-lesson" options={{ title: 'Edit Lesson', presentation: 'modal' }} />
@@ -82,17 +132,20 @@ export default function RootLayout() {
     }
   }, [loaded, error]);
 
-  // On web, we rely on the CDN in +html.tsx, so we don't wait for 'loaded'
   if (!loaded && Platform.OS !== 'web') return null;
 
   return (
     <ThemeProvider>
       <AuthProvider>
-        <LessonProvider>
-          <AuthGuard>
-            <RootLayoutNav />
-          </AuthGuard>
-        </LessonProvider>
+        <OrgProvider>
+          <LessonProvider>
+            <AuthGuard>
+              <OrgGuard>
+                <RootLayoutNav />
+              </OrgGuard>
+            </AuthGuard>
+          </LessonProvider>
+        </OrgProvider>
       </AuthProvider>
     </ThemeProvider>
   );

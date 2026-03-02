@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../../../../src/components/LogCard';
+import { useOrg } from '../../../../../src/contexts/OrgContext';
 import { useTheme } from '../../../../../src/contexts/ThemeContext';
 import { db } from '../../../../../src/lib/firebase';
 import { AttendanceLog, User } from '../../../../../src/types';
@@ -12,6 +13,7 @@ export default function SchoolLessonsScreen() {
     const { uid, schoolName } = useLocalSearchParams<{ uid: string, schoolName: string }>();
     const router = useRouter();
     const { colors } = useTheme();
+    const { activeOrgId } = useOrg();
 
     const [teacher, setTeacher] = useState<User | null>(null);
     const [schoolLogs, setSchoolLogs] = useState<AttendanceLog[]>([]);
@@ -36,18 +38,39 @@ export default function SchoolLessonsScreen() {
             }
 
             // Fetch Teacher Data
-            const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
-            if (dataSnap.exists()) {
-                const data = dataSnap.data();
-                const allLogs = (data.attendanceLogs || []) as AttendanceLog[];
-                // Filter logs for the specific school
-                const filtered = allLogs.filter(log => log.school === targetSchool);
-                // Sort by date desc
-                filtered.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
-                setSchoolLogs(filtered);
+            if (activeOrgId) {
+                // Org Mode
+                const logsRef = collection(db, 'orgs', activeOrgId, 'lessons');
+                const schoolsRef = collection(db, 'orgs', activeOrgId, 'schools');
 
-                const galleries = data.schoolGalleries || {};
-                setSchoolPhotos(galleries[targetSchool] || []);
+                const [logsSnap, schoolSnap] = await Promise.all([
+                    getDocs(query(logsRef, where('createdBy', '==', targetUid), where('school', '==', targetSchool))),
+                    getDoc(doc(db, 'orgs', activeOrgId, 'schools', targetSchool))
+                ]);
+
+                const loadedLogs: AttendanceLog[] = [];
+                logsSnap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
+                loadedLogs.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
+                setSchoolLogs(loadedLogs);
+
+                if (schoolSnap.exists()) {
+                    setSchoolPhotos(schoolSnap.data().gallery || []);
+                }
+            } else {
+                // Legacy
+                const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
+                if (dataSnap.exists()) {
+                    const data = dataSnap.data();
+                    const allLogs = (data.attendanceLogs || []) as AttendanceLog[];
+                    // Filter logs for the specific school
+                    const filtered = allLogs.filter(log => log.school === targetSchool);
+                    // Sort by date desc
+                    filtered.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
+                    setSchoolLogs(filtered);
+
+                    const galleries = data.schoolGalleries || {};
+                    setSchoolPhotos(galleries[targetSchool] || []);
+                }
             }
         } catch (e) {
             console.error(e);

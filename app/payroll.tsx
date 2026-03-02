@@ -6,6 +6,7 @@ import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setD
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
+import { useOrg } from '../src/contexts/OrgContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { db } from '../src/lib/firebase';
 import { AttendanceLog, PayrollSettings } from '../src/types';
@@ -22,8 +23,21 @@ const CURRENCIES = [
 
 export default function PayrollScreen() {
     const { user } = useAuth();
+    const { membershipRole } = useOrg();
     const { colors } = useTheme();
     const router = useRouter();
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin, router]);
+
+    if (isRestrictedAdmin) return null;
 
     const [loading, setLoading] = useState(true);
     const [fetchingLogs, setFetchingLogs] = useState(false);
@@ -40,7 +54,7 @@ export default function PayrollScreen() {
     const [settings, setSettings] = useState<PayrollSettings | null>(null);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-    // UI State for editing rates (strings to allow empty/deletion)
+    // UI State for editing rates
     const [hourlyRateInput, setHourlyRateInput] = useState('');
     const [kmRateInput, setKmRateInput] = useState('');
     const [currencyInput, setCurrencyInput] = useState('ILS');
@@ -50,9 +64,9 @@ export default function PayrollScreen() {
 
     // Load Settings
     useEffect(() => {
-        if (!user) return;
+        if (!user || isRestrictedAdmin) return;
         loadSettings();
-    }, [user]);
+    }, [user, isRestrictedAdmin]);
 
     const loadSettings = async () => {
         if (!user) return;
@@ -67,7 +81,7 @@ export default function PayrollScreen() {
                 setCurrencyInput(data.currency || 'ILS');
             } else {
                 setSettings(null);
-                setShowSettingsModal(true); // Open if missing
+                setShowSettingsModal(true);
             }
         } catch (e) {
             console.error('Failed to load payroll settings', e);
@@ -100,12 +114,10 @@ export default function PayrollScreen() {
                 updatedAt: serverTimestamp()
             };
             await setDoc(docRef, dataToSave, { merge: true });
-
-            // Reload local state
             setSettings(dataToSave as any);
             setShowSettingsModal(false);
             Alert.alert("Success", "Payroll settings saved.");
-            fetchLogsInRange(); // Refresh data
+            fetchLogsInRange();
         } catch (e: any) {
             console.error('Failed to save payroll settings', e);
             Alert.alert("Save Failed", `Error: ${e.code || 'unknown'}\n${e.message || ''}`);
@@ -114,7 +126,6 @@ export default function PayrollScreen() {
         }
     };
 
-    // Handle Range Type Changes
     useEffect(() => {
         if (rangeType === 'this_month') {
             setStartDate(startOfMonth(new Date()));
@@ -126,11 +137,10 @@ export default function PayrollScreen() {
         }
     }, [rangeType]);
 
-    // Fetch Logs when range changes
     useEffect(() => {
-        if (!user || loading) return;
+        if (!user || loading || isRestrictedAdmin) return;
         fetchLogsInRange();
-    }, [user, loading, startDate, endDate]);
+    }, [user, loading, startDate, endDate, isRestrictedAdmin]);
 
     const fetchLogsInRange = async () => {
         if (!user) return;
@@ -158,7 +168,6 @@ export default function PayrollScreen() {
         }
     };
 
-    // Aggregates
     const summary = useMemo(() => {
         const totalHours = logs.reduce((acc, log) => acc + (log.status === 'present' ? (log.hours || 0) : 0), 0);
         const totalKm = logs.reduce((acc, log) => acc + (log.status === 'present' ? (log.distance || 0) : 0), 0);
@@ -199,7 +208,6 @@ export default function PayrollScreen() {
         }
     };
 
-    // Date Picker Callbacks
     const onStartChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
         setShowStartPicker(false);
         if (selectedDate) setStartDate(selectedDate);
@@ -246,7 +254,6 @@ export default function PayrollScreen() {
                     </View>
                 )}
 
-                {/* Date Selection Section */}
                 <View style={[styles.section, { backgroundColor: colors.card }]}>
                     <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Date Range</Text>
                     <View style={styles.rangeButtons}>
@@ -259,10 +266,7 @@ export default function PayrollScreen() {
                                 ]}
                                 onPress={() => setRangeType(type)}
                             >
-                                <Text style={[
-                                    styles.rangeBtnText,
-                                    { color: rangeType === type ? '#fff' : '#888' }
-                                ]}>
+                                <Text style={[styles.rangeBtnText, { color: rangeType === type ? '#fff' : '#888' }]}>
                                     {type.replace('_', ' ').toUpperCase()}
                                 </Text>
                             </TouchableOpacity>
@@ -287,7 +291,6 @@ export default function PayrollScreen() {
                     {showEndPicker && <DateTimePicker value={endDate} mode="date" display="default" onChange={onEndChange} />}
                 </View>
 
-                {/* Summary Cards */}
                 {fetchingLogs ? (
                     <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 20 }} />
                 ) : (
@@ -311,7 +314,6 @@ export default function PayrollScreen() {
                     </View>
                 )}
 
-                {/* Export Buttons */}
                 <View style={styles.exportRow}>
                     <TouchableOpacity
                         style={[styles.exportBtn, { borderColor: colors.primary, borderWidth: 1 }]}
@@ -334,7 +336,6 @@ export default function PayrollScreen() {
                 </Text>
             </ScrollView>
 
-            {/* Settings Modal */}
             <Modal
                 visible={showSettingsModal}
                 transparent={true}

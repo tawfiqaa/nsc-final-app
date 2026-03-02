@@ -2,15 +2,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { membershipRole } = useOrg();
 
   if (!user) return null;
 
-  const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+  // Org-aware admin check: org owner/admin OR global super admin
+  const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+  const isAdmin = isOrgAdmin || isSuperAdmin;
+
+  // Show teacher tabs if not an org admin OR if a super admin
+  const showTeacherTabs = !isOrgAdmin || isSuperAdmin;
 
   return (
     <Tabs
@@ -30,7 +38,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          href: (user.role === 'teacher' || user.role === 'super_admin') ? '/' : null,
+          href: showTeacherTabs ? '/' : null,
           title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
@@ -38,12 +46,10 @@ export default function TabsLayout() {
         }}
       />
 
-
-
       <Tabs.Screen
         name="schools"
         options={{
-          href: (user.role === 'teacher' || user.role === 'super_admin') ? '/schools' : null,
+          href: showTeacherTabs ? '/schools' : null,
           title: 'My Schools',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="school-outline" size={size} color={color} />
@@ -54,7 +60,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="school-history"
         options={{
-          href: (user.role === 'teacher' || user.role === 'super_admin') ? '/school-history' : null,
+          href: showTeacherTabs ? '/school-history' : null,
           title: 'History',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" size={size} color={color} />

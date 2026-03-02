@@ -3,7 +3,9 @@ import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../src/contexts/AuthContext';
 import { useLesson } from '../src/contexts/LessonContext';
+import { useOrg } from '../src/contexts/OrgContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -12,7 +14,21 @@ export default function EditLessonScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
     const { schedules, updateSchedule, deleteSchedule } = useLesson();
+    const { user } = useAuth();
+    const { membershipRole } = useOrg();
     const { colors } = useTheme();
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin, router]);
+
+    if (isRestrictedAdmin) return null;
 
     const [school, setSchool] = useState('');
     const [dayOfWeek, setDayOfWeek] = useState<number>(1);
@@ -29,7 +45,6 @@ export default function EditLessonScreen() {
                 setDayOfWeek(schedule.dayOfWeek);
                 setDuration(schedule.duration.toString());
                 setDistance(schedule.distance.toString());
-                // Parse time "HH:mm"
                 try {
                     const now = new Date();
                     const [hours, minutes] = schedule.startTime.split(':').map(Number);
@@ -144,7 +159,7 @@ export default function EditLessonScreen() {
                         <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
                             {React.createElement('input', {
                                 type: 'time',
-                                lang: 'en-GB', // Forces 24-hour format in supported browsers
+                                lang: 'en-GB',
                                 value: format(startTime, 'HH:mm'),
                                 onChange: (e: any) => {
                                     const [h, m] = e.target.value.split(':');
@@ -157,9 +172,7 @@ export default function EditLessonScreen() {
                                 onClick: (e: any) => {
                                     try {
                                         if (e.target.showPicker) e.target.showPicker();
-                                    } catch (err) {
-                                        console.log('showPicker not supported', err);
-                                    }
+                                    } catch (err) { }
                                 },
                                 style: {
                                     fontSize: 16,

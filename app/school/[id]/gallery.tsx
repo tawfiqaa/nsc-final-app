@@ -1,40 +1,55 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../../../src/contexts/AuthContext';
 import { useLesson } from '../../../src/contexts/LessonContext';
+import { useOrg } from '../../../src/contexts/OrgContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const IMAGE_MARGIN = 2;
-const IMAGE_SIZE = (width - (40) - (IMAGE_MARGIN * 2 * COLUMN_COUNT)) / COLUMN_COUNT; // 40 is padding of container
+const IMAGE_SIZE = (width - (40) - (IMAGE_MARGIN * 2 * COLUMN_COUNT)) / COLUMN_COUNT;
 
 export default function SchoolGalleryScreen() {
     const { id } = useLocalSearchParams();
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
+    const { user } = useAuth();
+    const { membershipRole } = useOrg();
     const { schoolGalleries, addSchoolPhoto, deleteSchoolPhoto } = useLesson();
+    const router = useRouter();
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin, router]);
 
     const [uploading, setUploading] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     const photos = schoolGalleries[schoolName] || [];
 
-    const handleAddPhoto = async () => {
-        // Request permissions
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (isRestrictedAdmin) return null;
 
+    const handleAddPhoto = async () => {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
             Alert.alert("Permission Required", "You need to grant permission to access your photos.");
             return;
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'], // Updated line to use string[] instead of MediaTypeOptions enum
+            mediaTypes: ['images'],
             allowsEditing: true,
-            quality: 0.8, // Compress slightly
+            quality: 0.8,
         });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -165,7 +180,7 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 20,
-        paddingTop: 60, // Safe area ish
+        paddingTop: 60,
         borderBottomWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',

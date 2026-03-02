@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
+import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { exportToExcel, generateSchoolHistoryData } from '../../src/utils/export';
 
@@ -11,7 +12,20 @@ export default function SchoolsScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const { schedules, logs, deleteSchool } = useLesson();
+    const { membershipRole } = useOrg();
     const router = useRouter();
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    React.useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin]);
+
+    if (isRestrictedAdmin) return null;
 
     const schools = useMemo(() => {
         const schoolMap = new Map<string, { name: string, lessonCount: number }>();

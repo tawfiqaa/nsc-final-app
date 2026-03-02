@@ -1,15 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
+import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function SchoolHistoryScreen() {
     const { logs, deleteLog, updateLogNotes } = useLesson();
     const { colors } = useTheme();
+    const { user } = useAuth();
+    const { membershipRole } = useOrg();
+    const router = useRouter();
     const params = useLocalSearchParams();
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    React.useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin]);
+
+    if (isRestrictedAdmin) return null;
 
     // Note: params.teacherUid might be passed if Admin is viewing, 
     // but useLesson context should already be set to that teacherUid by the Admin screen logic.

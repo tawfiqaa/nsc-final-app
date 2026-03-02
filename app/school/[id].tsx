@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
+import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function SchoolDetailsScreen() {
@@ -12,8 +13,19 @@ export default function SchoolDetailsScreen() {
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
     const { user } = useAuth();
+    const { membershipRole } = useOrg();
     const { schedules, logs, deleteSchedule, deleteLog, updateLogNotes, deleteSchool } = useLesson();
     const router = useRouter();
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin, router]);
 
     const [editingLog, setEditingLog] = React.useState<typeof logs[0] | null>(null);
     const [notesInput, setNotesInput] = React.useState('');
@@ -30,23 +42,14 @@ export default function SchoolDetailsScreen() {
     };
 
     const stats = useMemo(() => {
-        // strict filter
         const schoolSchedules = schedules.filter(s => s.school === schoolName);
         const schoolLogs = logs
             .filter(l => l.school === schoolName)
             .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
 
         const initialCountTotal = schoolSchedules.reduce((acc, curr) => acc + (curr.initialCount || 0), 0);
-
-        // "Attended" means status 'present'
         const attendedCount = schoolLogs.filter(l => l.status === 'present').length;
-
-        // "Missed" means status 'absent'
         const missedCount = schoolLogs.filter(l => l.status === 'absent').length;
-
-        // Total = Initial + Attended + Missed (all logs)
-        // Note: If a schedule has initialCount=10, and you log 1 present, total is 11? 
-        // Yes, assuming initialCount represents "legacy" lessons before app usage.
         const totalLessons = initialCountTotal + attendedCount + missedCount;
 
         return {
@@ -80,6 +83,8 @@ export default function SchoolDetailsScreen() {
             ]
         );
     };
+
+    if (isRestrictedAdmin) return null;
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>

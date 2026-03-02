@@ -8,6 +8,7 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, Touc
 import { ThemeToggle } from '../../src/components/ThemeToggle';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
+import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { db } from '../../src/lib/firebase';
 import { handleExportProcess } from '../../src/utils/exportExcel';
@@ -15,12 +16,22 @@ import { handleExportProcess } from '../../src/utils/exportExcel';
 export default function SettingsScreen() {
     const { user, logout } = useAuth();
     const { schedules, logs } = useLesson();
+    const { activeOrg, activeOrgId, membershipRole, userOrgs, switchOrg } = useOrg();
     const { colors } = useTheme();
     const router = useRouter();
     const [editingName, setEditingName] = useState(false);
     const [tempName, setTempName] = useState(user?.name || '');
     const [exportDate, setExportDate] = useState(new Date());
     const [exporting, setExporting] = useState(false);
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+
+    // Restricted admins (org admins but not super admins) see a limited UI
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    // Teachers and Super Admins see teacher-specific features
+    const showTeacherFeatures = !isOrgAdmin || isSuperAdmin;
 
     const handleExportReport = async () => {
         if (exporting) return;
@@ -101,43 +112,87 @@ export default function SettingsScreen() {
                         <Text style={[styles.label, { color: colors.text }]}>Role</Text>
                         <Text style={[styles.value, { color: colors.primary }]}>{user?.role?.toUpperCase()}</Text>
                     </View>
-                    <View style={styles.row}>
-                        <Text style={[styles.label, { color: colors.text }]}>User ID</Text>
-                        <Text style={[styles.value, { color: colors.secondaryText, fontSize: 10 }]}>{user?.uid}</Text>
-                    </View>
                 </View>
 
+                {/* Organization Section */}
                 <View style={[styles.section, { backgroundColor: colors.card }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Reports</Text>
-
-                    {/* Month Picker */}
-                    <View style={[styles.row, { justifyContent: 'center', marginBottom: 24 }]}>
-                        <TouchableOpacity onPress={() => changeMonth(-1)} style={{ padding: 8 }}>
-                            <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                    <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Organization</Text>
+                    {activeOrg && (
+                        <>
+                            <View style={styles.row}>
+                                <Text style={[styles.label, { color: colors.text }]}>Active Org</Text>
+                                <Text style={[styles.value, { color: colors.primary, fontWeight: '600' }]}>{activeOrg.name || 'Unknown'}</Text>
+                            </View>
+                            <View style={styles.row}>
+                                <Text style={[styles.label, { color: colors.text }]}>Org Role</Text>
+                                <Text style={[styles.value, { color: colors.secondaryText }]}>{membershipRole?.toUpperCase()}</Text>
+                            </View>
+                            <View style={styles.row}>
+                                <Text style={[styles.label, { color: colors.text }]}>Org ID</Text>
+                                <Text style={[styles.value, { color: colors.secondaryText, fontSize: 10 }]} selectable>{activeOrgId}</Text>
+                            </View>
+                        </>
+                    )}
+                    {userOrgs.filter(o => o.status === 'approved' && o.orgId !== activeOrgId).length > 0 && (
+                        <View style={{ marginTop: 8 }}>
+                            <Text style={{ color: colors.secondaryText, fontSize: 12, marginBottom: 8 }}>Switch Organization:</Text>
+                            {userOrgs.filter(o => o.status === 'approved' && o.orgId !== activeOrgId).map(org => (
+                                <TouchableOpacity
+                                    key={org.orgId}
+                                    style={[styles.row, { paddingVertical: 8, paddingHorizontal: 8, borderRadius: 8, backgroundColor: colors.background }]}
+                                    onPress={() => switchOrg(org.orgId)}
+                                >
+                                    <Text style={[styles.label, { color: colors.text }]}>{org.orgName || org.orgId}</Text>
+                                    <Ionicons name="swap-horizontal" size={18} color={colors.primary} />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                    {showTeacherFeatures && (
+                        <TouchableOpacity
+                            style={[styles.row, { justifyContent: 'center', marginTop: 8, marginBottom: 0 }]}
+                            onPress={() => router.push('/join-org' as any)}
+                        >
+                            <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                            <Text style={[styles.label, { color: colors.primary, marginLeft: 6 }]}>Join Another Org</Text>
                         </TouchableOpacity>
-                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text, marginHorizontal: 16 }}>
-                            {format(exportDate, 'MMMM yyyy')}
-                        </Text>
-                        <TouchableOpacity onPress={() => changeMonth(1)} style={{ padding: 8 }}>
-                            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+                    )}
+                </View>
+
+                {/* Show Reports only for Teachers & Super Admins */}
+                {showTeacherFeatures && (
+                    <View style={[styles.section, { backgroundColor: colors.card }]}>
+                        <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Reports</Text>
+
+                        {/* Month Picker */}
+                        <View style={[styles.row, { justifyContent: 'center', marginBottom: 24 }]}>
+                            <TouchableOpacity onPress={() => changeMonth(-1)} style={{ padding: 8 }}>
+                                <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                            </TouchableOpacity>
+                            <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text, marginHorizontal: 16 }}>
+                                {format(exportDate, 'MMMM yyyy')}
+                            </Text>
+                            <TouchableOpacity onPress={() => changeMonth(1)} style={{ padding: 8 }}>
+                                <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.row, { marginBottom: 0, justifyContent: 'center' }]}
+                            onPress={handleExportReport}
+                            disabled={exporting}
+                        >
+                            {exporting ? (
+                                <ActivityIndicator size="small" color={colors.primary} />
+                            ) : (
+                                <>
+                                    <Text style={[styles.label, { color: colors.primary, fontWeight: 'bold' }]}>Quick Monthly Export</Text>
+                                    <Ionicons name="download-outline" size={24} color={colors.primary} style={{ marginLeft: 8 }} />
+                                </>
+                            )}
                         </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity
-                        style={[styles.row, { marginBottom: 0, justifyContent: 'center' }]}
-                        onPress={handleExportReport}
-                        disabled={exporting}
-                    >
-                        {exporting ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
-                        ) : (
-                            <>
-                                <Text style={[styles.label, { color: colors.primary, fontWeight: 'bold' }]}>Quick Monthly Export</Text>
-                                <Ionicons name="download-outline" size={24} color={colors.primary} style={{ marginLeft: 8 }} />
-                            </>
-                        )}
-                    </TouchableOpacity>
-                </View>
+                )}
 
                 <View style={[styles.section, { backgroundColor: colors.card }]}>
                     <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Preferences</Text>

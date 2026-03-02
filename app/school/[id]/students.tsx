@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useLesson } from '../../../src/contexts/LessonContext';
+import { useOrg } from '../../../src/contexts/OrgContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 import { db } from '../../../src/lib/firebase';
 import { Student } from '../../../src/types';
@@ -14,38 +15,64 @@ export default function ManageStudentsScreen() {
     const schoolId = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
     const { user } = useAuth();
+    const { activeOrgId, membershipStatus, membershipRole } = useOrg();
     const { deleteStudent } = useLesson();
     const router = useRouter();
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin, router]);
+
+    const orgMode = useMemo(() => !!activeOrgId && membershipStatus === 'approved', [activeOrgId, membershipStatus]);
 
     const [students, setStudents] = useState<Student[]>([]);
     const [newStudentName, setNewStudentName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        if (!user || !user.migratedToV2 || !schoolId) return;
+        if (!user || !schoolId || isRestrictedAdmin) return;
 
-        const studentsRef = collection(db, 'users', user.uid, 'schools', schoolId, 'students');
+        let studentsRef;
+        if (orgMode && activeOrgId) {
+            studentsRef = collection(db, 'orgs', activeOrgId, 'schools', schoolId, 'students');
+        } else if (user.migratedToV2) {
+            studentsRef = collection(db, 'users', user.uid, 'schools', schoolId, 'students');
+        } else {
+            return;
+        }
+
         const unsub = onSnapshot(studentsRef, (snap) => {
             const loadedStudents: Student[] = [];
             snap.forEach(d => {
                 loadedStudents.push(d.data() as Student);
             });
-            // Sort by createdAt ascending or name. Let's do name for easier scanning.
             loadedStudents.sort((a, b) => a.fullName.localeCompare(b.fullName));
             setStudents(loadedStudents);
         });
 
         return () => unsub();
-    }, [user, schoolId]);
+    }, [user, schoolId, orgMode, activeOrgId, isRestrictedAdmin]);
+
+    if (isRestrictedAdmin) return null;
 
     const handleAddStudent = async () => {
         const name = newStudentName.trim();
         if (!name) return;
-        if (!user || !user.migratedToV2 || !schoolId) return;
+        if (!user || !schoolId) return;
+        if (!orgMode && !user.migratedToV2) return;
 
         setIsSaving(true);
         try {
-            const studentRef = doc(collection(db, 'users', user.uid, 'schools', schoolId, 'students'));
+            const studentsCol = orgMode && activeOrgId
+                ? collection(db, 'orgs', activeOrgId, 'schools', schoolId, 'students')
+                : collection(db, 'users', user.uid, 'schools', schoolId, 'students');
+            const studentRef = doc(studentsCol);
             const newStudent: Student = {
                 id: studentRef.id,
                 fullName: name,
@@ -63,7 +90,8 @@ export default function ManageStudentsScreen() {
     };
 
     const handleDeleteStudent = async (studentId: string, studentName: string) => {
-        if (!user || !user.migratedToV2 || !schoolId) return;
+        if (!user || !schoolId) return;
+        if (!orgMode && !user.migratedToV2) return;
         Alert.alert(
             'Delete Student',
             `Are you sure you want to permanently delete ${studentName}? This will remove all their data from this school's roster.`,
@@ -83,7 +111,6 @@ export default function ManageStudentsScreen() {
         );
     };
 
-    // We render both active and archived for transparency, maybe separate sections.
     const activeStudents = students.filter(s => s.isActive);
     const archivedStudents = students.filter(s => !s.isActive);
 

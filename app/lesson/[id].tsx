@@ -1,26 +1,45 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
+import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { db } from '../../src/lib/firebase';
-import { AttendanceRecord, AttendanceRecordStatus, Student } from '../../src/types';
+import { AttendanceLog, AttendanceRecord, AttendanceRecordStatus, Student } from '../../src/types';
 
 export default function LessonDetailsScreen() {
     const { id } = useLocalSearchParams();
     const lessonId = Array.isArray(id) ? id[0] : id;
     const { colors } = useTheme();
     const { user } = useAuth();
+    const { activeOrgId, membershipStatus, membershipRole } = useOrg();
     const { logs, saveAttendance } = useLesson();
     const router = useRouter();
+    const orgMode = useMemo(() => !!activeOrgId && membershipStatus === 'approved', [activeOrgId, membershipStatus]);
+    const isAdmin = useMemo(() => membershipRole === 'admin' || membershipRole === 'owner', [membershipRole]);
 
-    const lessonLog = logs.find(l => l.id === lessonId);
+    const [lessonLog, setLessonLog] = useState<AttendanceLog | null>(null);
 
-    // Fallback if missing schoolId, we can still load from the log itself but attendance relies on schoolId.
+    // Load Lesson Log from context or firestore (for admins/other teachers)
+    useEffect(() => {
+        if (!lessonId) return;
+        const local = logs.find(l => l.id === lessonId);
+        if (local) {
+            setLessonLog(local);
+        } else if (orgMode && activeOrgId) {
+            // Admin or other view: fetch from org lessons
+            getDoc(doc(db, 'orgs', activeOrgId, 'lessons', lessonId)).then(snap => {
+                if (snap.exists()) setLessonLog(snap.id ? { id: snap.id, ...snap.data() } as AttendanceLog : null);
+            });
+        }
+    }, [lessonId, logs, orgMode, activeOrgId]);
+
     const schoolId = lessonLog?.school;
+    const isOurLesson = lessonLog?.createdBy === user?.uid;
+    const canEdit = isOurLesson || (isAdmin && !lessonLog?.createdBy); // Allow admin to edit if owner missing or it's ours
 
     const [students, setStudents] = useState<Student[]>([]);
     const [attendanceRecords, setAttendanceRecords] = useState<Record<string, AttendanceRecord>>({});
@@ -32,10 +51,15 @@ export default function LessonDetailsScreen() {
     const isSchoolValid = !!schoolId;
 
     useEffect(() => {
-        if (!user || !user.migratedToV2 || !lessonId || !schoolId) return;
+        if (!user || !lessonId || !schoolId) return;
+        if (!orgMode && !user.migratedToV2) return;
 
-        // 1. Listen to active students roster for this school
-        const studentsRef = collection(db, 'users', user.uid, 'schools', schoolId, 'students');
+        const studentsRef = orgMode && activeOrgId
+            ? collection(db, 'orgs', activeOrgId, 'schools', schoolId, 'students')
+            : collection(db, 'users', user.uid, 'schools', schoolId, 'students');
+        const attendanceRef = orgMode && activeOrgId
+            ? collection(db, 'orgs', activeOrgId, 'lessons', lessonId, 'attendance')
+            : collection(db, 'users', user.uid, 'lessons', lessonId, 'attendance');
         const unsubStudents = onSnapshot(studentsRef, (snap) => {
             const activeStudents: Student[] = [];
             snap.forEach(d => {
@@ -46,17 +70,13 @@ export default function LessonDetailsScreen() {
             setStudents(activeStudents);
         });
 
-        // 2. Listen to existing attendance for this lesson
-        const attendanceRef = collection(db, 'users', user.uid, 'lessons', lessonId, 'attendance');
         const unsubAttendance = onSnapshot(attendanceRef, (snap) => {
             const recordsMap: Record<string, AttendanceRecord> = {};
             snap.forEach(d => {
                 const r = d.data() as AttendanceRecord;
-                // use document id as key in map
                 recordsMap[d.id] = { ...r, id: d.id };
             });
             setAttendanceRecords(recordsMap);
-            // Since remote state updated, clear dirty (or handle conflict). We assume simple clear for now.
             setDirtyRecords({});
         });
 
@@ -64,7 +84,7 @@ export default function LessonDetailsScreen() {
             unsubStudents();
             unsubAttendance();
         };
-    }, [user, schoolId, lessonId]);
+    }, [user, schoolId, lessonId, orgMode, activeOrgId]);
 
     // Merge students with their attendance status
     const mergedList = useMemo(() => {
@@ -169,10 +189,10 @@ export default function LessonDetailsScreen() {
         }
     };
 
-    if (!user?.migratedToV2) {
+    if (!orgMode && !user?.migratedToV2) {
         return (
             <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
-                <Text style={{ color: colors.text }}>This feature is only available for V2 users.</Text>
+                <Text style={{ color: colors.text }}>This feature requires V2 migration or an active org.</Text>
             </View>
         );
     }
@@ -194,9 +214,11 @@ export default function LessonDetailsScreen() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.headerRow}>
                 <Text style={[styles.title, { color: colors.text }]}>Attendance Roster</Text>
-                <TouchableOpacity onPress={markAllPresent} style={[styles.quickBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={{ color: colors.primary, fontWeight: '600' }}>Mark All Present</Text>
-                </TouchableOpacity>
+                {canEdit && (
+                    <TouchableOpacity onPress={markAllPresent} style={[styles.quickBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={{ color: colors.primary, fontWeight: '600' }}>Mark All Present</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <FlatList
@@ -212,7 +234,8 @@ export default function LessonDetailsScreen() {
 
                         <TouchableOpacity
                             style={[styles.statusBtn, { borderColor: getStatusColor(item.status) }]}
-                            onPress={() => handleTapStatus(item.studentId, item.status)}
+                            onPress={() => canEdit && handleTapStatus(item.studentId, item.status)}
+                            disabled={!canEdit}
                         >
                             <Text style={{ color: getStatusColor(item.status), fontWeight: 'bold', textTransform: 'capitalize' }}>
                                 {item.status}
@@ -223,15 +246,17 @@ export default function LessonDetailsScreen() {
                 ListEmptyComponent={<Text style={[styles.empty, { color: colors.secondaryText }]}>No active students in roster.</Text>}
             />
 
-            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
-                <TouchableOpacity
-                    style={[styles.saveBtn, { backgroundColor: colors.primary }, (Object.keys(dirtyRecords).length === 0 || isSaving) && { opacity: 0.5 }]}
-                    onPress={handleSave}
-                    disabled={Object.keys(dirtyRecords).length === 0 || isSaving}
-                >
-                    <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save Attendance'}</Text>
-                </TouchableOpacity>
-            </View>
+            {canEdit && (
+                <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
+                    <TouchableOpacity
+                        style={[styles.saveBtn, { backgroundColor: colors.primary }, (Object.keys(dirtyRecords).length === 0 || isSaving) && { opacity: 0.5 }]}
+                        onPress={handleSave}
+                        disabled={Object.keys(dirtyRecords).length === 0 || isSaving}
+                    >
+                        <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save Attendance'}</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 }

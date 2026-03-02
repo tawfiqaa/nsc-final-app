@@ -3,7 +3,9 @@ import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../src/contexts/AuthContext';
 import { useLesson } from '../src/contexts/LessonContext';
+import { useOrg } from '../src/contexts/OrgContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -15,13 +17,34 @@ export default function AddLessonScreen() {
     const schoolParam = typeof params.school === 'string' ? params.school : undefined;
     const modeParam = typeof params.mode === 'string' ? params.mode : undefined;
 
+    const { user } = useAuth();
     const { addSchedules, addOneTimeLog, updateSchedule, schedules } = useLesson();
+    const { membershipRole } = useOrg();
     const { colors } = useTheme();
+
+    const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
+    const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+    const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
+
+    useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin, router]);
+
+    if (isRestrictedAdmin) return null;
 
     const [isOneTime, setIsOneTime] = useState(false);
     const [school, setSchool] = useState('');
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [startTime, setStartTime] = useState(new Date());
+    const [oneTimeDate, setOneTimeDate] = useState(new Date());
+    const [duration, setDuration] = useState('');
+    const [distance, setDistance] = useState('');
+    const [notes, setNotes] = useState('');
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const isContextMode = !!(schoolParam && modeParam === 'log');
 
@@ -33,8 +56,7 @@ export default function AddLessonScreen() {
                 setSelectedDays([sched.dayOfWeek]);
                 const [h, m] = sched.startTime.split(':').map(Number);
                 const d = new Date();
-                d.setHours(h);
-                d.setMinutes(m);
+                d.setHours(h, m, 0, 0);
                 setStartTime(d);
                 setDuration(sched.duration.toString());
                 setDistance(sched.distance.toString());
@@ -44,13 +66,11 @@ export default function AddLessonScreen() {
             setSchool(schoolParam);
             if (modeParam === 'log') {
                 setIsOneTime(true);
-                // Try to find the default schedule for this school to auto-fill details
                 const defaultSched = schedules.find(s => s.school === schoolParam);
                 if (defaultSched) {
                     const [h, m] = defaultSched.startTime.split(':').map(Number);
                     const d = new Date();
-                    d.setHours(h);
-                    d.setMinutes(m);
+                    d.setHours(h, m, 0, 0);
                     setStartTime(d);
                     setDuration(defaultSched.duration.toString());
                     setDistance(defaultSched.distance.toString());
@@ -58,14 +78,6 @@ export default function AddLessonScreen() {
             }
         }
     }, [scheduleId, schedules, schoolParam, modeParam]);
-
-    const [startTime, setStartTime] = useState(new Date());
-    const [oneTimeDate, setOneTimeDate] = useState(new Date());
-    const [duration, setDuration] = useState('');
-    const [distance, setDistance] = useState('');
-    const [notes, setNotes] = useState('');
-    const [showTimePicker, setShowTimePicker] = useState(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const toggleDay = (index: number) => {
         if (selectedDays.includes(index)) {
@@ -102,10 +114,6 @@ export default function AddLessonScreen() {
         try {
             setIsSaving(true);
             if (scheduleId) {
-                // Update Existing Schedule
-                // We only update the single schedule being edited.
-                // If user selected multiple days, we take the first one or warn?
-                // Let's assume user changes day by selecting ONE day.
                 const day = selectedDays[0];
                 await updateSchedule(scheduleId, {
                     school: school.trim(),
@@ -113,11 +121,10 @@ export default function AddLessonScreen() {
                     startTime: format(startTime, 'HH:mm'),
                     duration: dur,
                     distance: dist,
-                    isActive: true // Revive if archived
+                    isActive: true
                 });
                 Alert.alert('Success', 'Schedule updated.');
             } else if (isOneTime) {
-                // One Time Event
                 const finalDateTime = new Date(oneTimeDate);
                 finalDateTime.setHours(startTime.getHours());
                 finalDateTime.setMinutes(startTime.getMinutes());
@@ -136,7 +143,6 @@ export default function AddLessonScreen() {
                 });
                 Alert.alert('Success', 'One-time lesson logged.');
             } else {
-                // Recurring Schedule(s)
                 const newSchedules = selectedDays.map(day => ({
                     school: school.trim(),
                     dayOfWeek: day,
@@ -241,27 +247,15 @@ export default function AddLessonScreen() {
                                     type: 'date',
                                     value: format(oneTimeDate, 'yyyy-MM-dd'),
                                     onChange: (e: any) => {
-                                        const d = new Date(e.target.value);
-                                        // maintain time if needed, but for date picking usually reset or keep? 
-                                        // user picks date. standard is start of day or maintain current time? 
-                                        // let's just set the date part. props.oneTimeDate has some time.
-                                        // simple new Date(str) is UTC usually or local?
-                                        // 'yyyy-MM-dd' + 'T00:00:00'
-                                        if (!isNaN(d.getTime())) {
-                                            // Fix timezone offset issue manually or use date-fns parse?
-                                            // simple:
-                                            const [y, m, day] = e.target.value.split('-').map(Number);
-                                            const newDate = new Date(oneTimeDate);
-                                            newDate.setFullYear(y, m - 1, day);
-                                            setOneTimeDate(newDate);
-                                        }
+                                        const [y, m, day] = e.target.value.split('-').map(Number);
+                                        const newDate = new Date(oneTimeDate);
+                                        newDate.setFullYear(y, m - 1, day);
+                                        setOneTimeDate(newDate);
                                     },
                                     onClick: (e: any) => {
                                         try {
                                             if (e.target.showPicker) e.target.showPicker();
-                                        } catch {
-                                            // Handle silently or log
-                                        }
+                                        } catch { }
                                     },
                                     style: {
                                         fontSize: 16,
@@ -306,7 +300,7 @@ export default function AddLessonScreen() {
                         <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
                             {React.createElement('input', {
                                 type: 'time',
-                                lang: 'en-GB', // Forces 24-hour format in supported browsers
+                                lang: 'en-GB',
                                 value: format(startTime, 'HH:mm'),
                                 onChange: (e: any) => {
                                     const [h, m] = e.target.value.split(':');
@@ -319,9 +313,7 @@ export default function AddLessonScreen() {
                                 onClick: (e: any) => {
                                     try {
                                         if (e.target.showPicker) e.target.showPicker();
-                                    } catch (err) {
-                                        console.log('showPicker not supported', err);
-                                    }
+                                    } catch (err) { }
                                 },
                                 style: {
                                     fontSize: 16,
@@ -396,8 +388,6 @@ export default function AddLessonScreen() {
                         />
                     </View>
                 )}
-
-
 
             </ScrollView>
 

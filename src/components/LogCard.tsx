@@ -50,8 +50,8 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
                 </View>
             ) : null}
 
-            {!readOnly && (
-                <View style={styles.actions}>
+            <View style={styles.actions}>
+                {!readOnly && (
                     <TouchableOpacity onPress={onDelete}>
                         {deleteType === 'icon' ? (
                             <Ionicons name="trash-outline" size={20} color={colors.error} />
@@ -61,20 +61,20 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
                             </Text>
                         )}
                     </TouchableOpacity>
-                    {user?.migratedToV2 && (
-                        <TouchableOpacity onPress={() => router.push({ pathname: '/lesson/[id]' as any, params: { id: log.id } })}>
-                            <Text style={[styles.actionLink, { color: colors.text }]}>Attendance</Text>
-                        </TouchableOpacity>
-                    )}
-                    {onEditNote && (
-                        <TouchableOpacity onPress={onEditNote}>
-                            <Text style={[styles.actionLink, { color: colors.primary }]}>
-                                {log.notes ? 'Edit Note' : 'Add Note'}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-            )}
+                )}
+                {(user?.migratedToV2 || !!log.createdBy) && (
+                    <TouchableOpacity onPress={() => router.push({ pathname: '/lesson/[id]' as any, params: { id: log.id } })}>
+                        <Text style={[styles.actionLink, { color: colors.text }]}>Attendance</Text>
+                    </TouchableOpacity>
+                )}
+                {!readOnly && onEditNote && (
+                    <TouchableOpacity onPress={onEditNote}>
+                        <Text style={[styles.actionLink, { color: colors.primary }]}>
+                            {log.notes ? 'Edit Note' : 'Add Note'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
+            </View>
         </View>
     );
 };

@@ -91,13 +91,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 uid,
                 email: firebaseUser.email!,
                 name: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
-                role: isSuperAdmin ? 'super_admin' : 'pending',
-                isApproved: isSuperAdmin,
+                role: isSuperAdmin ? 'super_admin' : 'teacher',
+                isApproved: true,
+                isSuperAdmin: isSuperAdmin || undefined,
                 migratedToV2: true,
                 migrationVersion: 2,
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
             };
+            // Remove undefined fields to avoid Firestore errors
+            if (!isSuperAdmin) delete (newUser as any).isSuperAdmin;
             await setDoc(docRef, newUser);
 
             // We don't need to create empty teacherData doc for V2 users
@@ -130,16 +133,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newUser: User = {
             uid,
             email,
-            name: name || email.split('@')[0], // Default to part of email if no name
-            role: isSuperAdmin ? 'super_admin' : 'pending',
-            isApproved: isSuperAdmin, // Auto-approve super admin
+            name: name || email.split('@')[0],
+            role: isSuperAdmin ? 'super_admin' : 'teacher',
+            isApproved: true,
+            isSuperAdmin: isSuperAdmin || undefined,
             migratedToV2: true,
             migrationVersion: 2,
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
-
-        await setDoc(doc(db, 'users', uid), newUser);
+        // Remove undefined fields to avoid Firestore errors
+        const userToSave = { ...newUser };
+        if (!isSuperAdmin) delete (userToSave as any).isSuperAdmin;
+        await setDoc(doc(db, 'users', uid), userToSave);
 
         // Empty teacherData is not needed for new V2 users
 
