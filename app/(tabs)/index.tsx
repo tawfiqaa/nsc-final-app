@@ -19,7 +19,8 @@ import { useFormatting } from '../../src/utils/formatters';
 export default function Dashboard() {
   const { user } = useAuth();
   const { schedules, logs, markAttendance, deleteLog, refresh, loading, updateLogNotes } = useLesson();
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, tokens, theme } = useTheme();
+  const { spacing, radius, interaction } = tokens;
   const { membershipRole } = useOrg();
   const { t } = useTranslation();
   const { formatDate, formatNumber, formatCurrency } = useFormatting();
@@ -150,15 +151,15 @@ export default function Dashboard() {
     setEditingLog(null);
   };
 
-  const textStyle = { fontFamily: fonts.regular, color: colors.text };
-  const boldStyle = { fontFamily: fonts.bold, color: colors.text };
-  const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+  const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
+  const boldStyle = { fontFamily: fonts.bold, color: colors.textPrimary };
+  const secondaryStyle = { fontFamily: fonts.regular, color: colors.textSecondary };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.accentPrimary} />}
       >
         <View style={styles.header}>
           <View>
@@ -174,16 +175,30 @@ export default function Dashboard() {
 
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
           <TouchableOpacity
-            style={[styles.totalCardHome, { backgroundColor: colors.card, borderColor: colors.primary, borderWidth: 1 }]}
+            activeOpacity={interaction.pressedOpacity}
+            style={[
+              styles.totalCardHome,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+                borderWidth: 1,
+                borderRadius: radius.large,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                shadowRadius: 12,
+                elevation: theme === 'light' ? 2 : 4,
+              }
+            ]}
             onPress={() => router.push('/payroll' as any)}
           >
             <Text style={[styles.totalLabelHome, secondaryStyle]}>{t('dashboard.totalMonth')}</Text>
-            <Text style={[styles.totalValueHome, { color: colors.primary, fontFamily: fonts.bold }]}>
+            <Text style={[styles.totalValueHome, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
               {monthlyStats.ratesMissing ? t('dashboard.setRates') : formatCurrency(monthlyStats.totalPay, payrollSettings?.currency || 'ILS')}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
               <Text style={[secondaryStyle, { fontSize: 11 }]}>{t('dashboard.tapToViewDetails')}</Text>
-              <Ionicons name="chevron-forward" size={12} color={colors.secondaryText} style={{ marginLeft: 4 }} />
+              <Ionicons name="chevron-forward" size={12} color={colors.textSecondary} style={{ marginLeft: 4 }} />
             </View>
           </TouchableOpacity>
         </View>
@@ -217,10 +232,11 @@ export default function Dashboard() {
       </ScrollView>
 
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary }]}
+        activeOpacity={interaction.pressedOpacity}
+        style={[styles.fab, { backgroundColor: colors.accentPrimary, borderRadius: radius.full, width: 64, height: 64, elevation: 8, shadowOpacity: 0.3 }]}
         onPress={() => router.push('/add-lesson')}
       >
-        <Ionicons name="add" size={32} color="#fff" />
+        <Ionicons name="add" size={36} color="#fff" />
       </TouchableOpacity>
 
       {/* Modal for Notes (Add/Edit) */}
@@ -234,15 +250,24 @@ export default function Dashboard() {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, borderRadius: radius.large, borderColor: colors.borderSubtle, borderWidth: 1 }]}>
             <Text style={[styles.modalTitle, boldStyle]}>
               {markingSchedule ? t('dashboard.lessonNotesOptional') : editingLog?.notes ? t('dashboard.editNote') : t('dashboard.addNote')}
             </Text>
 
             <TextInput
-              style={[styles.textInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
+              style={[
+                styles.textInput,
+                {
+                  color: colors.textPrimary,
+                  borderColor: colors.borderSubtle,
+                  backgroundColor: colors.backgroundSecondary,
+                  fontFamily: fonts.regular,
+                  borderRadius: radius.medium
+                }
+              ]}
               placeholder={t('dashboard.notesPlaceholder')}
-              placeholderTextColor={colors.secondaryText}
+              placeholderTextColor={colors.textSecondary}
               value={notesInput}
               onChangeText={setNotesInput}
               multiline
@@ -252,7 +277,7 @@ export default function Dashboard() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                style={[styles.modalBtn, { borderColor: colors.borderSubtle, borderWidth: 1 }]}
                 onPress={() => {
                   setMarkingSchedule(null);
                   setEditingLog(null);
@@ -262,7 +287,7 @@ export default function Dashboard() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                style={[styles.modalBtn, { backgroundColor: colors.accentPrimary }]}
                 onPress={markingSchedule ? confirmMark : confirmEditNote}
               >
                 <Text style={{ color: '#fff', fontWeight: '600', fontFamily: fonts.bold }}>{t('common.save')}</Text>

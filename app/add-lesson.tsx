@@ -23,7 +23,8 @@ export default function AddLessonScreen() {
     const { user } = useAuth();
     const { addSchedules, addOneTimeLog, updateSchedule, schedules } = useLesson();
     const { membershipRole } = useOrg();
-    const { colors, fonts } = useTheme();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius, interaction } = tokens;
 
     const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
     const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
@@ -174,32 +175,50 @@ export default function AddLessonScreen() {
         }
     };
 
-    const textStyle = { fontFamily: fonts.regular, color: colors.text };
-    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
-    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+    const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.textPrimary };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.textSecondary };
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
             <ScrollView contentContainerStyle={styles.content}>
 
                 {!isContextMode && (
-                    <View style={styles.typeToggle}>
+                    <View style={[styles.typeToggle, { borderColor: colors.borderSubtle, borderRadius: radius.medium }]}>
                         <TouchableOpacity
-                            style={[styles.toggleBtn, !isOneTime && { backgroundColor: colors.primary }, (scheduleId || isSaving) && { opacity: 0.5 }]}
+                            activeOpacity={interaction.pressedOpacity}
+                            style={[
+                                styles.toggleBtn,
+                                !isOneTime ? { backgroundColor: colors.accentPrimary } : { backgroundColor: colors.surface },
+                                (scheduleId || isSaving) && { opacity: 0.5 }
+                            ]}
                             onPress={() => !scheduleId && !isSaving && setIsOneTime(false)}
                             disabled={!!scheduleId || isSaving}
                         >
-                            <Text style={[styles.toggleText, { fontFamily: fonts.bold }, !isOneTime ? { color: '#fff' } : { color: colors.text }]}>
+                            <Text style={[
+                                styles.toggleText,
+                                { fontFamily: fonts.bold },
+                                !isOneTime ? { color: '#fff' } : { color: colors.textPrimary }
+                            ]}>
                                 {scheduleId ? t('addLesson.editingSchedule') : t('addLesson.recurring')}
                             </Text>
                         </TouchableOpacity>
                         {!scheduleId && (
                             <TouchableOpacity
-                                style={[styles.toggleBtn, isOneTime && { backgroundColor: colors.primary }, isSaving && { opacity: 0.5 }]}
+                                activeOpacity={interaction.pressedOpacity}
+                                style={[
+                                    styles.toggleBtn,
+                                    isOneTime ? { backgroundColor: colors.accentPrimary } : { backgroundColor: colors.surface },
+                                    isSaving && { opacity: 0.5 }
+                                ]}
                                 onPress={() => !isSaving && setIsOneTime(true)}
                                 disabled={isSaving}
                             >
-                                <Text style={[styles.toggleText, { fontFamily: fonts.bold }, isOneTime ? { color: '#fff' } : { color: colors.text }]}>
+                                <Text style={[
+                                    styles.toggleText,
+                                    { fontFamily: fonts.bold },
+                                    isOneTime ? { color: '#fff' } : { color: colors.textPrimary }
+                                ]}>
                                     {t('addLesson.oneTime')}
                                 </Text>
                             </TouchableOpacity>
@@ -212,13 +231,19 @@ export default function AddLessonScreen() {
                     <TextInput
                         style={[
                             styles.input,
-                            { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular },
+                            {
+                                color: colors.textPrimary,
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                                fontFamily: fonts.regular,
+                                borderRadius: radius.large
+                            },
                             isContextMode && { opacity: 0.6 }
                         ]}
                         value={school}
                         onChangeText={setSchool}
                         placeholder={t('addLesson.schoolPlaceholder')}
-                        placeholderTextColor={colors.secondaryText}
+                        placeholderTextColor={colors.textSecondary}
                         editable={!isContextMode}
                     />
                 </View>
@@ -232,17 +257,18 @@ export default function AddLessonScreen() {
                                 const isSelected = selectedDays.includes(index);
                                 return (
                                     <TouchableOpacity
+                                        activeOpacity={interaction.pressedOpacity}
                                         key={dayKey}
                                         style={[
                                             styles.dayChip,
-                                            isSelected ? { backgroundColor: colors.primary } : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }
+                                            isSelected ? { backgroundColor: colors.accentPrimary } : { backgroundColor: colors.surface, borderColor: colors.borderSubtle, borderWidth: 1 }
                                         ]}
                                         onPress={() => toggleDay(index)}
                                     >
                                         <Text style={[
                                             styles.dayText,
                                             { fontFamily: fonts.bold },
-                                            isSelected ? { color: '#fff' } : { color: colors.text }
+                                            isSelected ? { color: '#fff' } : { color: colors.textPrimary }
                                         ]}>{t(`days.${dayKey}`)}</Text>
                                     </TouchableOpacity>
                                 );
@@ -255,7 +281,16 @@ export default function AddLessonScreen() {
                     <View style={styles.formGroup}>
                         <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.date')}</Text>
                         {Platform.OS === 'web' ? (
-                            <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
+                            <View style={[
+                                styles.input,
+                                {
+                                    justifyContent: 'center',
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.surface,
+                                    paddingVertical: 0,
+                                    borderRadius: radius.large
+                                }
+                            ]}>
                                 {React.createElement('input', {
                                     type: 'date',
                                     value: `${oneTimeDate.getFullYear()}-${(oneTimeDate.getMonth() + 1).toString().padStart(2, '0')}-${oneTimeDate.getDate().toString().padStart(2, '0')}`,
@@ -274,7 +309,7 @@ export default function AddLessonScreen() {
                                         fontSize: 16,
                                         border: 'none',
                                         background: 'transparent',
-                                        color: colors.text,
+                                        color: colors.textPrimary,
                                         width: '100%',
                                         height: '100%',
                                         outline: 'none',
@@ -286,7 +321,16 @@ export default function AddLessonScreen() {
                         ) : (
                             <>
                                 <TouchableOpacity
-                                    style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card }]}
+                                    activeOpacity={interaction.pressedOpacity}
+                                    style={[
+                                        styles.input,
+                                        {
+                                            justifyContent: 'center',
+                                            borderColor: colors.borderSubtle,
+                                            backgroundColor: colors.surface,
+                                            borderRadius: radius.large
+                                        }
+                                    ]}
                                     onPress={() => setShowDatePicker(true)}
                                 >
                                     <Text style={[textStyle, { fontSize: 16 }]}>{formatDate(oneTimeDate, { month: 'short', day: '2-digit', year: 'numeric' })}</Text>
@@ -310,7 +354,16 @@ export default function AddLessonScreen() {
                 <View style={styles.formGroup}>
                     <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.startTime')}</Text>
                     {Platform.OS === 'web' ? (
-                        <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
+                        <View style={[
+                            styles.input,
+                            {
+                                justifyContent: 'center',
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                                paddingVertical: 0,
+                                borderRadius: radius.large
+                            }
+                        ]}>
                             {React.createElement('input', {
                                 type: 'time',
                                 lang: 'en-GB',
@@ -332,7 +385,7 @@ export default function AddLessonScreen() {
                                     fontSize: 16,
                                     border: 'none',
                                     background: 'transparent',
-                                    color: colors.text,
+                                    color: colors.textPrimary,
                                     width: '100%',
                                     height: '100%',
                                     outline: 'none',
@@ -344,7 +397,16 @@ export default function AddLessonScreen() {
                     ) : (
                         <>
                             <TouchableOpacity
-                                style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card }]}
+                                activeOpacity={interaction.pressedOpacity}
+                                style={[
+                                    styles.input,
+                                    {
+                                        justifyContent: 'center',
+                                        borderColor: colors.borderSubtle,
+                                        backgroundColor: colors.surface,
+                                        borderRadius: radius.large
+                                    }
+                                ]}
                                 onPress={() => setShowTimePicker(true)}
                             >
                                 <Text style={[textStyle, { fontSize: 16 }]}>
@@ -368,23 +430,41 @@ export default function AddLessonScreen() {
                     <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
                         <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.duration')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
+                            style={[
+                                styles.input,
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.surface,
+                                    fontFamily: fonts.regular,
+                                    borderRadius: radius.large
+                                }
+                            ]}
                             value={duration}
                             onChangeText={setDuration}
                             keyboardType="numeric"
                             placeholder="1.5"
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                         />
                     </View>
                     <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                         <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.distance')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
+                            style={[
+                                styles.input,
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.surface,
+                                    fontFamily: fonts.regular,
+                                    borderRadius: radius.large
+                                }
+                            ]}
                             value={distance}
                             onChangeText={setDistance}
                             keyboardType="numeric"
                             placeholder="12.5"
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                         />
                     </View>
                 </View>
@@ -393,11 +473,22 @@ export default function AddLessonScreen() {
                     <View style={styles.formGroup}>
                         <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.notes')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, minHeight: 80, paddingVertical: 12, fontFamily: fonts.regular }]}
+                            style={[
+                                styles.input,
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.surface,
+                                    minHeight: 80,
+                                    paddingVertical: 12,
+                                    fontFamily: fonts.regular,
+                                    borderRadius: radius.large
+                                }
+                            ]}
                             value={notes}
                             onChangeText={setNotes}
                             placeholder={t('addLesson.notesPlaceholder')}
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                             multiline
                             textAlignVertical="top"
                         />
@@ -406,9 +497,21 @@ export default function AddLessonScreen() {
 
             </ScrollView>
 
-            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
+            <View style={[
+                styles.footer,
+                {
+                    borderTopColor: colors.borderSubtle,
+                    backgroundColor: colors.surface,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                    shadowRadius: 10,
+                    elevation: 5
+                }
+            ]}>
                 <TouchableOpacity
-                    style={[styles.saveButton, { backgroundColor: colors.primary }, isSaving && { opacity: 0.7 }]}
+                    activeOpacity={interaction.pressedOpacity}
+                    style={[styles.saveButton, { backgroundColor: colors.accentPrimary, borderRadius: radius.large }, isSaving && { opacity: 0.7 }]}
                     onPress={handleSave}
                     disabled={isSaving}
                 >

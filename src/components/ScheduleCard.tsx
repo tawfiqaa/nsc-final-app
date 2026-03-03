@@ -12,28 +12,45 @@ interface ScheduleCardProps {
 }
 
 export const ScheduleCard: React.FC<ScheduleCardProps> = ({ schedule, onMark, readOnly, lessonCount }) => {
-    const { colors } = useTheme();
+    const { colors, theme, tokens } = useTheme();
+    const { radius, interaction } = tokens;
+
+    const cardStyle = [
+        styles.card,
+        {
+            backgroundColor: colors.surface,
+            borderRadius: radius.large,
+            borderColor: theme === 'light' ? colors.borderSubtle : colors.divider,
+            borderWidth: 1,
+            // Subtle shadow for light mode
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+            shadowRadius: 10,
+            elevation: theme === 'light' ? 2 : 4,
+        }
+    ];
 
     return (
-        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.text }]}>
+        <View style={cardStyle}>
             <View style={styles.header}>
-                <Text style={[styles.school, { color: colors.text }]}>{schedule.school}</Text>
-                <Text style={[styles.time, { color: colors.primary }]}>{schedule.startTime}</Text>
+                <Text style={[styles.school, { color: colors.textPrimary }]}>{schedule.school}</Text>
+                <Text style={[styles.time, { color: colors.accentPrimary }]}>{schedule.startTime}</Text>
             </View>
 
             <View style={styles.details}>
                 <View style={styles.detailItem}>
-                    <Ionicons name="time-outline" size={16} color={colors.secondaryText} />
-                    <Text style={[styles.detailText, { color: colors.secondaryText }]}>{schedule.duration}h</Text>
+                    <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{schedule.duration}h</Text>
                 </View>
                 <View style={styles.detailItem}>
-                    <Ionicons name="car-outline" size={16} color={colors.secondaryText} />
-                    <Text style={[styles.detailText, { color: colors.secondaryText }]}>{schedule.distance}km</Text>
+                    <Ionicons name="car-outline" size={16} color={colors.textSecondary} />
+                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{schedule.distance}km</Text>
                 </View>
                 {typeof lessonCount !== 'undefined' && (
                     <View style={styles.detailItem}>
-                        <Ionicons name="book-outline" size={16} color={colors.secondaryText} />
-                        <Text style={[styles.detailText, { color: colors.secondaryText }]}>{lessonCount} lessons</Text>
+                        <Ionicons name="book-outline" size={16} color={colors.textSecondary} />
+                        <Text style={[styles.detailText, { color: colors.textSecondary }]}>{lessonCount} lessons</Text>
                     </View>
                 )}
             </View>
@@ -41,14 +58,16 @@ export const ScheduleCard: React.FC<ScheduleCardProps> = ({ schedule, onMark, re
             {!readOnly && (
                 <View style={styles.actions}>
                     <TouchableOpacity
-                        style={[styles.button, { borderColor: colors.error }]}
+                        activeOpacity={interaction.pressedOpacity}
+                        style={[styles.button, { borderColor: colors.danger, backgroundColor: colors.danger + '08' }]}
                         onPress={() => onMark?.('absent')}
                     >
-                        <Ionicons name="close-circle" size={20} color={colors.error} />
-                        <Text style={[styles.buttonText, { color: colors.error }]}>Absent</Text>
+                        <Ionicons name="close-circle" size={20} color={colors.danger} />
+                        <Text style={[styles.buttonText, { color: colors.danger }]}>Absent</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                        activeOpacity={interaction.pressedOpacity}
                         style={[styles.button, { borderColor: colors.success, backgroundColor: colors.success + '10' }]}
                         onPress={() => onMark?.('present')}
                     >

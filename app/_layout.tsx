@@ -1,6 +1,6 @@
-import { NotoSans_400Regular, NotoSans_700Bold } from '@expo-google-fonts/noto-sans';
-import { NotoSansArabic_400Regular, NotoSansArabic_700Bold } from '@expo-google-fonts/noto-sans-arabic';
-import { NotoSansHebrew_400Regular, NotoSansHebrew_700Bold } from '@expo-google-fonts/noto-sans-hebrew';
+import { NotoSans_400Regular, NotoSans_500Medium, NotoSans_700Bold } from '@expo-google-fonts/noto-sans';
+import { NotoSansArabic_400Regular, NotoSansArabic_500Medium, NotoSansArabic_700Bold } from '@expo-google-fonts/noto-sans-arabic';
+import { NotoSansHebrew_400Regular, NotoSansHebrew_500Medium, NotoSansHebrew_700Bold } from '@expo-google-fonts/noto-sans-hebrew';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -131,10 +131,13 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     ...Ionicons.font,
     NotoSans_400Regular,
+    NotoSans_500Medium,
     NotoSans_700Bold,
     NotoSansArabic_400Regular,
+    NotoSansArabic_500Medium,
     NotoSansArabic_700Bold,
     NotoSansHebrew_400Regular,
+    NotoSansHebrew_500Medium,
     NotoSansHebrew_700Bold,
   });
 

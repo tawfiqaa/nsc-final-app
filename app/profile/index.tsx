@@ -25,7 +25,8 @@ import { db, storage } from '../../src/lib/firebase';
 
 export default function ProfileScreen() {
     const { user } = useAuth();
-    const { colors, fonts } = useTheme();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius, interaction } = tokens;
     const { t } = useTranslation();
     const router = useRouter();
 
@@ -139,15 +140,24 @@ export default function ProfileScreen() {
 
     if (!user) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ color: colors.text }}>{t('profile.pleaseSignIn')}</Text>
+            <View style={[styles.container, { backgroundColor: colors.backgroundPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: colors.textPrimary, fontFamily: fonts.regular }}>{t('profile.pleaseSignIn')}</Text>
             </View>
         );
     }
 
-    const textStyle = { fontFamily: fonts.regular, color: colors.text };
-    const labelStyle = { fontFamily: fonts.bold, color: colors.secondaryText, fontSize: 12, marginBottom: 8, textTransform: 'uppercase' as const, letterSpacing: 0.5 };
-    const inputStyle = [styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }];
+    const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
+    const labelStyle = { fontFamily: fonts.bold, color: colors.textSecondary, fontSize: 12, marginBottom: 8, textTransform: 'uppercase' as const, letterSpacing: 0.5 };
+    const inputStyle = [
+        styles.input,
+        {
+            color: colors.textPrimary,
+            borderColor: colors.borderSubtle,
+            backgroundColor: colors.surface,
+            fontFamily: fonts.regular,
+            borderRadius: radius.large
+        }
+    ];
 
     return (
         <KeyboardAvoidingView
@@ -156,7 +166,7 @@ export default function ProfileScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         >
             <Stack.Screen options={{ title: t('profile.title'), headerTitleStyle: { fontFamily: fonts.bold } }} />
-            <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
+            <ScrollView style={[styles.container, { backgroundColor: colors.backgroundPrimary }]} contentContainerStyle={styles.content}>
 
                 {/* Avatar Section */}
                 <View style={styles.avatarContainer}>
@@ -165,16 +175,16 @@ export default function ProfileScreen() {
                             {photoURL ? (
                                 <Image
                                     source={{ uri: photoURL }}
-                                    style={styles.avatar}
+                                    style={[styles.avatar, { borderColor: colors.surface }]}
                                     contentFit="cover"
                                     transition={200}
                                 />
                             ) : (
-                                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.card }]}>
-                                    <Ionicons name="person" size={60} color={colors.secondaryText} />
+                                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
+                                    <Ionicons name="person" size={60} color={colors.textSecondary} />
                                 </View>
                             )}
-                            <View style={[styles.editBadge, { backgroundColor: colors.primary }]}>
+                            <View style={[styles.editBadge, { backgroundColor: colors.accentPrimary, borderColor: colors.surface }]}>
                                 <Ionicons name="camera" size={18} color="#fff" />
                             </View>
                             {uploading && (
@@ -184,7 +194,7 @@ export default function ProfileScreen() {
                             )}
                         </View>
                     </TouchableOpacity>
-                    <Text style={[textStyle, { marginTop: 12, fontSize: 14, color: colors.primary, fontFamily: fonts.bold }]}>
+                    <Text style={[textStyle, { marginTop: 12, fontSize: 14, color: colors.accentPrimary, fontFamily: fonts.bold }]}>
                         {uploading ? t('profile.uploading') : t('profile.changePhoto')}
                     </Text>
                 </View>
@@ -192,8 +202,8 @@ export default function ProfileScreen() {
                 {/* Form Fields */}
                 <View style={styles.form}>
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="person-outline" size={16} color={colors.secondaryText} />
-                        <Text style={[styles.sectionHeaderText, { color: colors.secondaryText, fontFamily: fonts.bold }]}>
+                        <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                        <Text style={[styles.sectionHeaderText, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
                             {t('settings.account')}
                         </Text>
                     </View>
@@ -205,7 +215,7 @@ export default function ProfileScreen() {
                             value={displayName}
                             onChangeText={setDisplayName}
                             placeholder={t('profile.displayName')}
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                         />
                     </View>
 
@@ -216,14 +226,14 @@ export default function ProfileScreen() {
                             value={username}
                             onChangeText={setUsername}
                             placeholder={t('profile.username')}
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                             autoCapitalize="none"
                         />
                     </View>
 
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="call-outline" size={16} color={colors.secondaryText} />
-                        <Text style={[styles.sectionHeaderText, { color: colors.secondaryText, fontFamily: fonts.bold }]}>
+                        <Ionicons name="call-outline" size={16} color={colors.textSecondary} />
+                        <Text style={[styles.sectionHeaderText, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
                             {t('profile.phone')} & {t('profile.dateOfBirth')}
                         </Text>
                     </View>
@@ -235,7 +245,7 @@ export default function ProfileScreen() {
                             value={phone}
                             onChangeText={setPhone}
                             placeholder={t('profile.phone')}
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                             keyboardType="phone-pad"
                         />
                     </View>
@@ -243,11 +253,19 @@ export default function ProfileScreen() {
                     <View style={styles.field}>
                         <Text style={labelStyle}>{t('profile.dateOfBirth')}</Text>
                         <TouchableOpacity
-                            style={[styles.dateSelector, { borderColor: colors.border, backgroundColor: colors.card }]}
+                            activeOpacity={interaction.pressedOpacity}
+                            style={[
+                                styles.dateSelector,
+                                {
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.surface,
+                                    borderRadius: radius.large
+                                }
+                            ]}
                             onPress={() => setShowDatePicker(true)}
                         >
                             <Text style={textStyle}>{dob.toISOString().split('T')[0]}</Text>
-                            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                            <Ionicons name="calendar-outline" size={20} color={colors.accentPrimary} />
                         </TouchableOpacity>
                         {showDatePicker && (
                             <DateTimePicker
@@ -264,8 +282,8 @@ export default function ProfileScreen() {
                     </View>
 
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="mail-outline" size={16} color={colors.secondaryText} />
-                        <Text style={[styles.sectionHeaderText, { color: colors.secondaryText, fontFamily: fonts.bold }]}>
+                        <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
+                        <Text style={[styles.sectionHeaderText, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
                             {t('settings.email')}
                         </Text>
                     </View>
@@ -273,27 +291,35 @@ export default function ProfileScreen() {
                     <View style={styles.field}>
                         <Text style={labelStyle}>{t('profile.contactEmail')}</Text>
                         <TextInput
-                            style={[inputStyle, emailError ? { borderColor: colors.error } : {}]}
+                            style={[inputStyle, emailError ? { borderColor: colors.danger } : {}]}
                             value={contactEmail}
                             onChangeText={(val) => {
                                 setContactEmail(val);
                                 validateEmail(val);
                             }}
                             placeholder={t('profile.contactEmail')}
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                             keyboardType="email-address"
                             autoCapitalize="none"
                         />
-                        {emailError ? <Text style={{ color: colors.error, fontSize: 12, marginTop: 4, fontFamily: fonts.regular }}>{emailError}</Text> : null}
+                        {emailError ? <Text style={{ color: colors.danger, fontSize: 12, marginTop: 4, fontFamily: fonts.regular }}>{emailError}</Text> : null}
                     </View>
 
                     <View style={styles.field}>
                         <Text style={labelStyle}>{t('profile.authEmail')}</Text>
-                        <View style={[styles.readOnlyField, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.7 }]}>
+                        <View style={[
+                            styles.readOnlyField,
+                            {
+                                backgroundColor: colors.backgroundSecondary,
+                                borderColor: colors.borderSubtle,
+                                opacity: 0.8,
+                                borderRadius: radius.large
+                            }
+                        ]}>
                             <Text style={[textStyle, { fontSize: 14 }]}>{user.authEmail || user.email}</Text>
-                            <Ionicons name="lock-closed" size={14} color={colors.secondaryText} />
+                            <Ionicons name="lock-closed" size={14} color={colors.textSecondary} />
                         </View>
-                        <Text style={[styles.helperText, { color: colors.secondaryText, fontFamily: fonts.regular }]}>
+                        <Text style={[styles.helperText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                             {t('profile.authEmail')} (Read-only)
                         </Text>
                     </View>
@@ -301,7 +327,12 @@ export default function ProfileScreen() {
 
                 {/* Save Button */}
                 <TouchableOpacity
-                    style={[styles.saveButton, { backgroundColor: colors.primary }, (loading || !!emailError) && { opacity: 0.6 }]}
+                    activeOpacity={interaction.pressedOpacity}
+                    style={[
+                        styles.saveButton,
+                        { backgroundColor: colors.accentPrimary, borderRadius: radius.large },
+                        (loading || !!emailError) && { opacity: 0.6 }
+                    ]}
                     onPress={handleSave}
                     disabled={loading || !!emailError}
                 >
@@ -310,7 +341,7 @@ export default function ProfileScreen() {
                     ) : (
                         <View style={styles.buttonContent}>
                             <Ionicons name="save-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                            <Text style={styles.saveButtonText}>{t('profile.save')}</Text>
+                            <Text style={[styles.saveButtonText, { fontFamily: fonts.bold }]}>{t('profile.save')}</Text>
                         </View>
                     )}
                 </TouchableOpacity>

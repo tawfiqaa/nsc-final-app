@@ -15,9 +15,9 @@ export const ThemeToggle = () => {
         <Switch
             value={isDark}
             onValueChange={toggleSwitch}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={Platform.OS === 'ios' ? undefined : (isDark ? colors.primary : '#f4f3f4')}
-            ios_backgroundColor={colors.border}
+            trackColor={{ false: colors.borderSubtle, true: colors.accentPrimary }}
+            thumbColor={Platform.OS === 'ios' ? undefined : (isDark ? colors.accentSecondary : '#f4f3f4')}
+            ios_backgroundColor={colors.borderSubtle}
         />
     );
 };

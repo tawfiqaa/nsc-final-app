@@ -17,8 +17,13 @@ export const useFormatting = () => {
      * Format a date according to the current locale
      */
     const formatDate = (date: Date | number, options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' }) => {
-        const d = typeof date === 'number' ? new Date(date) : date;
-        return new Intl.DateTimeFormat(locale, options).format(d);
+        try {
+            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date) : date;
+            if (!d || isNaN(d.getTime())) return '---';
+            return new Intl.DateTimeFormat(locale, options).format(d);
+        } catch (e) {
+            return '---';
+        }
     };
 
     /**
@@ -39,8 +44,13 @@ export const useFormatting = () => {
      * Format time according to the current locale
      */
     const formatTime = (date: Date | number) => {
-        const d = typeof date === 'number' ? new Date(date) : date;
-        return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+        try {
+            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date) : date;
+            if (!d || isNaN(d.getTime())) return '--:--';
+            return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+        } catch (e) {
+            return '--:--';
+        }
     };
 
     return { formatNumber, formatDate, formatCurrency, formatTime };
@@ -51,11 +61,21 @@ export const useFormatting = () => {
  */
 export const staticFormatters = {
     formatDate: (date: Date | number, locale = 'en') => {
-        const d = typeof date === 'number' ? new Date(date) : date;
-        return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(d);
+        try {
+            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date) : date;
+            if (!d || isNaN(d.getTime())) return '---';
+            return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(d);
+        } catch (e) {
+            return '---';
+        }
     },
     formatTime: (date: Date | number, locale = 'en') => {
-        const d = typeof date === 'number' ? new Date(date) : date;
-        return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+        try {
+            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date) : date;
+            if (!d || isNaN(d.getTime())) return '--:--';
+            return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+        } catch (e) {
+            return '--:--';
+        }
     }
 };

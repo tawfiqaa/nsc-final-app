@@ -10,7 +10,8 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { exportToExcel, generateSchoolHistoryData } from '../../src/utils/export';
 
 export default function SchoolsScreen() {
-    const { colors, fonts } = useTheme();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius, interaction } = tokens;
     const { user } = useAuth();
     const { schedules, logs, deleteSchool } = useLesson();
     const { membershipRole } = useOrg();
@@ -80,47 +81,63 @@ export default function SchoolsScreen() {
     };
 
     const renderItem = ({ item }: { item: { name: string, lessonCount: number } }) => (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[
+            styles.card,
+            {
+                backgroundColor: colors.surface,
+                borderColor: theme === 'light' ? colors.borderSubtle : colors.divider,
+                borderRadius: radius.large,
+                borderWidth: 1,
+                // Subtle shadow for light mode
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                shadowRadius: 10,
+                elevation: theme === 'light' ? 2 : 4,
+            }
+        ]}>
             <TouchableOpacity
                 style={styles.cardContent}
                 onPress={() => router.push({ pathname: '/school/[id]', params: { id: item.name } })}
             >
-                <View style={styles.iconContainer}>
-                    <Ionicons name="school" size={24} color={colors.primary} />
+                <View style={[styles.iconContainer, { backgroundColor: colors.accentPrimary + '10' }]}>
+                    <Ionicons name="school" size={24} color={colors.accentPrimary} />
                 </View>
                 <View style={styles.info}>
-                    <Text style={[styles.schoolName, { color: colors.text, fontFamily: fonts.bold }]}>{item.name}</Text>
-                    <Text style={[styles.stats, { color: colors.secondaryText, fontFamily: fonts.regular }]}>
+                    <Text style={[styles.schoolName, { color: colors.textPrimary, fontFamily: fonts.bold }]}>{item.name}</Text>
+                    <Text style={[styles.stats, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                         {t('schools.lessonCount', { count: item.lessonCount })}
                     </Text>
                 </View>
             </TouchableOpacity>
 
             <TouchableOpacity
+                activeOpacity={interaction.pressedOpacity}
                 style={styles.exportBtn}
                 onPress={() => handleExport(item.name)}
             >
-                <Ionicons name="download-outline" size={24} color={colors.primary} />
+                <Ionicons name="download-outline" size={24} color={colors.accentPrimary} />
             </TouchableOpacity>
 
             <TouchableOpacity
+                activeOpacity={interaction.pressedOpacity}
                 style={styles.exportBtn}
                 onPress={() => handleDeleteSchool(item.name)}
             >
-                <Ionicons name="trash-outline" size={24} color={colors.error || '#ff4444'} />
+                <Ionicons name="trash-outline" size={24} color={colors.danger} />
             </TouchableOpacity>
         </View>
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
             <FlatList
                 data={schools}
                 keyExtractor={item => item.name}
                 renderItem={renderItem}
                 contentContainerStyle={styles.list}
                 ListEmptyComponent={
-                    <Text style={[styles.empty, { color: colors.secondaryText, fontFamily: fonts.regular }]}>{t('schools.noSchoolsFound')}</Text>
+                    <Text style={[styles.empty, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('schools.noSchoolsFound')}</Text>
                 }
             />
         </View>

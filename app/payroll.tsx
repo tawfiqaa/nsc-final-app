@@ -26,7 +26,8 @@ const CURRENCIES = [
 export default function PayrollScreen() {
     const { user } = useAuth();
     const { membershipRole } = useOrg();
-    const { colors, fonts } = useTheme();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius, interaction } = tokens;
     const { t } = useTranslation();
     const { formatNumber, formatDate, formatCurrency } = useFormatting();
     const router = useRouter();
@@ -222,14 +223,14 @@ export default function PayrollScreen() {
         if (selectedDate) setEndDate(selectedDate);
     };
 
-    const textStyle = { fontFamily: fonts.regular, color: colors.text };
-    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
-    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+    const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.textPrimary };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.textSecondary };
 
     if (loading) {
         return (
-            <View style={[styles.centered, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
+            <View style={[styles.centered, { backgroundColor: colors.backgroundPrimary }]}>
+                <ActivityIndicator size="large" color={colors.accentPrimary} />
             </View>
         );
     }
@@ -237,44 +238,51 @@ export default function PayrollScreen() {
     const ratesMissing = !settings;
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={[styles.headerRow, { marginBottom: 20 }]}>
                     <Text style={[styles.title, boldStyle]}>{t('payroll.title')}</Text>
                     <TouchableOpacity onPress={() => setShowSettingsModal(true)}>
-                        <Ionicons name="settings-outline" size={24} color={colors.primary} />
+                        <Ionicons name="settings-outline" size={24} color={colors.accentPrimary} />
                     </TouchableOpacity>
                 </View>
 
                 {ratesMissing && (
-                    <View style={[styles.warningBox, { backgroundColor: '#332200', borderColor: '#FFCC00' }]}>
-                        <Ionicons name="warning-outline" size={24} color="#FFCC00" />
+                    <View style={[styles.warningBox, { backgroundColor: colors.warning + '15', borderColor: colors.warning }]}>
+                        <Ionicons name="warning-outline" size={24} color={colors.warning} />
                         <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={{ color: '#FFCC00', fontWeight: 'bold', fontFamily: fonts.bold }}>{t('payroll.ratesNotConfigured')}</Text>
-                            <Text style={{ color: '#DDD', fontSize: 13, fontFamily: fonts.regular }}>{t('payroll.setRatesToSeeTotals')}</Text>
+                            <Text style={{ color: colors.warning, fontWeight: 'bold', fontFamily: fonts.bold }}>{t('payroll.ratesNotConfigured')}</Text>
+                            <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: fonts.regular }}>{t('payroll.setRatesToSeeTotals')}</Text>
                         </View>
                         <TouchableOpacity
-                            style={[styles.smallBtn, { backgroundColor: '#FFCC00' }]}
+                            activeOpacity={interaction.pressedOpacity}
+                            style={[styles.smallBtn, { backgroundColor: colors.warning }]}
                             onPress={() => setShowSettingsModal(true)}
                         >
-                            <Text style={{ color: '#000', fontWeight: '800', fontSize: 12, fontFamily: fonts.bold }}>{t('dashboard.setRates')}</Text>
+                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12, fontFamily: fonts.bold }}>{t('dashboard.setRates')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
 
-                <View style={[styles.section, { backgroundColor: colors.card }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('payroll.dateRange')}</Text>
+                <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: radius.large }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('payroll.dateRange')}</Text>
                     <View style={styles.rangeButtons}>
                         {(['this_month', 'last_month', 'custom'] as const).map((type) => (
                             <TouchableOpacity
                                 key={type}
+                                activeOpacity={interaction.pressedOpacity}
                                 style={[
                                     styles.rangeBtn,
-                                    { borderColor: colors.border, borderWidth: 1, backgroundColor: rangeType === type ? colors.primary : '#1a1a1a' }
+                                    {
+                                        borderColor: rangeType === type ? 'transparent' : colors.borderSubtle,
+                                        borderWidth: 1,
+                                        backgroundColor: rangeType === type ? colors.accentPrimary : colors.backgroundSecondary,
+                                        borderRadius: radius.medium
+                                    }
                                 ]}
                                 onPress={() => setRangeType(type)}
                             >
-                                <Text style={[styles.rangeBtnText, { color: rangeType === type ? '#fff' : '#888', fontFamily: fonts.bold }]}>
+                                <Text style={[styles.rangeBtnText, { color: rangeType === type ? '#fff' : colors.textSecondary, fontFamily: fonts.bold }]}>
                                     {t(`payroll.${type === 'this_month' ? 'thisMonth' : type === 'last_month' ? 'lastMonth' : 'custom'}`).toUpperCase()}
                                 </Text>
                             </TouchableOpacity>
@@ -283,14 +291,14 @@ export default function PayrollScreen() {
 
                     {rangeType === 'custom' && (
                         <View style={styles.customDateRow}>
-                            <TouchableOpacity onPress={() => setShowStartPicker(true)} style={[styles.dateInput, { borderColor: colors.border }]}>
+                            <TouchableOpacity onPress={() => setShowStartPicker(true)} style={[styles.dateInput, { borderColor: colors.borderSubtle, borderRadius: radius.small, backgroundColor: colors.backgroundSecondary }]}>
                                 <Text style={textStyle}>{formatDate(startDate, { year: 'numeric', month: '2-digit', day: '2-digit' })}</Text>
-                                <Ionicons name="calendar-outline" size={16} color={colors.secondaryText} />
+                                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
                             </TouchableOpacity>
                             <Text style={[textStyle, { marginHorizontal: 8 }]}>-</Text>
-                            <TouchableOpacity onPress={() => setShowEndPicker(true)} style={[styles.dateInput, { borderColor: colors.border }]}>
+                            <TouchableOpacity onPress={() => setShowEndPicker(true)} style={[styles.dateInput, { borderColor: colors.borderSubtle, borderRadius: radius.small, backgroundColor: colors.backgroundSecondary }]}>
                                 <Text style={textStyle}>{formatDate(endDate, { year: 'numeric', month: '2-digit', day: '2-digit' })}</Text>
-                                <Ionicons name="calendar-outline" size={16} color={colors.secondaryText} />
+                                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
                     )}
@@ -300,20 +308,20 @@ export default function PayrollScreen() {
                 </View>
 
                 {fetchingLogs ? (
-                    <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 20 }} />
+                    <ActivityIndicator size="large" color={colors.accentPrimary} style={{ marginVertical: 20 }} />
                 ) : (
                     <View style={styles.summaryContainer}>
                         <View style={styles.summaryRow}>
-                            <SummaryCard title={t('payroll.totalHours')} value={formatNumber(summary.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="h" color={colors.text} cardColor={colors.card} font={fonts} />
-                            <SummaryCard title={t('payroll.totalKm')} value={formatNumber(summary.totalKm, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" color={colors.text} cardColor={colors.card} font={fonts} />
+                            <SummaryCard title={t('payroll.totalHours')} value={formatNumber(summary.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="h" color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
+                            <SummaryCard title={t('payroll.totalKm')} value={formatNumber(summary.totalKm, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
                         </View>
                         {!ratesMissing && (
                             <>
                                 <View style={styles.summaryRow}>
-                                    <SummaryCard title={t('payroll.hoursPay')} value={formatCurrency(summary.hoursPay, settings?.currency || 'ILS')} unit="" color={colors.primary} cardColor={colors.card} font={fonts} />
-                                    <SummaryCard title={t('payroll.kmPay')} value={formatCurrency(summary.kmPay, settings?.currency || 'ILS')} unit="" color={colors.primary} cardColor={colors.card} font={fonts} />
+                                    <SummaryCard title={t('payroll.hoursPay')} value={formatCurrency(summary.hoursPay, settings?.currency || 'ILS')} unit="" color={colors.accentPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
+                                    <SummaryCard title={t('payroll.kmPay')} value={formatCurrency(summary.kmPay, settings?.currency || 'ILS')} unit="" color={colors.accentPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
                                 </View>
-                                <View style={[styles.totalCard, { backgroundColor: colors.primary }]}>
+                                <View style={[styles.totalCard, { backgroundColor: colors.accentPrimary, borderRadius: radius.large }]}>
                                     <Text style={[styles.totalLabel, { fontFamily: fonts.bold }]}>{t('payroll.totalPayment')}</Text>
                                     <Text style={[styles.totalValue, { fontFamily: fonts.bold }]}>{formatCurrency(summary.totalPay, settings?.currency || 'ILS')}</Text>
                                 </View>
@@ -324,14 +332,16 @@ export default function PayrollScreen() {
 
                 <View style={styles.exportRow}>
                     <TouchableOpacity
-                        style={[styles.exportBtn, { borderColor: colors.primary, borderWidth: 1 }]}
+                        activeOpacity={interaction.pressedOpacity}
+                        style={[styles.exportBtn, { borderColor: colors.accentPrimary, borderWidth: 1, borderRadius: radius.medium }]}
                         onPress={() => handleExport('csv')}
                     >
-                        <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-                        <Text style={[styles.exportBtnText, { color: colors.primary, fontFamily: fonts.bold }]}>{t('payroll.exportCsv')}</Text>
+                        <Ionicons name="document-text-outline" size={20} color={colors.accentPrimary} />
+                        <Text style={[styles.exportBtnText, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{t('payroll.exportCsv')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.exportBtn, { backgroundColor: colors.primary }]}
+                        activeOpacity={interaction.pressedOpacity}
+                        style={[styles.exportBtn, { backgroundColor: colors.accentPrimary, borderRadius: radius.medium }]}
                         onPress={() => handleExport('excel')}
                     >
                         <Ionicons name="download-outline" size={20} color="#fff" />
@@ -339,7 +349,7 @@ export default function PayrollScreen() {
                     </TouchableOpacity>
                 </View>
 
-                <Text style={{ textAlign: 'center', color: colors.secondaryText, fontSize: 12, marginTop: 20, fontFamily: fonts.regular }}>
+                <Text style={{ textAlign: 'center', color: colors.textSecondary, fontSize: 12, marginTop: 20, fontFamily: fonts.regular }}>
                     {t('payroll.exportNotice')}
                 </Text>
             </ScrollView>
@@ -350,48 +360,70 @@ export default function PayrollScreen() {
                 animationType="slide"
                 onRequestClose={() => setShowSettingsModal(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                <View style={[styles.modalOverlay, { backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)' }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.surface, borderRadius: radius.large }]}>
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, boldStyle]}>{t('payroll.configTitle')}</Text>
                             <TouchableOpacity onPress={() => setShowSettingsModal(false)}>
-                                <Ionicons name="close" size={24} color={colors.secondaryText} />
+                                <Ionicons name="close" size={24} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={[styles.inputLabel, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('payroll.hourlyRate')}</Text>
+                        <Text style={[styles.inputLabel, { color: colors.textPrimary, fontFamily: fonts.bold }]}>{t('payroll.hourlyRate')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
+                            style={[
+                                styles.input,
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.backgroundSecondary,
+                                    fontFamily: fonts.regular,
+                                    borderRadius: radius.medium
+                                }
+                            ]}
                             value={hourlyRateInput}
                             onChangeText={setHourlyRateInput}
                             keyboardType="numeric"
                             placeholder="e.g. 100"
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                         />
 
-                        <Text style={[styles.inputLabel, { color: colors.secondaryText, marginTop: 16, fontFamily: fonts.bold }]}>{t('payroll.kmRate')}</Text>
+                        <Text style={[styles.inputLabel, { color: colors.textPrimary, marginTop: 16, fontFamily: fonts.bold }]}>{t('payroll.kmRate')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
+                            style={[
+                                styles.input,
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.backgroundSecondary,
+                                    fontFamily: fonts.regular,
+                                    borderRadius: radius.medium
+                                }
+                            ]}
                             value={kmRateInput}
                             onChangeText={setKmRateInput}
                             keyboardType="numeric"
                             placeholder="e.g. 2.0"
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                         />
 
-                        <Text style={[styles.inputLabel, { color: colors.secondaryText, marginTop: 16, fontFamily: fonts.bold }]}>{t('payroll.currency')}</Text>
+                        <Text style={[styles.inputLabel, { color: colors.textPrimary, marginTop: 16, fontFamily: fonts.bold }]}>{t('payroll.currency')}</Text>
                         <View style={styles.currencyRow}>
                             {CURRENCIES.map((curr) => (
                                 <TouchableOpacity
                                     key={curr.code}
+                                    activeOpacity={interaction.pressedOpacity}
                                     style={[
                                         styles.currencyBtn,
-                                        { borderColor: colors.border },
-                                        currencyInput === curr.code && { backgroundColor: colors.primary, borderColor: colors.primary }
+                                        {
+                                            borderColor: currencyInput === curr.code ? 'transparent' : colors.borderSubtle,
+                                            backgroundColor: currencyInput === curr.code ? colors.accentPrimary : colors.backgroundSecondary,
+                                            borderRadius: radius.medium
+                                        }
                                     ]}
                                     onPress={() => setCurrencyInput(curr.code)}
                                 >
-                                    <Text style={[styles.currencyBtnText, { color: currencyInput === curr.code ? '#fff' : colors.text, fontFamily: fonts.bold }]}>
+                                    <Text style={[styles.currencyBtnText, { color: currencyInput === curr.code ? '#fff' : colors.textPrimary, fontFamily: fonts.bold }]}>
                                         {curr.label}
                                     </Text>
                                 </TouchableOpacity>
@@ -399,7 +431,8 @@ export default function PayrollScreen() {
                         </View>
 
                         <TouchableOpacity
-                            style={[styles.saveBtn, { backgroundColor: colors.primary, marginTop: 24 }]}
+                            activeOpacity={interaction.pressedOpacity}
+                            style={[styles.saveBtn, { backgroundColor: colors.accentPrimary, marginTop: 24, borderRadius: radius.medium }]}
                             onPress={handleSaveSettings}
                             disabled={savingSettings}
                         >
@@ -412,10 +445,18 @@ export default function PayrollScreen() {
     );
 }
 
-function SummaryCard({ title, value, unit, color, cardColor, font }: any) {
+function SummaryCard({ title, value, unit, color, cardColor, font, radius, border, theme, divider }: any) {
     return (
-        <View style={[styles.summaryCard, { backgroundColor: cardColor }]}>
-            <Text style={[styles.summaryTitle, { fontFamily: font.regular }]}>{title}</Text>
+        <View style={[
+            styles.summaryCard,
+            {
+                backgroundColor: cardColor,
+                borderRadius: radius,
+                borderColor: theme === 'light' ? border : divider,
+                borderWidth: 1
+            }
+        ]}>
+            <Text style={[styles.summaryTitle, { fontFamily: font.regular, color: '#888' }]}>{title}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                 <Text style={[styles.summaryValue, { color, fontFamily: font.bold }]}>{value}</Text>
                 {unit ? <Text style={[styles.summaryUnit, { color, fontFamily: font.regular }]}>{unit}</Text> : null}

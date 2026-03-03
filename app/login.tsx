@@ -15,8 +15,9 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
     const [name, setName] = useState('');
-    const { login, register, loginWithGoogle } = useAuth();
-    const { colors, fonts } = useTheme();
+    const { user, login, register, loginWithGoogle } = useAuth();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius, interaction } = tokens;
     const [isLoading, setIsLoading] = useState(false);
 
     // Google Sign In Hook
@@ -64,14 +65,14 @@ export default function LoginScreen() {
         }
     };
 
-    const textStyle = { fontFamily: fonts.regular, color: colors.text };
-    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
-    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+    const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.textPrimary };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.textSecondary };
 
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={[styles.container, { backgroundColor: colors.background }]}
+            style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}
         >
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
@@ -79,17 +80,38 @@ export default function LoginScreen() {
                     <ThemeToggle />
                 </View>
 
-                <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.text }]}>
-                    <Text style={[styles.subtitle, boldStyle]}>
+                <View style={[
+                    styles.card,
+                    {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.borderSubtle,
+                        borderWidth: 1,
+                        borderRadius: radius.large,
+                        shadowColor: '#000',
+                        shadowOpacity: theme === 'light' ? 0.05 : 0.2,
+                        shadowRadius: 15,
+                        elevation: 5
+                    }
+                ]}>
+                    <Text style={[styles.subtitle, boldStyle, { color: colors.accentPrimary }]}>
                         {isRegistering ? t('auth.createAccount') : t('auth.welcomeBack')}
                     </Text>
 
                     <View style={styles.inputContainer}>
                         <Text style={[styles.label, secondaryStyle]}>{t('auth.email')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
+                            style={[
+                                styles.input,
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.backgroundPrimary,
+                                    fontFamily: fonts.regular,
+                                    borderRadius: radius.medium
+                                }
+                            ]}
                             placeholder="email@example.com"
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -100,9 +122,18 @@ export default function LoginScreen() {
                     <View style={styles.inputContainer}>
                         <Text style={[styles.label, secondaryStyle]}>{t('auth.password')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
+                            style={[
+                                styles.input,
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.backgroundPrimary,
+                                    fontFamily: fonts.regular,
+                                    borderRadius: radius.medium
+                                }
+                            ]}
                             placeholder="********"
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
@@ -113,9 +144,18 @@ export default function LoginScreen() {
                         <View style={styles.inputContainer}>
                             <Text style={[styles.label, secondaryStyle]}>{t('auth.fullName')}</Text>
                             <TextInput
-                                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
+                                style={[
+                                    styles.input,
+                                    {
+                                        color: colors.textPrimary,
+                                        borderColor: colors.borderSubtle,
+                                        backgroundColor: colors.backgroundPrimary,
+                                        fontFamily: fonts.regular,
+                                        borderRadius: radius.medium
+                                    }
+                                ]}
                                 placeholder={t('auth.fullName')}
-                                placeholderTextColor={colors.secondaryText}
+                                placeholderTextColor={colors.textSecondary}
                                 value={name}
                                 onChangeText={setName}
                             />
@@ -123,7 +163,8 @@ export default function LoginScreen() {
                     )}
 
                     <TouchableOpacity
-                        style={[styles.button, { backgroundColor: colors.primary }]}
+                        activeOpacity={interaction.pressedOpacity}
+                        style={[styles.button, { backgroundColor: colors.accentPrimary, borderRadius: radius.large }]}
                         onPress={handleAuth}
                         disabled={isLoading}
                     >
@@ -135,11 +176,19 @@ export default function LoginScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.googleButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+                        activeOpacity={interaction.pressedOpacity}
+                        style={[
+                            styles.googleButton,
+                            {
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                                borderRadius: radius.large
+                            }
+                        ]}
                         onPress={() => promptAsync()}
                         disabled={!request || isLoading}
                     >
-                        <Text style={[styles.googleButtonText, boldStyle]}>
+                        <Text style={[styles.googleButtonText, boldStyle, { color: colors.textPrimary }]}>
                             {t('auth.signInGoogle')}
                         </Text>
                     </TouchableOpacity>
@@ -147,8 +196,8 @@ export default function LoginScreen() {
                     <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)} style={styles.switchContainer}>
                         <Text style={[styles.switchText, secondaryStyle]}>
                             {isRegistering ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}
-                            <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>
-                                {isRegistering ? t('auth.login') : t('auth.signUp')}
+                            <Text style={{ color: colors.accentSecondary, fontFamily: fonts.bold }}>
+                                {isRegistering ? ` ${t('auth.login')}` : ` ${t('auth.signUp')}`}
                             </Text>
                         </Text>
                     </TouchableOpacity>

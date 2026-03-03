@@ -11,7 +11,8 @@ import { OrgMembership } from '../../src/types';
 
 export default function AdminScreen() {
     const router = useRouter();
-    const { colors } = useTheme();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius, interaction } = tokens;
     const { user } = useAuth();
     const { activeOrgId, activeOrg, membershipRole } = useOrg();
 
@@ -151,16 +152,36 @@ export default function AdminScreen() {
     };
 
     const renderPendingItem = ({ item }: { item: OrgMembership }) => (
-        <View style={[styles.memberCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[
+            styles.memberCard,
+            {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+                borderRadius: radius.medium,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                shadowRadius: 4,
+                elevation: theme === 'light' ? 1 : 2,
+            }
+        ]}>
             <View style={{ flex: 1 }}>
-                <Text style={[styles.memberName, { color: colors.text }]}>{item.displayName || item.email || item.uid}</Text>
-                <Text style={[styles.memberEmail, { color: colors.secondaryText }]}>{item.email}</Text>
+                <Text style={[styles.memberName, { color: colors.textPrimary, fontFamily: fonts.bold }]}>{item.displayName || item.email || item.uid}</Text>
+                <Text style={[styles.memberEmail, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{item.email}</Text>
             </View>
             <View style={styles.actionRow}>
-                <TouchableOpacity style={[styles.approveBtn, { backgroundColor: '#34C759' }]} onPress={() => handleApprove(item.uid)}>
+                <TouchableOpacity
+                    activeOpacity={interaction.pressedOpacity}
+                    style={[styles.approveBtn, { backgroundColor: colors.success }]}
+                    onPress={() => handleApprove(item.uid)}
+                >
                     <Ionicons name="checkmark" size={18} color="#fff" />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.rejectBtn, { backgroundColor: '#FF3B30' }]} onPress={() => handleReject(item.uid)}>
+                <TouchableOpacity
+                    activeOpacity={interaction.pressedOpacity}
+                    style={[styles.rejectBtn, { backgroundColor: colors.danger }]}
+                    onPress={() => handleReject(item.uid)}
+                >
                     <Ionicons name="close" size={18} color="#fff" />
                 </TouchableOpacity>
             </View>
@@ -168,27 +189,41 @@ export default function AdminScreen() {
     );
 
     const renderApprovedItem = ({ item }: { item: OrgMembership }) => (
-        <View style={[styles.memberCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[
+            styles.memberCard,
+            {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+                borderRadius: radius.medium,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                shadowRadius: 4,
+                elevation: theme === 'light' ? 1 : 2,
+            }
+        ]}>
             <View style={{ flex: 1 }}>
-                <Text style={[styles.memberName, { color: colors.text }]}>{item.displayName || item.email || item.uid}</Text>
+                <Text style={[styles.memberName, { color: colors.textPrimary, fontFamily: fonts.bold }]}>{item.displayName || item.email || item.uid}</Text>
                 <View style={styles.roleContainer}>
-                    <Text style={[styles.memberRole, { color: colors.primary }]}>{roleLabel(item.role)}</Text>
-                    {item.uid === user?.uid && <Text style={[styles.youBadge, { backgroundColor: colors.primary + '20', color: colors.primary }]}>YOU</Text>}
+                    <Text style={[styles.memberRole, { color: colors.accentPrimary, fontFamily: fonts.regular }]}>{roleLabel(item.role)}</Text>
+                    {item.uid === user?.uid && <Text style={[styles.youBadge, { backgroundColor: colors.accentPrimary + '15', color: colors.accentPrimary }]}>YOU</Text>}
                 </View>
             </View>
             <View style={styles.actionRow}>
                 {isOwner && item.uid !== user?.uid && item.role !== 'owner' && (
                     <TouchableOpacity
-                        style={[styles.roleBtn, { borderColor: colors.primary }]}
+                        activeOpacity={interaction.pressedOpacity}
+                        style={[styles.roleBtn, { borderColor: colors.accentPrimary, borderRadius: radius.small }]}
                         onPress={() => handleChangeRole(item.uid, item.role === 'admin' ? 'teacher' : 'admin')}
                     >
-                        <Text style={[styles.roleBtnText, { color: colors.primary }]}>
+                        <Text style={[styles.roleBtnText, { color: colors.accentPrimary }]}>
                             {item.role === 'admin' ? 'Demote' : 'Promote'}
                         </Text>
                     </TouchableOpacity>
                 )}
                 <TouchableOpacity
-                    style={[styles.detailsBtn, { backgroundColor: colors.primary }]}
+                    activeOpacity={interaction.pressedOpacity}
+                    style={[styles.detailsBtn, { backgroundColor: colors.accentPrimary, borderRadius: radius.small }]}
                     onPress={() => router.push(`/admin/teacher/${item.uid}`)}
                 >
                     <Ionicons name="eye-outline" size={16} color="#fff" />
@@ -199,11 +234,11 @@ export default function AdminScreen() {
     );
 
     if (loading) {
-        return <View style={[styles.container, { backgroundColor: colors.background }]}><ActivityIndicator size="large" /></View>;
+        return <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}><ActivityIndicator size="large" color={colors.accentPrimary} /></View>;
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
 
             <FlatList
                 data={[]}
@@ -211,10 +246,22 @@ export default function AdminScreen() {
                 ListHeaderComponent={
                     <>
                         {!activeOrgId && (
-                            <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                <Ionicons name="business-outline" size={48} color={colors.secondaryText} />
-                                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No Active Organization</Text>
-                                <Text style={[styles.emptyStateText, { color: colors.secondaryText }]}>
+                            <View style={[
+                                styles.emptyState,
+                                {
+                                    backgroundColor: colors.surface,
+                                    borderColor: colors.borderSubtle,
+                                    borderRadius: radius.large,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 4 },
+                                    shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                                    shadowRadius: 12,
+                                    elevation: theme === 'light' ? 2 : 4,
+                                }
+                            ]}>
+                                <Ionicons name="business-outline" size={48} color={colors.textSecondary} />
+                                <Text style={[styles.emptyStateTitle, { color: colors.textPrimary, fontFamily: fonts.bold }]}>No Active Organization</Text>
+                                <Text style={[styles.emptyStateText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                                     {isSuperAdmin
                                         ? "You aren't managing a specific organization yet. Use the controls below to create one or join an existing one."
                                         : "You aren't a member of any organization. Contact your administrator for a join code."}
@@ -226,20 +273,44 @@ export default function AdminScreen() {
                         {activeOrgId && (
                             <>
                                 <View style={styles.statsRow}>
-                                    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                        <Text style={[styles.statValue, { color: colors.primary }]}>{orgStats.teacherCount}</Text>
-                                        <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Teachers</Text>
+                                    <View style={[
+                                        styles.statCard,
+                                        {
+                                            backgroundColor: colors.surface,
+                                            borderColor: colors.borderSubtle,
+                                            borderRadius: radius.large,
+                                            shadowColor: '#000',
+                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                                            shadowRadius: 12,
+                                            elevation: theme === 'light' ? 2 : 4,
+                                        }
+                                    ]}>
+                                        <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.teacherCount}</Text>
+                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Teachers</Text>
                                     </View>
-                                    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                        <Text style={[styles.statValue, { color: colors.primary }]}>{orgStats.totalHours.toFixed(1)}h</Text>
-                                        <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Hours (Month)</Text>
+                                    <View style={[
+                                        styles.statCard,
+                                        {
+                                            backgroundColor: colors.surface,
+                                            borderColor: colors.borderSubtle,
+                                            borderRadius: radius.large,
+                                            shadowColor: '#000',
+                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                                            shadowRadius: 12,
+                                            elevation: theme === 'light' ? 2 : 4,
+                                        }
+                                    ]}>
+                                        <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.totalHours.toFixed(1)}h</Text>
+                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Hours (Month)</Text>
                                     </View>
                                 </View>
 
                                 {/* Pending Requests */}
                                 {pendingMembers.length > 0 && (
                                     <>
-                                        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                                        <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.bold }]}>
                                             Pending Requests ({pendingMembers.length})
                                         </Text>
                                         {pendingMembers.map(item => (
@@ -249,30 +320,57 @@ export default function AdminScreen() {
                                 )}
 
                                 {/* Org Members */}
-                                <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+                                <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 24, fontFamily: fonts.bold }]}>
                                     Organization Members ({approvedMembers.length})
                                 </Text>
                                 {approvedMembers.map(item => (
                                     <View key={item.uid}>{renderApprovedItem({ item })}</View>
                                 ))}
 
-                                <View style={[styles.orgIdSection, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 32 }]}>
-                                    <Text style={[styles.orgIdLabel, { color: colors.secondaryText }]}>Organization Join ID (Share with teachers)</Text>
-                                    <Text style={[styles.orgIdText, { color: colors.primary }]} selectable>{activeOrgId}</Text>
+                                <View style={[
+                                    styles.orgIdSection,
+                                    {
+                                        backgroundColor: colors.surface,
+                                        borderColor: colors.accentPrimary + '30',
+                                        borderRadius: radius.large,
+                                        marginTop: 32,
+                                        shadowColor: colors.accentPrimary,
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: 0.1,
+                                        shadowRadius: 4,
+                                        elevation: 2,
+                                    }
+                                ]}>
+                                    <Text style={[styles.orgIdLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Organization Join ID (Share with teachers)</Text>
+                                    <Text style={[styles.orgIdText, { color: colors.accentPrimary, fontFamily: fonts.bold }]} selectable>{activeOrgId}</Text>
                                 </View>
                             </>
                         )}
 
                         {/* Super Admin Actions */}
                         {isSuperAdmin && (
-                            <View style={[styles.superAdminSection, { backgroundColor: colors.card, borderColor: colors.primary + '40', marginTop: 24 }]}>
-                                <Text style={[styles.sectionTitle, { color: colors.primary, marginBottom: 12 }]}>Super Admin Controls</Text>
+                            <View style={[
+                                styles.superAdminSection,
+                                {
+                                    backgroundColor: colors.surface,
+                                    borderColor: colors.accentPrimary + '40',
+                                    borderRadius: radius.large,
+                                    marginTop: 24,
+                                    shadowColor: colors.accentPrimary,
+                                    shadowOffset: { width: 0, height: 4 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 8,
+                                    elevation: 4,
+                                }
+                            ]}>
+                                <Text style={[styles.sectionTitle, { color: colors.accentPrimary, marginBottom: 12, fontFamily: fonts.bold }]}>Super Admin Controls</Text>
                                 <TouchableOpacity
-                                    style={[styles.createOrgBtn, { backgroundColor: colors.primary }]}
+                                    activeOpacity={interaction.pressedOpacity}
+                                    style={[styles.createOrgBtn, { backgroundColor: colors.accentPrimary, borderRadius: radius.medium }]}
                                     onPress={() => router.push('/create-org' as any)}
                                 >
                                     <Ionicons name="business-outline" size={20} color="#fff" />
-                                    <Text style={styles.createOrgBtnText}>Create New Organization</Text>
+                                    <Text style={[styles.createOrgBtnText, { fontFamily: fonts.bold }]}>Create New Organization</Text>
                                 </TouchableOpacity>
                             </View>
                         )}

@@ -17,19 +17,37 @@ interface LogCardProps {
 }
 
 export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, readOnly, deleteType = 'text' }) => {
-    const { colors, fonts } = useTheme();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius, interaction } = tokens;
     const { user } = useAuth();
     const { t } = useTranslation();
     const { formatDate } = useFormatting();
     const router = useRouter();
     const isPresent = log.status === 'present';
 
-    const textStyle = { fontFamily: fonts.regular, color: colors.text };
-    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
-    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+    const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.textPrimary };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.textSecondary };
+
+    const cardStyle = [
+        styles.card,
+        {
+            backgroundColor: colors.surface,
+            borderRadius: radius.medium,
+            borderColor: theme === 'light' ? colors.borderSubtle : colors.divider,
+            borderWidth: 1,
+            // Subtle shadow for light mode
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+            shadowRadius: 10,
+            elevation: theme === 'light' ? 2 : 4,
+            borderLeftColor: isPresent ? colors.success : colors.danger,
+        }
+    ];
 
     return (
-        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.text }]}>
+        <View style={cardStyle}>
             <View style={styles.row}>
                 <View style={styles.info}>
                     <Text style={[styles.school, boldStyle]}>{log.school}</Text>
@@ -42,9 +60,9 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
                     <Ionicons
                         name={isPresent ? "checkmark-circle" : "close-circle"}
                         size={24}
-                        color={isPresent ? colors.success : colors.error}
+                        color={isPresent ? colors.success : colors.danger}
                     />
-                    <Text style={[styles.status, { color: isPresent ? colors.success : colors.error, fontFamily: fonts.bold }]}>
+                    <Text style={[styles.status, { color: isPresent ? colors.success : colors.danger, fontFamily: fonts.bold }]}>
                         {isPresent ? t('logCard.present') : t('logCard.absent')}
                     </Text>
                 </View>
@@ -59,24 +77,24 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
 
             <View style={styles.actions}>
                 {!readOnly && (
-                    <TouchableOpacity onPress={onDelete}>
+                    <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={onDelete}>
                         {deleteType === 'icon' ? (
-                            <Ionicons name="trash-outline" size={20} color={colors.error} />
+                            <Ionicons name="trash-outline" size={20} color={colors.danger} />
                         ) : (
-                            <Text style={[styles.actionLink, { color: colors.error, fontFamily: fonts.bold }]}>
+                            <Text style={[styles.actionLink, { color: colors.danger, fontFamily: fonts.bold }]}>
                                 {t('logCard.undo')}
                             </Text>
                         )}
                     </TouchableOpacity>
                 )}
                 {(user?.migratedToV2 || !!log.createdBy) && (
-                    <TouchableOpacity onPress={() => router.push({ pathname: '/lesson/[id]' as any, params: { id: log.id } })}>
+                    <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => router.push({ pathname: '/lesson/[id]' as any, params: { id: log.id } })}>
                         <Text style={[styles.actionLink, boldStyle]}>{t('logCard.attendance')}</Text>
                     </TouchableOpacity>
                 )}
                 {!readOnly && onEditNote && (
-                    <TouchableOpacity onPress={onEditNote}>
-                        <Text style={[styles.actionLink, { color: colors.primary, fontFamily: fonts.bold }]}>
+                    <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={onEditNote}>
+                        <Text style={[styles.actionLink, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
                             {log.notes ? t('dashboard.editNote') : t('dashboard.addNote')}
                         </Text>
                     </TouchableOpacity>
@@ -136,7 +154,7 @@ const styles = StyleSheet.create({
         marginTop: 8,
         paddingTop: 8,
         borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: '#ccc',
+        borderTopColor: 'rgba(148, 163, 184, 0.2)',
         alignItems: 'flex-start',
     },
     notesText: {

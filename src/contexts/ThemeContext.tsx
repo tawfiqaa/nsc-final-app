@@ -2,14 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
-
-type Theme = 'light' | 'dark';
+import { interaction, radius, spacing, ThemeColors, themes, ThemeType } from '../theme';
 
 interface ThemeContextType {
-    theme: Theme;
+    theme: ThemeType;
     toggleTheme: () => void;
-    setTheme: (theme: Theme) => void;
-    colors: {
+    setTheme: (theme: ThemeType) => void;
+    // Core color tokens for quick access (compat + semantic)
+    colors: ThemeColors & {
+        // Compatibility aliases
         background: string;
         card: string;
         text: string;
@@ -17,10 +18,16 @@ interface ThemeContextType {
         primary: string;
         border: string;
         error: string;
-        success: string;
+    };
+    // Shared constants
+    tokens: {
+        spacing: typeof spacing;
+        radius: typeof radius;
+        interaction: typeof interaction;
     };
     fonts: {
         regular: string;
+        medium: string;
         bold: string;
     };
 }
@@ -37,7 +44,7 @@ export const useTheme = () => {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const systemScheme = useColorScheme();
-    const [theme, setTheme] = useState<Theme>(systemScheme === 'dark' ? 'dark' : 'light');
+    const [theme, setThemeState] = useState<ThemeType>(systemScheme === 'dark' ? 'dark' : 'light');
 
     useEffect(() => {
         loadTheme();
@@ -46,17 +53,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const loadTheme = async () => {
         try {
             const savedTheme = await AsyncStorage.getItem('app_theme');
-            if (savedTheme) {
-                setTheme(savedTheme as Theme);
+            // Validate that the saved theme is one of our supported themes
+            if (savedTheme === 'light' || savedTheme === 'dark') {
+                setThemeState(savedTheme as ThemeType);
+            } else if (savedTheme) {
+                // If it's a legacy value like 'system', default to light and clear it
+                setThemeState('light');
+                await AsyncStorage.setItem('app_theme', 'light');
             }
         } catch (e) {
             console.error('Failed to load theme', e);
         }
     };
 
-    const toggleTheme = async () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
+    const setTheme = async (newTheme: ThemeType) => {
+        setThemeState(newTheme);
         try {
             await AsyncStorage.setItem('app_theme', newTheme);
         } catch (e) {
@@ -64,27 +75,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     };
 
-    const colors = {
-        light: {
-            background: '#F3F4F6',
-            card: '#FFFFFF',
-            text: '#1F2937',
-            secondaryText: '#6B7280',
-            primary: '#4F46E5',
-            border: '#E5E7EB',
-            error: '#EF4444',
-            success: '#10B981',
-        },
-        dark: {
-            background: '#111827',
-            card: '#1F2937',
-            text: '#F9FAFB',
-            secondaryText: '#9CA3AF',
-            primary: '#6366F1',
-            border: '#374151',
-            error: '#F87171',
-            success: '#34D399',
-        },
+    const toggleTheme = () => {
+        setTheme(theme === 'light' ? 'dark' : 'light');
+    };
+
+    const currentColors = themes[theme];
+
+    // Create the extended colors object with aliases
+    const colors: any = {
+        ...currentColors,
+        background: currentColors.backgroundPrimary,
+        card: currentColors.surface,
+        text: currentColors.textPrimary,
+        secondaryText: currentColors.textSecondary,
+        primary: currentColors.accentPrimary,
+        border: currentColors.borderSubtle,
+        error: currentColors.danger,
     };
 
     const { i18n } = useTranslation();
@@ -93,22 +99,29 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         regular: i18n.language === 'ar' ? 'NotoSansArabic_400Regular' :
             i18n.language === 'he' ? 'NotoSansHebrew_400Regular' :
                 'NotoSans_400Regular',
+        medium: i18n.language === 'ar' ? 'NotoSansArabic_500Medium' :
+            i18n.language === 'he' ? 'NotoSansHebrew_500Medium' :
+                'NotoSans_500Medium',
         bold: i18n.language === 'ar' ? 'NotoSansArabic_700Bold' :
             i18n.language === 'he' ? 'NotoSansHebrew_700Bold' :
                 'NotoSans_700Bold',
     };
 
-    const explicitSetTheme = async (newTheme: Theme) => {
-        setTheme(newTheme);
-        try {
-            await AsyncStorage.setItem('app_theme', newTheme);
-        } catch (e) {
-            console.error('Failed to save theme', e);
-        }
+    const tokens = {
+        spacing,
+        radius,
+        interaction,
     };
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme: explicitSetTheme, colors: colors[theme], fonts }}>
+        <ThemeContext.Provider value={{
+            theme,
+            toggleTheme,
+            setTheme,
+            colors: colors as ThemeContextType['colors'],
+            fonts,
+            tokens
+        }}>
             {children}
         </ThemeContext.Provider>
     );

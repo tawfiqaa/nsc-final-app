@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,30 +30,41 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: colors.card,
+          backgroundColor: 'transparent',
         },
+        headerBackground: () => (
+          <LinearGradient
+            colors={colors.headerGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ flex: 1 }}
+          />
+        ),
         headerShadowVisible: false,
         headerTitleStyle: {
           fontFamily: fonts.bold,
-          color: colors.text,
+          color: colors.textPrimary,
+          fontSize: 18,
         },
         headerRight: () => (
           <TouchableOpacity
             onPress={() => router.push('/settings' as any)}
             style={{ marginRight: 15, padding: 5 }}
           >
-            <Ionicons name="settings-outline" size={24} color={colors.text} />
+            <Ionicons name="settings-outline" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         ),
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.borderSubtle,
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
+          elevation: 0,
+          shadowOpacity: 0,
         },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.secondaryText,
+        tabBarActiveTintColor: colors.accentSecondary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: {
           fontFamily: fonts.regular,
           fontSize: 11,

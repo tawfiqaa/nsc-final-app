@@ -20,7 +20,8 @@ export default function SettingsScreen() {
     const { user, logout } = useAuth();
     const { schedules, logs } = useLesson();
     const { activeOrg, activeOrgId, membershipRole, userOrgs, switchOrg } = useOrg();
-    const { colors, fonts, theme } = useTheme();
+    const { colors, fonts, theme, tokens } = useTheme();
+    const { spacing, radius, interaction } = tokens;
     const { t, i18n } = useTranslation();
     const { formatDate } = useFormatting();
     const router = useRouter();
@@ -117,41 +118,43 @@ export default function SettingsScreen() {
         }
     };
 
-    const textStyle = { fontFamily: fonts.regular, color: colors.text };
-    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
-    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+    const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.textPrimary };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.textSecondary };
 
     const cardStyle = [
         styles.section,
         {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
+            backgroundColor: colors.surface,
+            borderColor: colors.borderSubtle,
             borderWidth: 1,
-            // Subtle shadow
+            borderRadius: radius.large,
+            padding: spacing.md,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: theme === 'light' ? 0.05 : 0.3,
-            shadowRadius: 10,
-            elevation: theme === 'light' ? 3 : 5,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+            shadowRadius: 12,
+            elevation: theme === 'light' ? 2 : 4,
         }
     ];
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
             <ScrollView contentContainerStyle={styles.content}>
 
                 <View style={cardStyle}>
-                    <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.account')}</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.account')}</Text>
 
                     <TouchableOpacity
+                        activeOpacity={interaction.pressedOpacity}
                         style={[styles.row, { paddingVertical: 8 }]}
                         onPress={() => router.push('/profile' as any)}
                     >
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Ionicons name="person-circle-outline" size={24} color={colors.primary} style={{ marginRight: 12 }} />
+                            <Ionicons name="person-circle-outline" size={24} color={colors.accentPrimary} style={{ marginRight: 12 }} />
                             <Text style={[styles.label, textStyle]}>{t('profile.title')}</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
+                        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
 
                     <View style={styles.row}>
@@ -159,22 +162,42 @@ export default function SettingsScreen() {
                         {editingName ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <TextInput
-                                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
+                                    style={[
+                                        styles.input,
+                                        {
+                                            color: colors.textPrimary,
+                                            borderColor: colors.borderSubtle,
+                                            backgroundColor: colors.backgroundSecondary,
+                                            fontFamily: fonts.regular,
+                                            borderRadius: radius.small
+                                        }
+                                    ]}
                                     value={tempName}
                                     onChangeText={setTempName}
                                 />
-                                <TouchableOpacity onPress={saveName} style={{ marginLeft: 8 }}>
-                                    <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                                <TouchableOpacity
+                                    activeOpacity={interaction.pressedOpacity}
+                                    onPress={saveName}
+                                    style={{ marginLeft: 8 }}
+                                >
+                                    <Ionicons name="checkmark-circle" size={24} color={colors.success} />
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setEditingName(false)} style={{ marginLeft: 8 }}>
-                                    <Ionicons name="close-circle" size={24} color={colors.error} />
+                                <TouchableOpacity
+                                    activeOpacity={interaction.pressedOpacity}
+                                    onPress={() => setEditingName(false)}
+                                    style={{ marginLeft: 8 }}
+                                >
+                                    <Ionicons name="close-circle" size={24} color={colors.danger} />
                                 </TouchableOpacity>
                             </View>
                         ) : (
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Text style={[styles.value, secondaryStyle, { marginRight: 8 }]}>{user?.name || 'N/A'}</Text>
-                                <TouchableOpacity onPress={() => { setTempName(user?.name || ''); setEditingName(true); }}>
-                                    <Ionicons name="pencil" size={16} color={colors.primary} />
+                                <TouchableOpacity
+                                    activeOpacity={interaction.pressedOpacity}
+                                    onPress={() => { setTempName(user?.name || ''); setEditingName(true); }}
+                                >
+                                    <Ionicons name="pencil" size={16} color={colors.accentPrimary} />
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -185,18 +208,18 @@ export default function SettingsScreen() {
                     </View>
                     <View style={styles.row}>
                         <Text style={[styles.label, textStyle]}>{t('settings.role')}</Text>
-                        <Text style={[styles.value, { color: colors.primary, fontFamily: fonts.bold }]}>{user?.role?.toUpperCase()}</Text>
+                        <Text style={[styles.value, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{user?.role?.toUpperCase()}</Text>
                     </View>
                 </View>
 
                 {/* Organization Section */}
                 <View style={cardStyle}>
-                    <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.organization')}</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.organization')}</Text>
                     {activeOrg && (
                         <>
                             <View style={styles.row}>
                                 <Text style={[styles.label, textStyle]}>{t('settings.activeOrg')}</Text>
-                                <Text style={[styles.value, { color: colors.primary, fontFamily: fonts.bold }]}>{activeOrg.name || 'Unknown'}</Text>
+                                <Text style={[styles.value, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{activeOrg.name || 'Unknown'}</Text>
                             </View>
                             <View style={styles.row}>
                                 <Text style={[styles.label, textStyle]}>{t('settings.orgRole')}</Text>
@@ -213,12 +236,13 @@ export default function SettingsScreen() {
                             <Text style={[secondaryStyle, { fontSize: 12, marginBottom: 8 }]}>{t('settings.switchOrg')}:</Text>
                             {userOrgs.filter(o => o.status === 'approved' && o.orgId !== activeOrgId).map(org => (
                                 <TouchableOpacity
+                                    activeOpacity={interaction.pressedOpacity}
                                     key={org.orgId}
-                                    style={[styles.row, { paddingVertical: 8, paddingHorizontal: 8, borderRadius: 8, backgroundColor: colors.background }]}
+                                    style={[styles.row, { paddingVertical: 8, paddingHorizontal: 12, borderRadius: radius.medium, backgroundColor: colors.backgroundSecondary }]}
                                     onPress={() => switchOrg(org.orgId)}
                                 >
                                     <Text style={[styles.label, textStyle]}>{org.orgName || org.orgId}</Text>
-                                    <Ionicons name="swap-horizontal" size={18} color={colors.primary} />
+                                    <Ionicons name="swap-horizontal" size={18} color={colors.accentPrimary} />
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -226,20 +250,22 @@ export default function SettingsScreen() {
                     {showTeacherFeatures && (
                         <View style={{ marginTop: 8, gap: 12 }}>
                             <TouchableOpacity
+                                activeOpacity={interaction.pressedOpacity}
                                 style={[styles.row, { justifyContent: 'center', marginBottom: 0 }]}
                                 onPress={() => router.push('/join-org' as any)}
                             >
-                                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                                <Text style={[styles.label, { color: colors.primary, marginLeft: 6, fontFamily: fonts.regular }]}>{t('settings.joinAnotherOrg')}</Text>
+                                <Ionicons name="add-circle-outline" size={18} color={colors.accentPrimary} />
+                                <Text style={[styles.label, { color: colors.accentPrimary, marginLeft: 6, fontFamily: fonts.regular }]}>{t('settings.joinAnotherOrg')}</Text>
                             </TouchableOpacity>
 
                             {isSuperAdmin && (
                                 <TouchableOpacity
+                                    activeOpacity={interaction.pressedOpacity}
                                     style={[styles.row, { justifyContent: 'center', marginBottom: 0 }]}
                                     onPress={() => router.push('/create-org' as any)}
                                 >
-                                    <Ionicons name="business-outline" size={18} color={colors.primary} />
-                                    <Text style={[styles.label, { color: colors.primary, marginLeft: 6, fontFamily: fonts.regular }]}>{t('settings.createNewOrg')}</Text>
+                                    <Ionicons name="business-outline" size={18} color={colors.accentPrimary} />
+                                    <Text style={[styles.label, { color: colors.accentPrimary, marginLeft: 6, fontFamily: fonts.regular }]}>{t('settings.createNewOrg')}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -249,32 +275,33 @@ export default function SettingsScreen() {
                 {/* Show Reports only for Teachers & Super Admins */}
                 {showTeacherFeatures && (
                     <View style={cardStyle}>
-                        <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.reports')}</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.reports')}</Text>
 
                         {/* Month Picker */}
                         <View style={[styles.row, { justifyContent: 'center', marginBottom: 24 }]}>
-                            <TouchableOpacity onPress={() => changeMonth(-1)} style={{ padding: 8 }}>
-                                <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                            <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => changeMonth(-1)} style={{ padding: 8 }}>
+                                <Ionicons name="chevron-back" size={24} color={colors.accentPrimary} />
                             </TouchableOpacity>
-                            <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text, marginHorizontal: 16, fontFamily: fonts.bold }}>
+                            <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, marginHorizontal: 16, fontFamily: fonts.bold }}>
                                 {formatDate(exportDate, { month: 'long', year: 'numeric' })}
                             </Text>
-                            <TouchableOpacity onPress={() => changeMonth(1)} style={{ padding: 8 }}>
-                                <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+                            <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => changeMonth(1)} style={{ padding: 8 }}>
+                                <Ionicons name="chevron-forward" size={24} color={colors.accentPrimary} />
                             </TouchableOpacity>
                         </View>
 
                         <TouchableOpacity
+                            activeOpacity={interaction.pressedOpacity}
                             style={[styles.row, { marginBottom: 0, justifyContent: 'center' }]}
                             onPress={handleExportReport}
                             disabled={exporting}
                         >
                             {exporting ? (
-                                <ActivityIndicator size="small" color={colors.primary} />
+                                <ActivityIndicator size="small" color={colors.accentPrimary} />
                             ) : (
                                 <>
-                                    <Text style={[styles.label, { color: colors.primary, fontFamily: fonts.bold }]}>{t('settings.quickMonthlyExport')}</Text>
-                                    <Ionicons name="download-outline" size={24} color={colors.primary} style={{ marginLeft: 8 }} />
+                                    <Text style={[styles.label, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{t('settings.quickMonthlyExport')}</Text>
+                                    <Ionicons name="download-outline" size={24} color={colors.accentPrimary} style={{ marginLeft: 8 }} />
                                 </>
                             )}
                         </TouchableOpacity>
@@ -282,13 +309,13 @@ export default function SettingsScreen() {
                 )}
 
                 <View style={cardStyle}>
-                    <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.preferences')}</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.preferences')}</Text>
                     <View style={styles.row}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Ionicons
                                 name={theme === 'dark' ? "moon" : "sunny"}
                                 size={22}
-                                color={colors.primary}
+                                color={colors.accentPrimary}
                                 style={{ marginRight: 12 }}
                             />
                             <Text style={[styles.label, textStyle]}>{t('settings.darkMode')}</Text>
@@ -298,27 +325,30 @@ export default function SettingsScreen() {
 
                     <View style={[styles.row, { marginBottom: 0 }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Ionicons name="language-outline" size={22} color={colors.primary} style={{ marginRight: 12 }} />
+                            <Ionicons name="language-outline" size={22} color={colors.accentPrimary} style={{ marginRight: 12 }} />
                             <Text style={[styles.label, textStyle]}>{t('settings.language')}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
                             <TouchableOpacity
+                                activeOpacity={interaction.pressedOpacity}
                                 onPress={() => handleLanguageChange('en')}
-                                style={[styles.langButton, i18n.language === 'en' && { backgroundColor: colors.primary }]}
+                                style={[styles.langButton, { borderColor: colors.borderSubtle }, i18n.language === 'en' && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary }]}
                             >
-                                <Text style={[styles.langButtonText, { color: i18n.language === 'en' ? '#fff' : colors.text, fontFamily: fonts.regular }]}>EN</Text>
+                                <Text style={[styles.langButtonText, { color: i18n.language === 'en' ? '#fff' : colors.textPrimary, fontFamily: fonts.regular }]}>EN</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
+                                activeOpacity={interaction.pressedOpacity}
                                 onPress={() => handleLanguageChange('he')}
-                                style={[styles.langButton, i18n.language === 'he' && { backgroundColor: colors.primary }]}
+                                style={[styles.langButton, { borderColor: colors.borderSubtle }, i18n.language === 'he' && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary }]}
                             >
-                                <Text style={[styles.langButtonText, { color: i18n.language === 'he' ? '#fff' : colors.text, fontFamily: fonts.regular }]}>עב</Text>
+                                <Text style={[styles.langButtonText, { color: i18n.language === 'he' ? '#fff' : colors.textPrimary, fontFamily: fonts.regular }]}>עב</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
+                                activeOpacity={interaction.pressedOpacity}
                                 onPress={() => handleLanguageChange('ar')}
-                                style={[styles.langButton, i18n.language === 'ar' && { backgroundColor: colors.primary }]}
+                                style={[styles.langButton, { borderColor: colors.borderSubtle }, i18n.language === 'ar' && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary }]}
                             >
-                                <Text style={[styles.langButtonText, { color: i18n.language === 'ar' ? '#fff' : colors.text, fontFamily: fonts.regular }]}>عر</Text>
+                                <Text style={[styles.langButtonText, { color: i18n.language === 'ar' ? '#fff' : colors.textPrimary, fontFamily: fonts.regular }]}>عر</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -326,36 +356,38 @@ export default function SettingsScreen() {
 
                 {isSuperAdmin && (
                     <View style={cardStyle}>
-                        <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.systemAdmin')}</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.systemAdmin')}</Text>
                         <TouchableOpacity
+                            activeOpacity={interaction.pressedOpacity}
                             style={[styles.row, { paddingVertical: 8 }]}
                             onPress={() => router.push('/admin/org-management' as any)}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Ionicons name="business" size={24} color={colors.primary} style={{ marginRight: 12 }} />
+                                <Ionicons name="business" size={24} color={colors.accentPrimary} style={{ marginRight: 12 }} />
                                 <Text style={[styles.label, textStyle]}>{t('settings.orgManagement')}</Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
+                            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
                 )}
 
-                <View style={[cardStyle, { borderColor: colors.error + '40' }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.error, fontFamily: fonts.bold }]}>{t('settings.dangerZone')}</Text>
+                <View style={[cardStyle, { borderColor: colors.danger + '40', backgroundColor: theme === 'light' ? colors.danger + '05' : colors.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.danger, fontFamily: fonts.bold }]}>{t('settings.dangerZone')}</Text>
                     <TouchableOpacity
+                        activeOpacity={interaction.pressedOpacity}
                         style={[styles.row, { marginBottom: 0 }]}
                         onPress={() => setShowDeleteModal(true)}
                     >
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Ionicons name="trash-outline" size={24} color={colors.error} style={{ marginRight: 12 }} />
-                            <Text style={[styles.label, { color: colors.error, fontFamily: fonts.regular }]}>{t('settings.deleteAccount')}</Text>
+                            <Ionicons name="trash-outline" size={24} color={colors.danger} style={{ marginRight: 12 }} />
+                            <Text style={[styles.label, { color: colors.danger, fontFamily: fonts.regular }]}>{t('settings.deleteAccount')}</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
+                        <Ionicons name="chevron-forward" size={20} color={colors.danger + '80'} />
                     </TouchableOpacity>
                 </View>
 
                 <View style={cardStyle}>
-                    <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
                     <View style={styles.row}>
                         <Text style={[styles.label, textStyle]}>{t('common.version')}</Text>
                         <Text style={[styles.value, secondaryStyle]}>{Constants.expoConfig?.version || '1.0.0'}</Text>
@@ -371,11 +403,12 @@ export default function SettingsScreen() {
                 </View>
 
                 <TouchableOpacity
-                    style={[styles.logoutButton, { borderColor: colors.error }]}
+                    activeOpacity={interaction.pressedOpacity}
+                    style={[styles.logoutButton, { borderColor: colors.danger }]}
                     onPress={logout}
                 >
-                    <Ionicons name="log-out-outline" size={20} color={colors.error} />
-                    <Text style={[styles.logoutText, { color: colors.error, fontFamily: fonts.bold }]}>{t('settings.logout')}</Text>
+                    <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+                    <Text style={[styles.logoutText, { color: colors.danger, fontFamily: fonts.bold }]}>{t('settings.logout')}</Text>
                 </TouchableOpacity>
 
                 {/* Delete Account Modal */}
@@ -386,10 +419,10 @@ export default function SettingsScreen() {
                     onRequestClose={() => setShowDeleteModal(false)}
                 >
                     <View style={styles.modalOverlay}>
-                        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                            <Text style={[styles.modalTitle, { color: colors.error, fontFamily: fonts.bold, fontSize: 20 }]}>Delete Your Account?</Text>
+                        <View style={[styles.modalContent, { backgroundColor: colors.surface, borderRadius: radius.large, borderColor: colors.borderSubtle, borderWidth: 1 }]}>
+                            <Text style={[styles.modalTitle, { color: colors.danger, fontFamily: fonts.bold, fontSize: 20 }]}>Delete Your Account?</Text>
                             <Text style={[textStyle, { fontSize: 16, marginBottom: 20, lineHeight: 22 }]}>
-                                This action is <Text style={{ fontWeight: 'bold' }}>permanent and cannot be undone</Text>. Your profile, all lessons, schedules, schools, students, and media will be wiped forever.
+                                This action is <Text style={[boldStyle, { color: colors.danger }]}>permanent and cannot be undone</Text>. Your profile, all lessons, schedules, schools, students, and media will be wiped forever.
                             </Text>
 
                             <Text style={[secondaryStyle, { fontSize: 14, marginBottom: 8 }]}>
@@ -397,17 +430,17 @@ export default function SettingsScreen() {
                             </Text>
 
                             <TextInput
-                                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, paddingVertical: 12, height: undefined, width: '100%' }]}
+                                style={[styles.input, { color: colors.textPrimary, borderColor: colors.borderSubtle, backgroundColor: colors.backgroundSecondary, paddingVertical: 12, height: undefined, width: '100%' }]}
                                 value={deleteConfirmText}
                                 onChangeText={setDeleteConfirmText}
                                 autoCapitalize="characters"
                                 placeholder="Type confirmation here"
-                                placeholderTextColor={colors.secondaryText}
+                                placeholderTextColor={colors.textSecondary}
                             />
 
                             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
                                 <TouchableOpacity
-                                    style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                                    style={[styles.modalBtn, { borderColor: colors.borderSubtle, borderWidth: 1 }]}
                                     onPress={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
                                     disabled={isDeletingAccount}
                                 >
@@ -416,7 +449,7 @@ export default function SettingsScreen() {
                                 <TouchableOpacity
                                     style={[
                                         styles.modalBtn,
-                                        { backgroundColor: colors.error },
+                                        { backgroundColor: colors.danger },
                                         (deleteConfirmText !== 'DELETE MY ACCOUNT' || isDeletingAccount) && { opacity: 0.5 }
                                     ]}
                                     onPress={handleDeleteAccount}
@@ -452,8 +485,6 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     section: {
-        borderRadius: 16,
-        padding: 16,
         marginBottom: 24,
     },
     sectionTitle: {
@@ -470,7 +501,6 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 16,
-        fontWeight: '500',
     },
     value: {
         fontSize: 16,
@@ -480,18 +510,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         marginTop: 24,
     },
     logoutText: {
         fontSize: 16,
-        fontWeight: '600',
         marginLeft: 8,
     },
     input: {
         borderWidth: 1,
-        borderRadius: 8,
         padding: 4,
         paddingHorizontal: 8,
         width: 150,
@@ -500,9 +528,8 @@ const styles = StyleSheet.create({
     langButton: {
         paddingVertical: 6,
         paddingHorizontal: 12,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#ccc',
     },
     langButtonText: {
         fontSize: 14,

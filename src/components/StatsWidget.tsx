@@ -9,14 +9,29 @@ interface StatsWidgetProps {
 }
 
 export const StatsWidget: React.FC<StatsWidgetProps> = ({ title, value, unit }) => {
-    const { colors } = useTheme();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius } = tokens;
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.card }]}>
-            <Text style={[styles.title, { color: colors.secondaryText }]}>{title}</Text>
+        <View style={[
+            styles.container,
+            {
+                backgroundColor: colors.surface,
+                borderRadius: radius.large,
+                borderColor: colors.borderSubtle,
+                borderWidth: 1,
+                // Subtle shadow for light mode
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                shadowRadius: 10,
+                elevation: theme === 'light' ? 2 : 4,
+            }
+        ]}>
+            <Text style={[styles.title, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{title}</Text>
             <View style={styles.valueContainer}>
-                <Text style={[styles.value, { color: colors.primary }]}>{value}</Text>
-                {unit && <Text style={[styles.unit, { color: colors.secondaryText }]}>{unit}</Text>}
+                <Text style={[styles.value, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{value}</Text>
+                {unit && <Text style={[styles.unit, { color: colors.textSecondary, fontFamily: fonts.medium }]}>{unit}</Text>}
             </View>
         </View>
     );

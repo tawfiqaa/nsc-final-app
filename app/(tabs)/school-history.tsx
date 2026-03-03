@@ -11,7 +11,8 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function SchoolHistoryScreen() {
     const { logs, deleteLog, updateLogNotes } = useLesson();
-    const { colors, fonts } = useTheme();
+    const { colors, fonts, tokens, theme } = useTheme();
+    const { radius, interaction } = tokens;
     const { user } = useAuth();
     const { membershipRole } = useOrg();
     const { t } = useTranslation();
@@ -63,22 +64,32 @@ export default function SchoolHistoryScreen() {
 
     const totalLessons = filteredLogs.filter(l => l.status === 'present').length;
 
-    const textStyle = { fontFamily: fonts.regular, color: colors.text };
-    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
-    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+    const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.textPrimary };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.textSecondary };
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
+            <View style={[
+                styles.header,
+                {
+                    backgroundColor: colors.surface,
+                    borderBottomColor: theme === 'light' ? colors.borderSubtle : colors.divider
+                }
+            ]}>
                 <View>
-                    <TouchableOpacity onPress={() => setShowFilter(true)} style={styles.filterButton}>
-                        <Text style={[styles.filterText, { color: colors.primary, fontFamily: fonts.bold }]}>
+                    <TouchableOpacity
+                        activeOpacity={interaction.pressedOpacity}
+                        onPress={() => setShowFilter(true)}
+                        style={styles.filterButton}
+                    >
+                        <Text style={[styles.filterText, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
                             {selectedSchool}  <Ionicons name="chevron-down" size={12} />
                         </Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.stats}>
-                    <Text style={[styles.statValue, { color: colors.primary, fontFamily: fonts.bold }]}>{totalLessons}</Text>
+                    <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{totalLessons}</Text>
                     <Text style={[styles.statLabel, secondaryStyle]}>{t('history.lessons')}</Text>
                 </View>
             </View>
@@ -105,12 +116,12 @@ export default function SchoolHistoryScreen() {
                     activeOpacity={1}
                     onPress={() => setShowFilter(false)}
                 >
-                    <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.surface, borderRadius: radius.large }]}>
                         <Text style={[styles.modalTitle, boldStyle]}>{t('history.filterBySchool')}</Text>
                         {schools.map(school => (
                             <TouchableOpacity
                                 key={school}
-                                style={[styles.filterItem, { borderBottomColor: colors.border }]}
+                                style={[styles.filterItem, { borderBottomColor: colors.divider }]}
                                 onPress={() => {
                                     setSelectedSchool(school);
                                     setShowFilter(false);
@@ -118,9 +129,9 @@ export default function SchoolHistoryScreen() {
                             >
                                 <Text style={[
                                     styles.filterItemText,
-                                    { color: school === selectedSchool ? colors.primary : colors.text, fontFamily: fonts.regular }
+                                    { color: school === selectedSchool ? colors.accentPrimary : colors.textPrimary, fontFamily: fonts.regular }
                                 ]}>{school}</Text>
-                                {school === selectedSchool && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                                {school === selectedSchool && <Ionicons name="checkmark" size={20} color={colors.accentPrimary} />}
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -135,16 +146,29 @@ export default function SchoolHistoryScreen() {
                 onRequestClose={() => setEditingLog(null)}
             >
                 <View style={[styles.modalOverlay, { padding: 20 }]}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: undefined }]}>
+                    <View style={[
+                        styles.modalContent,
+                        {
+                            backgroundColor: colors.surface,
+                            borderRadius: radius.large,
+                            maxHeight: undefined
+                        }
+                    ]}>
                         <Text style={[styles.modalTitle, boldStyle]}>{editingLog?.notes ? t('dashboard.editNote') : t('dashboard.addNote')}</Text>
 
                         <TextInput
                             style={[
                                 styles.textInput,
-                                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.backgroundSecondary,
+                                    fontFamily: fonts.regular,
+                                    borderRadius: radius.medium
+                                }
                             ]}
                             placeholder={t('dashboard.notesPlaceholder')}
-                            placeholderTextColor={colors.secondaryText}
+                            placeholderTextColor={colors.textSecondary}
                             value={notesInput}
                             onChangeText={setNotesInput}
                             multiline
@@ -154,14 +178,16 @@ export default function SchoolHistoryScreen() {
 
                         <View style={styles.modalActions}>
                             <TouchableOpacity
-                                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                                activeOpacity={interaction.pressedOpacity}
+                                style={[styles.modalBtn, { borderColor: colors.borderSubtle, borderWidth: 1, borderRadius: radius.medium }]}
                                 onPress={() => setEditingLog(null)}
                             >
                                 <Text style={[textStyle, { fontWeight: '600' }]}>{t('common.cancel')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                                activeOpacity={interaction.pressedOpacity}
+                                style={[styles.modalBtn, { backgroundColor: colors.accentPrimary, borderRadius: radius.medium }]}
                                 onPress={confirmEditNote}
                             >
                                 <Text style={{ color: '#fff', fontWeight: '600', fontFamily: fonts.bold }}>{t('common.save')}</Text>
