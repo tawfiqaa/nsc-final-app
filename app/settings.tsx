@@ -284,12 +284,23 @@ export default function SettingsScreen() {
                 <View style={cardStyle}>
                     <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.preferences')}</Text>
                     <View style={styles.row}>
-                        <Text style={[styles.label, textStyle]}>{t('settings.theme')}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons
+                                name={theme === 'dark' ? "moon" : "sunny"}
+                                size={22}
+                                color={colors.primary}
+                                style={{ marginRight: 12 }}
+                            />
+                            <Text style={[styles.label, textStyle]}>{t('settings.darkMode')}</Text>
+                        </View>
                         <ThemeToggle />
                     </View>
 
-                    <View style={[styles.row, { marginTop: 16 }]}>
-                        <Text style={[styles.label, textStyle]}>{t('settings.language')}</Text>
+                    <View style={[styles.row, { marginBottom: 0 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="language-outline" size={22} color={colors.primary} style={{ marginRight: 12 }} />
+                            <Text style={[styles.label, textStyle]}>{t('settings.language')}</Text>
+                        </View>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
                             <TouchableOpacity
                                 onPress={() => handleLanguageChange('en')}
