@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { endOfMonth, getDay, isSameDay, startOfMonth } from 'date-fns';
+import { addDays, endOfMonth, getDay, isAfter, isSameDay, startOfDay, startOfMonth } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { DashboardEmptyState } from '../../src/components/DashboardEmptyState';
 import { LogCard } from '../../src/components/LogCard';
 import { ScheduleCard } from '../../src/components/ScheduleCard';
+import { SectionContainer } from '../../src/components/SectionContainer';
 import { StatsWidget } from '../../src/components/StatsWidget';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
@@ -108,10 +110,10 @@ export default function Dashboard() {
     });
   }, [schedules, logs]);
 
-  // Recently updated logs (last 12 hours OR upcoming one-time lessons)
+  // Recently updated logs (last 24 hours OR upcoming one-time lessons)
   const recentLogs = useMemo(() => {
     const now = new Date();
-    const cutoff = now.getTime() - (12 * 60 * 60 * 1000);
+    const cutoff = now.getTime() - (24 * 60 * 60 * 1000);
 
     return [...logs]
       .filter(log => {
@@ -120,11 +122,40 @@ export default function Dashboard() {
         if (log.isOneTime && (isSameDay(lessonDate, now) || lessonDate > now)) {
           return true;
         }
-        // Rule 2: Show ANY lesson (recurring or one-time) if it was updated in the last 12 hours
+        // Rule 2: Show ANY lesson if it was updated recently
         return log.updatedAt >= cutoff;
       })
-      .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
+      .sort((a, b) => b.updatedAt - a.updatedAt) // Sort by update time for "Activity"
+      .slice(0, 10); // Don't overflow
   }, [logs]);
+
+  // Upcoming lessons for next 7 days (recurring and one-time)
+  const upcomingLessons = useMemo(() => {
+    const now = startOfDay(new Date());
+    const days: any[] = [];
+
+    // Check next 6 days (excluding today which is in todaysLessons)
+    for (let i = 1; i <= 6; i++) {
+      const checkDate = addDays(now, i);
+      const dayOfWeek = getDay(checkDate);
+
+      const daySchedules = schedules.filter(s =>
+        s.isActive !== false &&
+        s.dayOfWeek === dayOfWeek
+      ).map(s => ({ ...s, upcomingDate: checkDate }));
+
+      days.push(...daySchedules);
+    }
+
+    // Also include one-time logs that are in the future
+    const upcomingOneTime = logs.filter(l =>
+      l.isOneTime &&
+      isAfter(startOfDay(new Date(l.dateISO)), now) &&
+      !isSameDay(new Date(l.dateISO), now)
+    ).map(l => ({ ...l, upcomingDate: new Date(l.dateISO) }));
+
+    return [...days].sort((a, b) => a.upcomingDate.getTime() - b.upcomingDate.getTime());
+  }, [schedules, logs]);
 
   const handleMark = (scheduleId: string, status: AttendanceStatus) => {
     setMarkingSchedule({ id: scheduleId, status });
@@ -203,32 +234,70 @@ export default function Dashboard() {
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.sectionTitle, boldStyle]}>{t('dashboard.todaysLessons')}</Text>
-        {todaysLessons.length === 0 ? (
-          <Text style={[styles.emptyText, secondaryStyle]}>{t('dashboard.noMoreLessonsToday')}</Text>
-        ) : (
-          todaysLessons.map(schedule => (
-            <ScheduleCard
-              key={schedule.id}
-              schedule={schedule}
-              onMark={(status) => handleMark(schedule.id, status)}
-            />
-          ))
-        )}
+        <SectionContainer
+          title={t('dashboard.sections.today')}
+          subtitle={formatDate(today, { weekday: 'long', day: 'numeric', month: 'long' })}
+          rightAction={
+            <TouchableOpacity onPress={() => router.push('/history' as any)}>
+              <Text style={{ color: colors.accentPrimary, fontSize: 13, fontFamily: fonts.bold }}>{t('common.viewAll')}</Text>
+            </TouchableOpacity>
+          }
+        >
+          {todaysLessons.length === 0 ? (
+            <DashboardEmptyState icon="calendar-outline" message={t('dashboard.noMoreLessonsToday')} />
+          ) : (
+            todaysLessons.map(schedule => (
+              <ScheduleCard
+                key={schedule.id}
+                schedule={schedule}
+                onMark={(status) => handleMark(schedule.id, status)}
+              />
+            ))
+          )}
+        </SectionContainer>
 
-        <Text style={[styles.sectionTitle, boldStyle, { marginTop: 24 }]}>{t('dashboard.recentlyUpdated')}</Text>
-        {recentLogs.length === 0 ? (
-          <Text style={[styles.emptyText, secondaryStyle]}>{t('dashboard.noRecentActivity')}</Text>
-        ) : (
-          recentLogs.map(log => (
-            <LogCard
-              key={log.id}
-              log={log}
-              onDelete={() => deleteLog(log.id)}
-              onEditNote={() => handleEditNote(log)}
-            />
-          ))
-        )}
+        <SectionContainer
+          title={t('dashboard.sections.upcoming')}
+          subtitle={t('dashboard.sections.nextSevenDays')}
+        >
+          {upcomingLessons.length === 0 ? (
+            <DashboardEmptyState icon="time-outline" message={t('dashboard.noUpcomingLessons')} />
+          ) : (
+            upcomingLessons.slice(0, 3).map((item, idx) => (
+              <View key={`${item.id}-${idx}`} style={{ opacity: 0.85, marginBottom: idx === 2 ? 0 : 12 }}>
+                <ScheduleCard
+                  schedule={item}
+                  isUpcoming={true}
+                  upcomingDate={item.upcomingDate}
+                  onMark={() => { }} // Disabled for upcoming
+                  compact={true}
+                />
+              </View>
+            ))
+          )}
+        </SectionContainer>
+
+        <SectionContainer
+          title={t('dashboard.sections.recentActivity')}
+          rightAction={
+            <TouchableOpacity onPress={() => router.push('/history' as any)}>
+              <Text style={{ color: colors.accentPrimary, fontSize: 13, fontFamily: fonts.bold }}>{t('common.viewAll')}</Text>
+            </TouchableOpacity>
+          }
+        >
+          {recentLogs.length === 0 ? (
+            <DashboardEmptyState icon="flash-outline" message={t('dashboard.noRecentActivity')} />
+          ) : (
+            recentLogs.map(log => (
+              <LogCard
+                key={log.id}
+                log={log}
+                onDelete={() => deleteLog(log.id)}
+                onEditNote={() => handleEditNote(log)}
+              />
+            ))
+          )}
+        </SectionContainer>
       </ScrollView>
 
       <TouchableOpacity

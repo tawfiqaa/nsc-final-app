@@ -27,7 +27,8 @@
         "success": "Success",
         "ok": "OK",
         "version": "Version",
-        "saving": "Saving..."
+        "saving": "Saving...",
+        "viewAll": "View All"
     },
     "settings": {
         "title": "Settings",
@@ -78,7 +79,14 @@
         "lessonNotesOptional": "Lesson Notes (Optional)",
         "editNote": "Edit Note",
         "addNote": "Add Note",
-        "notesPlaceholder": "e.g. Covered Chapter 3, student was late..."
+        "notesPlaceholder": "e.g. Covered Chapter 3, student was late...",
+        "sections": {
+            "today": "Today",
+            "upcoming": "Upcoming",
+            "recentActivity": "Recent Activity",
+            "nextSevenDays": "Next 7 days"
+        },
+        "noUpcomingLessons": "No upcoming lessons found."
     },
     "tabs": {
         "dashboard": "Dashboard",
@@ -250,5 +258,27 @@
         "saveSuccess": "Profile updated successfully!",
         "saveError": "Failed to update profile",
         "pleaseSignIn": "Please sign in to view your profile"
+    },
+    "teacherDetails": {
+        "title": "Teacher Profile",
+        "activeSchedules": "Active Schedules",
+        "ongoingWorkloads": "ongoing workloads",
+        "noSchedules": "No active schedules found.",
+        "recentActivity": "Recent Activity",
+        "noActivity": "No recent activity recorded.",
+        "exportAll": "Export All",
+        "management": "Management",
+        "editProfile": "Edit Profile",
+        "reassign": "Reassign",
+        "suspendAccess": "Suspend Access",
+        "restoreAccess": "Restore Access",
+        "permanentDelete": "Permanent Delete",
+        "dangerZone": "Danger Zone",
+        "stats": {
+            "monthlyHours": "Monthly Hours",
+            "monthlyKm": "Monthly KM",
+            "attendance": "Attendance",
+            "estPayroll": "Est. Payroll"
+        }
     }
 }

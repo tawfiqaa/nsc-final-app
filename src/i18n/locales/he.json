@@ -27,7 +27,8 @@
         "success": "הצלחה",
         "ok": "אישור",
         "version": "גרסה",
-        "saving": "שומר..."
+        "saving": "שומר...",
+        "viewAll": "צפה בהכל"
     },
     "settings": {
         "title": "הגדרות",
@@ -74,7 +75,14 @@
         "lessonNotesOptional": "הערות לשיעור (אופציונלי)",
         "editNote": "ערוך הערה",
         "addNote": "הוסף הערה",
-        "notesPlaceholder": "למשל: למדנו פרק 3, התלמיד איחר..."
+        "notesPlaceholder": "למשל: למדנו פרק 3, התלמיד איחר...",
+        "sections": {
+            "today": "היום",
+            "upcoming": "בקרוב",
+            "recentActivity": "פעילות אחרונה",
+            "nextSevenDays": "7 הימים הבאים"
+        },
+        "noUpcomingLessons": "לא נמצאו שיעורים קרובים."
     },
     "tabs": {
         "dashboard": "בית",
@@ -246,5 +254,27 @@
         "saveSuccess": "הפרופיל עודכן בהצלחה!",
         "saveError": "עדכון הפרופיל נכשל",
         "pleaseSignIn": "אנא התחבר כדי לצפות בפרופיל שלך"
+    },
+    "teacherDetails": {
+        "title": "פרופיל מורה",
+        "activeSchedules": "לוחות זמנים פעילים",
+        "ongoingWorkloads": "עומסי עבודה פעילים",
+        "noSchedules": "לא נמצאו לוחות זמנים פעילים.",
+        "recentActivity": "פעילות אחרונה",
+        "noActivity": "לא נרשמה פעילות אחרונה.",
+        "exportAll": "ייצא הכל",
+        "management": "ניהול",
+        "editProfile": "ערוך פרופיל",
+        "reassign": "שיוך מחדש",
+        "suspendAccess": "השהה גישה",
+        "restoreAccess": "שחזר גישה",
+        "permanentDelete": "מחיקה לצמיתות",
+        "dangerZone": "אזור סכנה",
+        "stats": {
+            "monthlyHours": "שעות חודשיות",
+            "monthlyKm": "קמ חודשיים",
+            "attendance": "נוכחות",
+            "estPayroll": "שכר משוער"
+        }
     }
 }

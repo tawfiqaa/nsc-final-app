@@ -27,7 +27,8 @@
         "success": "نجاح",
         "ok": "موافق",
         "version": "الإصدار",
-        "saving": "جاري الحفظ..."
+        "saving": "جاري الحفظ...",
+        "viewAll": "عرض الكل"
     },
     "settings": {
         "title": "الإعدادات",
@@ -74,7 +75,14 @@
         "lessonNotesOptional": "ملاحظات الدرس (اختياري)",
         "editNote": "تعديل الملاحظة",
         "addNote": "إضافة ملاحظة",
-        "notesPlaceholder": "مثال: تمت تغطية الفصل 3، تأخر الطالب..."
+        "notesPlaceholder": "مثال: تمت تغطية الفصل 3، تأخر الطالب...",
+        "sections": {
+            "today": "اليوم",
+            "upcoming": "قادمة",
+            "recentActivity": "النشاط الأخير",
+            "nextSevenDays": "الأيام السبعة القادمة"
+        },
+        "noUpcomingLessons": "لم يتم العثور على دروس قادمة."
     },
     "tabs": {
         "dashboard": "الرئيسية",
@@ -246,5 +254,27 @@
         "saveSuccess": "تم تحديث الملف الشخصي بنجاح!",
         "saveError": "فشل تحديث الملف الشخصي",
         "pleaseSignIn": "يرجى تسجيل الدخول لعرض ملفك الشخصي"
+    },
+    "teacherDetails": {
+        "title": "ملف المعلم",
+        "activeSchedules": "الجداول النشطة",
+        "ongoingWorkloads": "أعباء عمل جارية",
+        "noSchedules": "لم يتم العثور على جداول نشطة.",
+        "recentActivity": "النشاط الأخير",
+        "noActivity": "لم يتم تسجيل أي نشاط حديث.",
+        "exportAll": "تصدير الكل",
+        "management": "الإدارة",
+        "editProfile": "تعديل الملف الشخصي",
+        "reassign": "إعادة تعيين",
+        "suspendAccess": "تعليق الوصول",
+        "restoreAccess": "استعادة الوصول",
+        "permanentDelete": "الحذف الدائم",
+        "dangerZone": "منطقة الخطر",
+        "stats": {
+            "monthlyHours": "الساعات الشهرية",
+            "monthlyKm": "كم الشهرية",
+            "attendance": "الحضور",
+            "estPayroll": "الراتب التقديري"
+        }
     }
 }
