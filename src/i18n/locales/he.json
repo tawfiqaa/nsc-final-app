@@ -22,6 +22,8 @@
         "home": "בית",
         "save": "שמור",
         "cancel": "ביטול",
+        "edit": "ערוך",
+        "delete": "מחק",
         "loading": "טוען...",
         "language": "שפה",
         "success": "הצלחה",
@@ -190,7 +192,16 @@
         "recentHistory": "היסטוריה אחרונה",
         "noHistoryYet": "אין עדיין היסטוריה.",
         "confirmDeletion": "אישור מחיקה",
-        "deleteLogConfirm": "האם אתה בטוח שברצונך למחוק דוח זה?"
+        "deleteLogConfirm": "האם אתה בטוח שברצונך למחוק את הרישום הזה?",
+        "location": "מיקום",
+        "noLocationSet": "לא הוגדר מיקום",
+        "openInGoogleMaps": "פתח ב-Google Maps",
+        "openInWaze": "פתח ב-Waze",
+        "editLocation": "ערוך מיקום",
+        "addressLabel": "כתובת / תווית",
+        "latitude": "קו רוחב (אופציונלי)",
+        "longitude": "קו אורך (אופציונלי)",
+        "invalidCoordinates": "קואורדינטות לא תקינות"
     },
     "logCard": {
         "present": "נוכח",

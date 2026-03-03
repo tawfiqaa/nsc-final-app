@@ -22,6 +22,8 @@
         "home": "Home",
         "save": "Save",
         "cancel": "Cancel",
+        "edit": "Edit",
+        "delete": "Delete",
         "loading": "Loading...",
         "language": "Language",
         "success": "Success",
@@ -194,7 +196,16 @@
         "recentHistory": "Recent History",
         "noHistoryYet": "No history yet.",
         "confirmDeletion": "Confirm Deletion",
-        "deleteLogConfirm": "Are you sure you want to delete this log?"
+        "deleteLogConfirm": "Are you sure you want to delete this log?",
+        "location": "Location",
+        "noLocationSet": "No location set",
+        "openInGoogleMaps": "Open in Google Maps",
+        "openInWaze": "Open in Waze",
+        "editLocation": "Edit Location",
+        "addressLabel": "Address / Label",
+        "latitude": "Latitude (Optional)",
+        "longitude": "Longitude (Optional)",
+        "invalidCoordinates": "Invalid coordinates"
     },
     "logCard": {
         "present": "Present",

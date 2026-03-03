@@ -98,7 +98,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="school-history"
         options={{
-          href: showTeacherTabs ? '/school-history' : null,
+          href: null,
           title: t('tabs.history'),
           headerTitle: t('tabs.history'),
           tabBarIcon: ({ color, size }) => (

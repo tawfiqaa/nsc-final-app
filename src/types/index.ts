@@ -91,8 +91,13 @@ export interface User {
 }
 
 export interface School {
-    id: string;
+    id: string; // school name acts as ID in many places, but this is the document ID
     name: string;
+    addressLabel?: string;
+    location?: {
+        lat: number;
+        lng: number;
+    } | null;
     gallery?: string[];
     createdAt: number;
     updatedAt: number;
@@ -170,6 +175,7 @@ export interface AuthContextType {
 export interface LessonContextType {
     schedules: Schedule[];
     logs: AttendanceLog[];
+    schools: School[];
     schoolGalleries: Record<string, string[]>;
     loading: boolean;
     addSchedule: (schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -188,4 +194,5 @@ export interface LessonContextType {
     refresh: () => Promise<void>;
     setTargetUid: (uid: string) => void;
     saveAttendance: (lessonId: string, records: AttendanceRecord[]) => Promise<void>;
+    updateSchoolLocation: (schoolId: string, payload: { addressLabel: string; location: { lat: number; lng: number } | null }) => Promise<void>;
 }

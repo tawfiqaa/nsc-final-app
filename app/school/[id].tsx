@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { buildGoogleMapsUrl, openWaze } from '../../src/utils/navigationLinks';
 
 const DAYS_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
@@ -16,8 +18,8 @@ export default function SchoolDetailsScreen() {
     const schoolName = Array.isArray(id) ? id[0] : id;
     const { colors, fonts } = useTheme();
     const { user } = useAuth();
-    const { membershipRole } = useOrg();
-    const { schedules, logs, deleteSchedule, deleteLog, updateLogNotes, deleteSchool } = useLesson();
+    const { membershipRole, activeOrgId } = useOrg();
+    const { schedules, logs, schools, deleteSchedule, deleteLog, updateLogNotes, deleteSchool, updateSchoolLocation } = useLesson();
     const { t } = useTranslation();
     const router = useRouter();
 
@@ -33,6 +35,13 @@ export default function SchoolDetailsScreen() {
 
     const [editingLog, setEditingLog] = React.useState<typeof logs[0] | null>(null);
     const [notesInput, setNotesInput] = React.useState('');
+
+    // Location State
+    const [showLocationModal, setShowLocationModal] = React.useState(false);
+    const [addrInput, setAddrInput] = React.useState('');
+    const [latInput, setLatInput] = React.useState('');
+    const [lngInput, setLngInput] = React.useState('');
+    const [savingLocation, setSavingLocation] = React.useState(false);
 
     const handleEditNote = (log: typeof logs[0]) => {
         setEditingLog(log);
@@ -51,6 +60,8 @@ export default function SchoolDetailsScreen() {
             .filter(l => l.school === schoolName)
             .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
 
+        const schoolDoc = schools.find(s => s.name === schoolName);
+
         const initialCountTotal = schoolSchedules.reduce((acc, curr) => acc + (curr.initialCount || 0), 0);
         const attendedCount = schoolLogs.filter(l => l.status === 'present').length;
         const missedCount = schoolLogs.filter(l => l.status === 'absent').length;
@@ -62,9 +73,47 @@ export default function SchoolDetailsScreen() {
             missedCount,
             totalLessons,
             schoolSchedules,
-            schoolLogs
+            schoolLogs,
+            schoolDoc
         };
-    }, [schedules, logs, schoolName]);
+    }, [schedules, logs, schools, schoolName]);
+
+    const handleOpenEditLocation = () => {
+        setAddrInput(stats.schoolDoc?.addressLabel || '');
+        setLatInput(stats.schoolDoc?.location?.lat?.toString() || '');
+        setLngInput(stats.schoolDoc?.location?.lng?.toString() || '');
+        setShowLocationModal(true);
+    };
+
+    const handleSaveLocation = async () => {
+        if (!addrInput.trim()) {
+            Alert.alert(t('common.error'), t('addLesson.schoolRequired'));
+            return;
+        }
+
+        let location = null;
+        if (latInput.trim() || lngInput.trim()) {
+            const lat = parseFloat(latInput);
+            const lng = parseFloat(lngInput);
+            if (isNaN(lat) || isNaN(lng)) {
+                Alert.alert(t('common.error'), t('addLesson.invalidDistance') || "Invalid coordinates");
+                return;
+            }
+            location = { lat, lng };
+        }
+
+        setSavingLocation(true);
+        try {
+            // Find the correct school doc to get its ID (though name is often used as ID)
+            const schoolId = stats.schoolDoc?.id || schoolName!;
+            await updateSchoolLocation(schoolId, { addressLabel: addrInput.trim(), location });
+            setShowLocationModal(false);
+        } catch (e) {
+            Alert.alert(t('common.error'), "Failed to save location");
+        } finally {
+            setSavingLocation(false);
+        }
+    };
 
     const handleDeleteSchool = () => {
         Alert.alert(
@@ -138,6 +187,54 @@ export default function SchoolDetailsScreen() {
                     <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <Text style={[styles.statValue, { color: colors.primary, fontFamily: fonts.bold }]}>{stats.attendedCount}</Text>
                         <Text style={[secondaryStyle, { fontSize: 12 }]}>{t('history.lessons')}</Text>
+                    </View>
+                </View>
+
+                {/* Location Section */}
+                <View style={[styles.locationCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={styles.locationHeader}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 4 }]}>{t('schoolDetails.location')}</Text>
+                            <Text style={[textStyle, { fontSize: 14 }]} numberOfLines={2}>
+                                {stats.schoolDoc?.addressLabel || t('schoolDetails.noLocationSet')}
+                            </Text>
+                        </View>
+                        {(isOrgAdmin || isSuperAdmin || !activeOrgId) && (
+                            <TouchableOpacity
+                                style={[styles.editLocBtn, { backgroundColor: colors.background }]}
+                                onPress={handleOpenEditLocation}
+                            >
+                                <Ionicons name="location-outline" size={18} color={colors.primary} />
+                                <Text style={[boldStyle, { color: colors.primary, fontSize: 12 }]}>{t('common.edit')}</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    <View style={styles.navButtons}>
+                        <TouchableOpacity
+                            style={[styles.navBtn, { borderColor: colors.border }]}
+                            onPress={() => {
+                                const url = buildGoogleMapsUrl({
+                                    addressLabel: stats.schoolDoc?.addressLabel,
+                                    location: stats.schoolDoc?.location
+                                });
+                                if (url) Linking.openURL(url);
+                            }}
+                        >
+                            <Ionicons name="map-outline" size={18} color={colors.text} />
+                            <Text style={[textStyle, { fontSize: 13 }]}>{t('schoolDetails.openInGoogleMaps')}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.navBtn, { borderColor: colors.border }]}
+                            onPress={() => openWaze({
+                                addressLabel: stats.schoolDoc?.addressLabel,
+                                location: stats.schoolDoc?.location
+                            })}
+                        >
+                            <Ionicons name="navigate-outline" size={18} color={colors.text} />
+                            <Text style={[textStyle, { fontSize: 13 }]}>{t('schoolDetails.openInWaze')}</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -243,6 +340,82 @@ export default function SchoolDetailsScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Modal for Location */}
+            <Modal
+                visible={showLocationModal}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setShowLocationModal(false)}
+            >
+                <View style={[styles.modalOverlay, { padding: 20 }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                        <Text style={[styles.modalTitle, boldStyle]}>{t('schoolDetails.editLocation')}</Text>
+
+                        <Text style={[secondaryStyle, { marginBottom: 4, fontSize: 12 }]}>{t('schoolDetails.addressLabel')}</Text>
+                        <TextInput
+                            style={[
+                                styles.textInputSingle,
+                                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
+                            ]}
+                            placeholder="e.g. 123 Main St, Haifa"
+                            placeholderTextColor={colors.secondaryText}
+                            value={addrInput}
+                            onChangeText={setAddrInput}
+                        />
+
+                        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={[secondaryStyle, { marginBottom: 4, fontSize: 12 }]}>{t('schoolDetails.latitude')}</Text>
+                                <TextInput
+                                    style={[
+                                        styles.textInputSingle,
+                                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
+                                    ]}
+                                    placeholder="32.1234"
+                                    placeholderTextColor={colors.secondaryText}
+                                    value={latInput}
+                                    onChangeText={setLatInput}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={[secondaryStyle, { marginBottom: 4, fontSize: 12 }]}>{t('schoolDetails.longitude')}</Text>
+                                <TextInput
+                                    style={[
+                                        styles.textInputSingle,
+                                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
+                                    ]}
+                                    placeholder="34.1234"
+                                    placeholderTextColor={colors.secondaryText}
+                                    value={lngInput}
+                                    onChangeText={setLngInput}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                                onPress={() => setShowLocationModal(false)}
+                            >
+                                <Text style={[boldStyle, { fontWeight: '600' }]}>{t('common.cancel')}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                                onPress={handleSaveLocation}
+                                disabled={savingLocation}
+                            >
+                                <Text style={{ color: '#fff', fontWeight: '600', fontFamily: fonts.bold }}>
+                                    {savingLocation ? t('common.saving') : t('common.save')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -325,4 +498,45 @@ const styles = StyleSheet.create({
         minWidth: 80,
         alignItems: 'center',
     },
+    locationCard: {
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        marginBottom: 24,
+    },
+    locationHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    editLocBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    navButtons: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    navBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+    },
+    textInputSingle: {
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 16,
+        marginBottom: 12,
+    }
 });

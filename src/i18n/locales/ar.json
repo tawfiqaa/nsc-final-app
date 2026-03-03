@@ -22,6 +22,8 @@
         "home": "الرئيسية",
         "save": "حفظ",
         "cancel": "إلغاء",
+        "edit": "تعديل",
+        "delete": "حذف",
         "loading": "جاري التحميل...",
         "language": "اللغة",
         "success": "نجاح",
@@ -190,7 +192,16 @@
         "recentHistory": "السجل الأخير",
         "noHistoryYet": "لا يوجد سجل بعد.",
         "confirmDeletion": "تأكيد الحذف",
-        "deleteLogConfirm": "هل أنت متأكد من رغبتك في حذف هذا السجل؟"
+        "deleteLogConfirm": "هل أنت متأكد من رغبتك في حذف هذا السجل؟",
+        "location": "الموقع",
+        "noLocationSet": "لم يتم تحديد موقع",
+        "openInGoogleMaps": "فتح في خرائط Google",
+        "openInWaze": "فتح في Waze",
+        "editLocation": "تعديل الموقع",
+        "addressLabel": "العنوان / المسمى",
+        "latitude": "خط العرض (اختياري)",
+        "longitude": "خط الطول (اختياري)",
+        "invalidCoordinates": "إحداثيات غير صالحة"
     },
     "logCard": {
         "present": "حاضر",

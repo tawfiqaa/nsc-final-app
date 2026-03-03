@@ -3,7 +3,7 @@ import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, qu
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { db, storage } from '../lib/firebase';
-import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, TeacherData } from '../types';
+import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, School, TeacherData } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 import { useAuth } from './AuthContext';
 import { useOrg } from './OrgContext';
@@ -23,6 +23,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const { activeOrgId, membershipStatus } = useOrg();
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [logs, setLogs] = useState<AttendanceLog[]>([]);
+    const [schools, setSchools] = useState<School[]>([]);
     const [schoolGalleries, setSchoolGalleries] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(true);
     const [targetUid, setTargetUid] = useState<string | null>(null);
@@ -84,12 +85,18 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }));
 
             unsubs.push(onSnapshot(schoolsQuery, (snap) => {
-                const mapped: Record<string, string[]> = {};
+                const mappedGalleries: Record<string, string[]> = {};
+                const loadedSchools: School[] = [];
                 snap.forEach(d => {
-                    const data = d.data();
-                    mapped[data.name] = data.gallery || [];
+                    const data = d.data() as School;
+                    const schoolWithId = { ...data, id: d.id };
+                    loadedSchools.push(schoolWithId);
+                    mappedGalleries[data.name] = data.gallery || [];
                 });
-                if (isMounted) setSchoolGalleries(mapped);
+                if (isMounted) {
+                    setSchools(loadedSchools);
+                    setSchoolGalleries(mappedGalleries);
+                }
             }));
 
             if (isMounted) setLoading(false);
@@ -194,11 +201,17 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                     const unsubSchools = onSnapshot(schoolsRef, (snap) => {
                         const mappedGalleries: Record<string, string[]> = {};
+                        const loadedSchools: School[] = [];
                         snap.forEach(d => {
-                            const data = d.data();
+                            const data = d.data() as School;
+                            const schoolWithId = { ...data, id: d.id };
+                            loadedSchools.push(schoolWithId);
                             mappedGalleries[data.name] = data.gallery || [];
                         });
-                        if (isMounted) setSchoolGalleries(mappedGalleries);
+                        if (isMounted) {
+                            setSchools(loadedSchools);
+                            setSchoolGalleries(mappedGalleries);
+                        }
                     });
                     unsubs.push(unsubSchools);
                     if (isMounted) setLoading(false);
@@ -645,6 +658,31 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
+    const updateSchoolLocation = async (schoolId: string, payload: { addressLabel: string; location: { lat: number; lng: number } | null }) => {
+        if (!user) return;
+        const now = Date.now();
+        const updateData = {
+            addressLabel: payload.addressLabel,
+            location: payload.location,
+            updatedAt: now
+        };
+
+        try {
+            if (orgMode && activeOrgId) {
+                await setDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolId), updateData, { merge: true });
+            } else if (isTargetMigrated) {
+                await setDoc(doc(db, 'users', targetUid!, 'schools', schoolId), updateData, { merge: true });
+            } else {
+                // Legacy V1 doesn't explicitly store school docs with location, but we can try to support it if needed.
+                // For now, following instructions to focus on V2.
+                console.warn("Location updates not supported in V1 legacy mode.");
+            }
+        } catch (error) {
+            console.error("Failed to update school location:", error);
+            throw error;
+        }
+    };
+
     const deleteSchool = async (schoolName: string) => {
         if (!user) return;
         if (!orgMode && user.uid !== targetUid) return;
@@ -703,6 +741,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         <LessonContext.Provider value={{
             schedules,
             logs,
+            schools,
             schoolGalleries,
             loading,
             addSchedule,
@@ -721,6 +760,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             refresh,
             setTargetUid,
             saveAttendance,
+            updateSchoolLocation,
         }}>
             {children}
         </LessonContext.Provider>

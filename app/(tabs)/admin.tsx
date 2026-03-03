@@ -18,7 +18,7 @@ export default function AdminScreen() {
 
     const [pendingMembers, setPendingMembers] = useState<OrgMembership[]>([]);
     const [approvedMembers, setApprovedMembers] = useState<OrgMembership[]>([]);
-    const [orgStats, setOrgStats] = useState({ totalHours: 0, teacherCount: 0 });
+    const [orgStats, setOrgStats] = useState({ totalSchools: 0, teacherCount: 0 });
     const [loading, setLoading] = useState(true);
 
     const isOwner = membershipRole === 'owner';
@@ -54,28 +54,28 @@ export default function AdminScreen() {
             }
         );
 
-        // Fetch Org Stats (Lessons this month)
-        const startOfMo = new Date();
-        startOfMo.setDate(1);
-        startOfMo.setHours(0, 0, 0, 0);
+        // Fetch Org Stats (Unique Schools per teacher)
+        const schedulesRef = collection(db, 'orgs', activeOrgId, 'schedules');
+        const schedulesStatsUnsub = onSnapshot(schedulesRef, (snap) => {
+            const teacherSchools: Record<string, Set<string>> = {};
+            snap.forEach(d => {
+                const data = d.data();
+                if (data.createdBy && data.school) {
+                    if (!teacherSchools[data.createdBy]) {
+                        teacherSchools[data.createdBy] = new Set();
+                    }
+                    teacherSchools[data.createdBy].add(data.school);
+                }
+            });
 
-        const lessonsRef = collection(db, 'orgs', activeOrgId, 'lessons');
-        const statsUnsub = onSnapshot(
-            query(lessonsRef, where('createdAt', '>=', startOfMo.getTime())),
-            (snap) => {
-                let hours = 0;
-                snap.forEach(d => {
-                    const data = d.data();
-                    if (data.status === 'present') hours += (data.hours || 0);
-                });
-                setOrgStats(prev => ({ ...prev, totalHours: hours }));
-            }
-        );
+            const totalSchools = Object.values(teacherSchools).reduce((acc, set) => acc + set.size, 0);
+            setOrgStats(prev => ({ ...prev, totalSchools }));
+        });
 
         return () => {
             pendingUnsub();
             approvedUnsub();
-            statsUnsub();
+            schedulesStatsUnsub();
         };
     }, [activeOrgId, isAdmin, isSuperAdmin]);
 
@@ -302,8 +302,8 @@ export default function AdminScreen() {
                                             elevation: theme === 'light' ? 2 : 4,
                                         }
                                     ]}>
-                                        <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.totalHours.toFixed(1)}h</Text>
-                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Hours (Month)</Text>
+                                        <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.totalSchools}</Text>
+                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Schools</Text>
                                     </View>
                                 </View>
 
