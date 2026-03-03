@@ -6,7 +6,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AttendanceLog } from '../types';
-import { useFormatting } from '../utils/formatters';
+import { formatDateDMY, formatTime24 } from '../utils/datetime';
 
 interface LogCardProps {
     log: AttendanceLog;
@@ -21,7 +21,6 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
     const { radius, interaction } = tokens;
     const { user } = useAuth();
     const { t } = useTranslation();
-    const { formatDate } = useFormatting();
     const router = useRouter();
     const isPresent = log.status === 'present';
 
@@ -52,7 +51,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
                 <View style={styles.info}>
                     <Text style={[styles.school, boldStyle]}>{log.school}</Text>
                     <Text style={[styles.date, secondaryStyle]}>
-                        {formatDate(new Date(log.dateISO), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {formatDateDMY(new Date(log.dateISO))} {formatTime24(new Date(log.dateISO))}
                     </Text>
                 </View>
 

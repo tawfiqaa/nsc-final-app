@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { AttendanceStatus, Schedule } from '../types';
+import { formatDateDMY } from '../utils/datetime';
 
 interface ScheduleCardProps {
     schedule: Schedule;
@@ -71,7 +72,7 @@ export const ScheduleCard: React.FC<ScheduleCardProps> = ({
                     <View style={styles.detailItem}>
                         <Ionicons name="calendar-outline" size={compact ? 14 : 16} color={colors.accentPrimary} />
                         <Text style={[styles.detailText, { color: colors.accentPrimary, fontFamily: fonts.bold, fontSize: compact ? 12 : 14 }]}>
-                            {upcomingDate.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}
+                            {formatDateDMY(upcomingDate)}
                         </Text>
                     </View>
                 )}

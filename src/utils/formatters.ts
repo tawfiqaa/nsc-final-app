@@ -1,7 +1,11 @@
 import i18n from '../i18n/i18n';
+import { formatDateDMY, formatTime24 } from './datetime';
+
+export { formatDateDMY, formatTime24 } from './datetime';
 
 /**
- * Hook for formatting numbers, dates, and currencies according to the current locale
+ * Hook for formatting numbers, dates, and currencies according to the current locale.
+ * All dates → DD/MM/YYYY. All times → 24-hour HH:mm.
  */
 export const useFormatting = () => {
     const locale = i18n.language || 'en';
@@ -14,14 +18,26 @@ export const useFormatting = () => {
     };
 
     /**
-     * Format a date according to the current locale
+     * Format a date as DD/MM/YYYY (ignores Intl options for safety).
+     * If you need Intl formatting (e.g., "Monday, 3 March"), pass `useIntl: true`
+     * and provide options — used only for human-readable subtitles.
      */
-    const formatDate = (date: Date | number, options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' }) => {
+    const formatDate = (
+        date: Date | number,
+        options?: Intl.DateTimeFormatOptions,
+    ) => {
         try {
-            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date) : date;
+            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date as any) : date;
             if (!d || isNaN(d.getTime())) return '---';
-            return new Intl.DateTimeFormat(locale, options).format(d);
-        } catch (e) {
+
+            // If caller wants weekday/month-name style (dashboard subtitle etc.), use Intl
+            if (options && (options.weekday || options.month === 'long' || options.month === 'short')) {
+                return new Intl.DateTimeFormat(locale, options).format(d);
+            }
+
+            // Default: DD/MM/YYYY
+            return formatDateDMY(d);
+        } catch {
             return '---';
         }
     };
@@ -35,22 +51,16 @@ export const useFormatting = () => {
                 style: 'currency',
                 currency,
             }).format(amount);
-        } catch (e) {
+        } catch {
             return `${amount} ${currency}`;
         }
     };
 
     /**
-     * Format time according to the current locale
+     * Format time as 24-hour HH:mm (always, regardless of locale)
      */
     const formatTime = (date: Date | number) => {
-        try {
-            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date) : date;
-            if (!d || isNaN(d.getTime())) return '--:--';
-            return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
-        } catch (e) {
-            return '--:--';
-        }
+        return formatTime24(date);
     };
 
     return { formatNumber, formatDate, formatCurrency, formatTime };
@@ -60,22 +70,10 @@ export const useFormatting = () => {
  * Static formatters for cases where hooks cannot be used (e.g. outside of components)
  */
 export const staticFormatters = {
-    formatDate: (date: Date | number, locale = 'en') => {
-        try {
-            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date) : date;
-            if (!d || isNaN(d.getTime())) return '---';
-            return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(d);
-        } catch (e) {
-            return '---';
-        }
+    formatDate: (date: Date | number, _locale = 'en') => {
+        return formatDateDMY(date);
     },
-    formatTime: (date: Date | number, locale = 'en') => {
-        try {
-            const d = (typeof date === 'number' || typeof date === 'string') ? new Date(date) : date;
-            if (!d || isNaN(d.getTime())) return '--:--';
-            return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
-        } catch (e) {
-            return '--:--';
-        }
+    formatTime: (date: Date | number, _locale = 'en') => {
+        return formatTime24(date);
     }
 };

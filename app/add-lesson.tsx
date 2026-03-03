@@ -7,6 +7,7 @@ import { useAuth } from '../src/contexts/AuthContext';
 import { useLesson } from '../src/contexts/LessonContext';
 import { useOrg } from '../src/contexts/OrgContext';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { formatDateDMY } from '../src/utils/datetime';
 import { useFormatting } from '../src/utils/formatters';
 
 const DAYS_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -333,7 +334,7 @@ export default function AddLessonScreen() {
                                     ]}
                                     onPress={() => setShowDatePicker(true)}
                                 >
-                                    <Text style={[textStyle, { fontSize: 16 }]}>{formatDate(oneTimeDate, { month: 'short', day: '2-digit', year: 'numeric' })}</Text>
+                                    <Text style={[textStyle, { fontSize: 16 }]}>{formatDateDMY(oneTimeDate)}</Text>
                                 </TouchableOpacity>
                                 {showDatePicker && (
                                     <DateTimePicker

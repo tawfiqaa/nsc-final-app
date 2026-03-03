@@ -22,6 +22,12 @@ import {
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { db, storage } from '../../src/lib/firebase';
+import {
+    dateToISODateOnly,
+    formatISODateOnlyToDMY,
+    isoDateOnlyToLocalDate,
+    migrateDOBToString,
+} from '../../src/utils/datetime';
 
 export default function ProfileScreen() {
     const { user } = useAuth();
@@ -34,7 +40,11 @@ export default function ProfileScreen() {
     const [username, setUsername] = useState(user?.username || '');
     const [phone, setPhone] = useState(user?.phone || '');
     const [contactEmail, setContactEmail] = useState(user?.contactEmail || '');
-    const [dob, setDob] = useState<Date>(user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date(1990, 0, 1));
+    // DOB is stored/kept as "YYYY-MM-DD" string to avoid timezone shifts
+    const [dob, setDob] = useState<string>(() => {
+        const migrated = migrateDOBToString(user?.dateOfBirth);
+        return migrated || '1990-01-01';
+    });
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [photoURL, setPhotoURL] = useState(user?.photoURL || '');
 
@@ -49,9 +59,9 @@ export default function ProfileScreen() {
             setPhone(user.phone || '');
             setContactEmail(user.contactEmail || '');
             if (user.dateOfBirth) {
-                // Handle local date string correctly
-                const [year, month, day] = user.dateOfBirth.split('-').map(Number);
-                setDob(new Date(year, month - 1, day));
+                // Migrate legacy Timestamp or any format → clean YYYY-MM-DD string
+                const migrated = migrateDOBToString(user.dateOfBirth);
+                if (migrated) setDob(migrated);
             }
             setPhotoURL(user.photoURL || '');
         }
@@ -84,7 +94,7 @@ export default function ProfileScreen() {
                 username,
                 phone,
                 contactEmail,
-                dateOfBirth: dob.toISOString().split('T')[0], // YYYY-MM-DD
+                dateOfBirth: dob, // Already "YYYY-MM-DD" string — no UTC conversion
                 photoURL,
                 updatedAt: serverTimestamp(),
             }, { merge: true });
@@ -264,17 +274,20 @@ export default function ProfileScreen() {
                             ]}
                             onPress={() => setShowDatePicker(true)}
                         >
-                            <Text style={textStyle}>{dob.toISOString().split('T')[0]}</Text>
+                            <Text style={textStyle}>{formatISODateOnlyToDMY(dob)}</Text>
                             <Ionicons name="calendar-outline" size={20} color={colors.accentPrimary} />
                         </TouchableOpacity>
                         {showDatePicker && (
                             <DateTimePicker
-                                value={dob}
+                                value={isoDateOnlyToLocalDate(dob) || new Date(1990, 0, 1)}
                                 mode="date"
                                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                                 onChange={(event, selectedDate) => {
                                     setShowDatePicker(Platform.OS === 'ios');
-                                    if (selectedDate) setDob(selectedDate);
+                                    if (selectedDate) {
+                                        // Use LOCAL date parts — never toISOString() which uses UTC
+                                        setDob(dateToISODateOnly(selectedDate));
+                                    }
                                 }}
                                 maximumDate={new Date()}
                             />
