@@ -181,6 +181,7 @@
         "updateSchedule": "تحديث الجدول"
     },
     "schoolDetails": {
+        "overview": "نظرة عامة",
         "gallery": "المعرض",
         "students": "الطلاب",
         "addPastLesson": "إضافة درس سابق",

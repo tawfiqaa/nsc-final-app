@@ -185,6 +185,7 @@
         "updateSchedule": "Update Schedule"
     },
     "schoolDetails": {
+        "overview": "Overview",
         "gallery": "Gallery",
         "students": "Students",
         "addPastLesson": "Add Past Lesson",

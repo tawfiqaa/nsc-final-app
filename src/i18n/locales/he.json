@@ -181,6 +181,7 @@
         "updateSchedule": "עדכן מערכת"
     },
     "schoolDetails": {
+        "overview": "סקירה כללית",
         "gallery": "גלריה",
         "students": "תלמידים",
         "addPastLesson": "הוסף שיעור עבר",
