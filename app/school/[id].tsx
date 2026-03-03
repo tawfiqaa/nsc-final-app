@@ -20,7 +20,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import SchoolMap, { Marker } from '../../components/SchoolMap';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useOrg } from '../../src/contexts/OrgContext';
@@ -293,7 +293,7 @@ export default function SchoolDetailsScreen() {
 
                 {stats.schoolDoc?.location ? (
                     <View style={styles.mapPreviewContainer}>
-                        <MapView
+                        <SchoolMap
                             style={styles.mapPreview}
                             scrollEnabled={false}
                             zoomEnabled={false}
@@ -312,7 +312,7 @@ export default function SchoolDetailsScreen() {
                                     longitude: stats.schoolDoc.location.lng,
                                 }}
                             />
-                        </MapView>
+                        </SchoolMap>
                         {!isRestrictedAdmin && (
                             <TouchableOpacity style={styles.editLocationText} onPress={handleOpenEditLocation}>
                                 <Text style={[textStyle, { color: colors.primary, fontFamily: fonts.bold }]}>{t('schoolDetails.editLocation')}</Text>
@@ -527,7 +527,7 @@ export default function SchoolDetailsScreen() {
                         onChangeText={setLocationLabelInput}
                     />
                     <View style={{ flex: 1 }}>
-                        <MapView
+                        <SchoolMap
                             style={{ flex: 1 }}
                             initialRegion={{
                                 latitude: tempLocation?.lat || 32.0853,
@@ -535,7 +535,7 @@ export default function SchoolDetailsScreen() {
                                 latitudeDelta: 0.0922,
                                 longitudeDelta: 0.0421,
                             }}
-                            onPress={(e) => {
+                            onPress={(e: any) => {
                                 const { latitude, longitude } = e.nativeEvent.coordinate;
                                 setTempLocation({ lat: latitude, lng: longitude });
                             }}
@@ -544,10 +544,10 @@ export default function SchoolDetailsScreen() {
                                 <Marker
                                     draggable
                                     coordinate={{ latitude: tempLocation.lat, longitude: tempLocation.lng }}
-                                    onDragEnd={(e) => setTempLocation({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}
+                                    onDragEnd={(e: any) => setTempLocation({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}
                                 />
                             )}
-                        </MapView>
+                        </SchoolMap>
                         <View style={styles.mapInstruction}>
                             <Text style={[secondaryStyle, { textAlign: 'center', fontSize: 12 }]}>{t('schoolDetails.mapInstruction')}</Text>
                         </View>
