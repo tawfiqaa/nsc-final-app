@@ -206,7 +206,9 @@ export default function AdminScreen() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Organization Admin</Text>
-                <Text style={[styles.orgName, { color: colors.secondaryText }]}>{activeOrg?.name}</Text>
+                <Text style={[styles.orgName, { color: colors.secondaryText }]}>
+                    {activeOrg?.name || (isSuperAdmin ? 'Global Management' : 'No Active Organization')}
+                </Text>
             </View>
 
             <FlatList
@@ -214,43 +216,72 @@ export default function AdminScreen() {
                 renderItem={() => null}
                 ListHeaderComponent={
                     <>
-                        {/* Org Overview Stats */}
-                        <View style={styles.statsRow}>
-                            <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                <Text style={[styles.statValue, { color: colors.primary }]}>{orgStats.teacherCount}</Text>
-                                <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Teachers</Text>
-                            </View>
-                            <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                <Text style={[styles.statValue, { color: colors.primary }]}>{orgStats.totalHours.toFixed(1)}h</Text>
-                                <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Hours (Month)</Text>
-                            </View>
-                        </View>
-
-                        {/* Pending Requests */}
-                        {pendingMembers.length > 0 && (
-                            <>
-                                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                                    Pending Requests ({pendingMembers.length})
+                        {!activeOrgId && (
+                            <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                <Ionicons name="business-outline" size={48} color={colors.secondaryText} />
+                                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No Active Organization</Text>
+                                <Text style={[styles.emptyStateText, { color: colors.secondaryText }]}>
+                                    {isSuperAdmin
+                                        ? "You aren't managing a specific organization yet. Use the controls below to create one or join an existing one."
+                                        : "You aren't a member of any organization. Contact your administrator for a join code."}
                                 </Text>
-                                {pendingMembers.map(item => (
-                                    <View key={item.uid}>{renderPendingItem({ item })}</View>
+                            </View>
+                        )}
+
+                        {/* Org Overview Stats & Member Lists */}
+                        {activeOrgId && (
+                            <>
+                                <View style={styles.statsRow}>
+                                    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                        <Text style={[styles.statValue, { color: colors.primary }]}>{orgStats.teacherCount}</Text>
+                                        <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Teachers</Text>
+                                    </View>
+                                    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                        <Text style={[styles.statValue, { color: colors.primary }]}>{orgStats.totalHours.toFixed(1)}h</Text>
+                                        <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Hours (Month)</Text>
+                                    </View>
+                                </View>
+
+                                {/* Pending Requests */}
+                                {pendingMembers.length > 0 && (
+                                    <>
+                                        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                                            Pending Requests ({pendingMembers.length})
+                                        </Text>
+                                        {pendingMembers.map(item => (
+                                            <View key={item.uid}>{renderPendingItem({ item })}</View>
+                                        ))}
+                                    </>
+                                )}
+
+                                {/* Org Members */}
+                                <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+                                    Organization Members ({approvedMembers.length})
+                                </Text>
+                                {approvedMembers.map(item => (
+                                    <View key={item.uid}>{renderApprovedItem({ item })}</View>
                                 ))}
+
+                                <View style={[styles.orgIdSection, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 32 }]}>
+                                    <Text style={[styles.orgIdLabel, { color: colors.secondaryText }]}>Organization Join ID (Share with teachers)</Text>
+                                    <Text style={[styles.orgIdText, { color: colors.primary }]} selectable>{activeOrgId}</Text>
+                                </View>
                             </>
                         )}
 
-                        {/* Org Members */}
-                        <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
-                            Organization Members ({approvedMembers.length})
-                        </Text>
-                        {approvedMembers.map(item => (
-                            <View key={item.uid}>{renderApprovedItem({ item })}</View>
-                        ))}
-
-                        {/* Org ID for sharing */}
-                        <View style={[styles.orgIdSection, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 32 }]}>
-                            <Text style={[styles.orgIdLabel, { color: colors.secondaryText }]}>Organization Join ID (Share with teachers)</Text>
-                            <Text style={[styles.orgIdText, { color: colors.primary }]} selectable>{activeOrgId}</Text>
-                        </View>
+                        {/* Super Admin Actions */}
+                        {isSuperAdmin && (
+                            <View style={[styles.superAdminSection, { backgroundColor: colors.card, borderColor: colors.primary + '40', marginTop: 24 }]}>
+                                <Text style={[styles.sectionTitle, { color: colors.primary, marginBottom: 12 }]}>Super Admin Controls</Text>
+                                <TouchableOpacity
+                                    style={[styles.createOrgBtn, { backgroundColor: colors.primary }]}
+                                    onPress={() => router.push('/create-org' as any)}
+                                >
+                                    <Ionicons name="business-outline" size={20} color="#fff" />
+                                    <Text style={styles.createOrgBtnText}>Create New Organization</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </>
                 }
                 contentContainerStyle={styles.list}
@@ -293,4 +324,41 @@ const styles = StyleSheet.create({
     statCard: { flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
     statValue: { fontSize: 24, fontWeight: 'bold' },
     statLabel: { fontSize: 12, marginTop: 4, textTransform: 'uppercase', fontWeight: '600' },
+    superAdminSection: {
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 24,
+    },
+    emptyState: {
+        padding: 32,
+        borderRadius: 16,
+        borderWidth: 1,
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    emptyStateTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    emptyStateText: {
+        fontSize: 14,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+    createOrgBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 14,
+        borderRadius: 10,
+        gap: 10,
+    },
+    createOrgBtnText: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: 'bold',
+    },
 });

@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Updates from 'expo-updates';
 import { createUserWithEmailAndPassword, User as FirebaseUser, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
+import i18n, { applyRTLLogic, LANGUAGE_KEY } from '../i18n/i18n';
 import { auth, db } from '../lib/firebase';
 import { AuthContextType, User } from '../types';
 import { STORAGE_KEYS, SUPER_ADMIN_EMAILS } from '../utils/constants';
@@ -55,6 +58,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const userData = docSnap.data() as User;
                     setUser(userData);
                     await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(userData));
+
+                    // Sync language from Firestore
+                    const dbLang = userData.settings?.ui?.language;
+                    if (dbLang && i18n.language !== dbLang) {
+                        const currentIsRTL = i18n.language === 'he' || i18n.language === 'ar';
+                        const newIsRTL = dbLang === 'he' || dbLang === 'ar';
+
+                        await i18n.changeLanguage(dbLang);
+                        await AsyncStorage.setItem(LANGUAGE_KEY, dbLang);
+
+                        if (currentIsRTL !== newIsRTL && Platform.OS !== 'web') {
+                            applyRTLLogic(dbLang);
+                            // We might need to reload here, but be careful with loops
+                            // Usually, if it's during initial load, we don't reload if we can avoid it
+                            // But if the app already started with wrong RTL, we MUST reload.
+                            Updates.reloadAsync();
+                        } else {
+                            applyRTLLogic(dbLang);
+                        }
+                    }
                 } else {
                     // Needed if the user doc is missing for some reason
                     console.warn("User doc missing for auth user");

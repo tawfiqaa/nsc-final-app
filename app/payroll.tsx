@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
+import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useOrg } from '../src/contexts/OrgContext';
@@ -11,6 +12,7 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { db } from '../src/lib/firebase';
 import { AttendanceLog, PayrollSettings } from '../src/types';
 import { exportPayrollCSV, exportPayrollExcel } from '../src/utils/exportPayroll';
+import { useFormatting } from '../src/utils/formatters';
 
 type RangeType = 'this_month' | 'last_month' | 'custom';
 
@@ -24,7 +26,9 @@ const CURRENCIES = [
 export default function PayrollScreen() {
     const { user } = useAuth();
     const { membershipRole } = useOrg();
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
+    const { t } = useTranslation();
+    const { formatNumber, formatDate, formatCurrency } = useFormatting();
     const router = useRouter();
 
     const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
@@ -92,7 +96,7 @@ export default function PayrollScreen() {
 
     const handleSaveSettings = async () => {
         if (!user) {
-            Alert.alert("Error", "Please sign in to save settings.");
+            Alert.alert(t('common.error'), t('auth.authFailed'));
             return;
         }
 
@@ -100,7 +104,7 @@ export default function PayrollScreen() {
         const kRate = parseFloat(kmRateInput);
 
         if (isNaN(hRate) || isNaN(kRate)) {
-            Alert.alert("Invalid Input", "Please enter valid numbers for rates.");
+            Alert.alert(t('common.error'), t('payroll.invalidInput'));
             return;
         }
 
@@ -116,11 +120,11 @@ export default function PayrollScreen() {
             await setDoc(docRef, dataToSave, { merge: true });
             setSettings(dataToSave as any);
             setShowSettingsModal(false);
-            Alert.alert("Success", "Payroll settings saved.");
+            Alert.alert(t('common.success'), t('payroll.saveSuccess'));
             fetchLogsInRange();
         } catch (e: any) {
             console.error('Failed to save payroll settings', e);
-            Alert.alert("Save Failed", `Error: ${e.code || 'unknown'}\n${e.message || ''}`);
+            Alert.alert(t('payroll.saveFailed'), `Error: ${e.code || 'unknown'}\n${e.message || ''}`);
         } finally {
             setSavingSettings(false);
         }
@@ -184,7 +188,7 @@ export default function PayrollScreen() {
 
     const handleExport = async (formatType: 'csv' | 'excel') => {
         if (!settings) {
-            Alert.alert("Rates Missing", "Please set your payroll rates before exporting.");
+            Alert.alert(t('payroll.ratesMissing'), t('payroll.setRatesBeforeExport'));
             return;
         }
         try {
@@ -204,7 +208,7 @@ export default function PayrollScreen() {
                 await exportPayrollExcel(options);
             }
         } catch (e: any) {
-            Alert.alert("Export Failed", e.message);
+            Alert.alert(t('payroll.saveFailed'), e.message);
         }
     };
 
@@ -217,6 +221,10 @@ export default function PayrollScreen() {
         setShowEndPicker(false);
         if (selectedDate) setEndDate(selectedDate);
     };
+
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
 
     if (loading) {
         return (
@@ -232,7 +240,7 @@ export default function PayrollScreen() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={[styles.headerRow, { marginBottom: 20 }]}>
-                    <Text style={[styles.title, { color: colors.text }]}>Payroll Report</Text>
+                    <Text style={[styles.title, boldStyle]}>{t('payroll.title')}</Text>
                     <TouchableOpacity onPress={() => setShowSettingsModal(true)}>
                         <Ionicons name="settings-outline" size={24} color={colors.primary} />
                     </TouchableOpacity>
@@ -242,20 +250,20 @@ export default function PayrollScreen() {
                     <View style={[styles.warningBox, { backgroundColor: '#332200', borderColor: '#FFCC00' }]}>
                         <Ionicons name="warning-outline" size={24} color="#FFCC00" />
                         <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={{ color: '#FFCC00', fontWeight: 'bold' }}>Rates not configured</Text>
-                            <Text style={{ color: '#DDD', fontSize: 13 }}>Set your hourly and KM rates to see pay totals.</Text>
+                            <Text style={{ color: '#FFCC00', fontWeight: 'bold', fontFamily: fonts.bold }}>{t('payroll.ratesNotConfigured')}</Text>
+                            <Text style={{ color: '#DDD', fontSize: 13, fontFamily: fonts.regular }}>{t('payroll.setRatesToSeeTotals')}</Text>
                         </View>
                         <TouchableOpacity
                             style={[styles.smallBtn, { backgroundColor: '#FFCC00' }]}
                             onPress={() => setShowSettingsModal(true)}
                         >
-                            <Text style={{ color: '#000', fontWeight: '800', fontSize: 12 }}>SET RATES</Text>
+                            <Text style={{ color: '#000', fontWeight: '800', fontSize: 12, fontFamily: fonts.bold }}>{t('dashboard.setRates')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
 
                 <View style={[styles.section, { backgroundColor: colors.card }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Date Range</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('payroll.dateRange')}</Text>
                     <View style={styles.rangeButtons}>
                         {(['this_month', 'last_month', 'custom'] as const).map((type) => (
                             <TouchableOpacity
@@ -266,8 +274,8 @@ export default function PayrollScreen() {
                                 ]}
                                 onPress={() => setRangeType(type)}
                             >
-                                <Text style={[styles.rangeBtnText, { color: rangeType === type ? '#fff' : '#888' }]}>
-                                    {type.replace('_', ' ').toUpperCase()}
+                                <Text style={[styles.rangeBtnText, { color: rangeType === type ? '#fff' : '#888', fontFamily: fonts.bold }]}>
+                                    {t(`payroll.${type === 'this_month' ? 'thisMonth' : type === 'last_month' ? 'lastMonth' : 'custom'}`).toUpperCase()}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -276,12 +284,12 @@ export default function PayrollScreen() {
                     {rangeType === 'custom' && (
                         <View style={styles.customDateRow}>
                             <TouchableOpacity onPress={() => setShowStartPicker(true)} style={[styles.dateInput, { borderColor: colors.border }]}>
-                                <Text style={{ color: colors.text }}>{format(startDate, 'yyyy-MM-dd')}</Text>
+                                <Text style={textStyle}>{formatDate(startDate, { year: 'numeric', month: '2-digit', day: '2-digit' })}</Text>
                                 <Ionicons name="calendar-outline" size={16} color={colors.secondaryText} />
                             </TouchableOpacity>
-                            <Text style={{ color: colors.text, marginHorizontal: 8 }}>to</Text>
+                            <Text style={[textStyle, { marginHorizontal: 8 }]}>-</Text>
                             <TouchableOpacity onPress={() => setShowEndPicker(true)} style={[styles.dateInput, { borderColor: colors.border }]}>
-                                <Text style={{ color: colors.text }}>{format(endDate, 'yyyy-MM-dd')}</Text>
+                                <Text style={textStyle}>{formatDate(endDate, { year: 'numeric', month: '2-digit', day: '2-digit' })}</Text>
                                 <Ionicons name="calendar-outline" size={16} color={colors.secondaryText} />
                             </TouchableOpacity>
                         </View>
@@ -296,18 +304,18 @@ export default function PayrollScreen() {
                 ) : (
                     <View style={styles.summaryContainer}>
                         <View style={styles.summaryRow}>
-                            <SummaryCard title="Total Hours" value={summary.totalHours.toFixed(1)} unit="h" color={colors.text} cardColor={colors.card} />
-                            <SummaryCard title="Total KM" value={summary.totalKm.toFixed(1)} unit="km" color={colors.text} cardColor={colors.card} />
+                            <SummaryCard title={t('payroll.totalHours')} value={formatNumber(summary.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="h" color={colors.text} cardColor={colors.card} font={fonts} />
+                            <SummaryCard title={t('payroll.totalKm')} value={formatNumber(summary.totalKm, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" color={colors.text} cardColor={colors.card} font={fonts} />
                         </View>
                         {!ratesMissing && (
                             <>
                                 <View style={styles.summaryRow}>
-                                    <SummaryCard title="Hours Pay" value={`${settings?.currency || 'ILS'} ${summary.hoursPay.toFixed(2)}`} unit="" color={colors.primary} cardColor={colors.card} />
-                                    <SummaryCard title="KM Pay" value={`${settings?.currency || 'ILS'} ${summary.kmPay.toFixed(2)}`} unit="" color={colors.primary} cardColor={colors.card} />
+                                    <SummaryCard title={t('payroll.hoursPay')} value={formatCurrency(summary.hoursPay, settings?.currency || 'ILS')} unit="" color={colors.primary} cardColor={colors.card} font={fonts} />
+                                    <SummaryCard title={t('payroll.kmPay')} value={formatCurrency(summary.kmPay, settings?.currency || 'ILS')} unit="" color={colors.primary} cardColor={colors.card} font={fonts} />
                                 </View>
                                 <View style={[styles.totalCard, { backgroundColor: colors.primary }]}>
-                                    <Text style={styles.totalLabel}>Total Payment</Text>
-                                    <Text style={styles.totalValue}>{settings?.currency || 'ILS'} {summary.totalPay.toFixed(2)}</Text>
+                                    <Text style={[styles.totalLabel, { fontFamily: fonts.bold }]}>{t('payroll.totalPayment')}</Text>
+                                    <Text style={[styles.totalValue, { fontFamily: fonts.bold }]}>{formatCurrency(summary.totalPay, settings?.currency || 'ILS')}</Text>
                                 </View>
                             </>
                         )}
@@ -320,19 +328,19 @@ export default function PayrollScreen() {
                         onPress={() => handleExport('csv')}
                     >
                         <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-                        <Text style={[styles.exportBtnText, { color: colors.primary }]}>Export CSV</Text>
+                        <Text style={[styles.exportBtnText, { color: colors.primary, fontFamily: fonts.bold }]}>{t('payroll.exportCsv')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.exportBtn, { backgroundColor: colors.primary }]}
                         onPress={() => handleExport('excel')}
                     >
                         <Ionicons name="download-outline" size={20} color="#fff" />
-                        <Text style={[styles.exportBtnText, { color: '#fff' }]}>Export Excel</Text>
+                        <Text style={[styles.exportBtnText, { color: '#fff', fontFamily: fonts.bold }]}>{t('payroll.exportExcel')}</Text>
                     </TouchableOpacity>
                 </View>
 
-                <Text style={{ textAlign: 'center', color: colors.secondaryText, fontSize: 12, marginTop: 20 }}>
-                    Exports include the full itemized list of lessons within this date range.
+                <Text style={{ textAlign: 'center', color: colors.secondaryText, fontSize: 12, marginTop: 20, fontFamily: fonts.regular }}>
+                    {t('payroll.exportNotice')}
                 </Text>
             </ScrollView>
 
@@ -345,15 +353,15 @@ export default function PayrollScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>Payroll Rates Configuration</Text>
+                            <Text style={[styles.modalTitle, boldStyle]}>{t('payroll.configTitle')}</Text>
                             <TouchableOpacity onPress={() => setShowSettingsModal(false)}>
                                 <Ionicons name="close" size={24} color={colors.secondaryText} />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={[styles.inputLabel, { color: colors.secondaryText }]}>Hourly Rate</Text>
+                        <Text style={[styles.inputLabel, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('payroll.hourlyRate')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                            style={[styles.input, { color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
                             value={hourlyRateInput}
                             onChangeText={setHourlyRateInput}
                             keyboardType="numeric"
@@ -361,9 +369,9 @@ export default function PayrollScreen() {
                             placeholderTextColor={colors.secondaryText}
                         />
 
-                        <Text style={[styles.inputLabel, { color: colors.secondaryText, marginTop: 16 }]}>KM Rate</Text>
+                        <Text style={[styles.inputLabel, { color: colors.secondaryText, marginTop: 16, fontFamily: fonts.bold }]}>{t('payroll.kmRate')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                            style={[styles.input, { color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
                             value={kmRateInput}
                             onChangeText={setKmRateInput}
                             keyboardType="numeric"
@@ -371,7 +379,7 @@ export default function PayrollScreen() {
                             placeholderTextColor={colors.secondaryText}
                         />
 
-                        <Text style={[styles.inputLabel, { color: colors.secondaryText, marginTop: 16 }]}>Currency</Text>
+                        <Text style={[styles.inputLabel, { color: colors.secondaryText, marginTop: 16, fontFamily: fonts.bold }]}>{t('payroll.currency')}</Text>
                         <View style={styles.currencyRow}>
                             {CURRENCIES.map((curr) => (
                                 <TouchableOpacity
@@ -383,7 +391,7 @@ export default function PayrollScreen() {
                                     ]}
                                     onPress={() => setCurrencyInput(curr.code)}
                                 >
-                                    <Text style={[styles.currencyBtnText, { color: currencyInput === curr.code ? '#fff' : colors.text }]}>
+                                    <Text style={[styles.currencyBtnText, { color: currencyInput === curr.code ? '#fff' : colors.text, fontFamily: fonts.bold }]}>
                                         {curr.label}
                                     </Text>
                                 </TouchableOpacity>
@@ -395,7 +403,7 @@ export default function PayrollScreen() {
                             onPress={handleSaveSettings}
                             disabled={savingSettings}
                         >
-                            {savingSettings ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save Configuration</Text>}
+                            {savingSettings ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.saveBtnText, { fontFamily: fonts.bold }]}>{t('payroll.saveConfig')}</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -404,13 +412,13 @@ export default function PayrollScreen() {
     );
 }
 
-function SummaryCard({ title, value, unit, color, cardColor }: any) {
+function SummaryCard({ title, value, unit, color, cardColor, font }: any) {
     return (
         <View style={[styles.summaryCard, { backgroundColor: cardColor }]}>
-            <Text style={styles.summaryTitle}>{title}</Text>
+            <Text style={[styles.summaryTitle, { fontFamily: font.regular }]}>{title}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                <Text style={[styles.summaryValue, { color }]}>{value}</Text>
-                {unit ? <Text style={[styles.summaryUnit, { color }]}>{unit}</Text> : null}
+                <Text style={[styles.summaryValue, { color, fontFamily: font.bold }]}>{value}</Text>
+                {unit ? <Text style={[styles.summaryUnit, { color, fontFamily: font.regular }]}>{unit}</Text> : null}
             </View>
         </View>
     );
@@ -430,19 +438,19 @@ const styles = StyleSheet.create({
     rangeBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', marginHorizontal: 4 },
     rangeBtnText: { fontSize: 10, fontWeight: '800' },
     customDateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-    dateInput: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 8, padding: 8, width: 130 },
+    dateInput: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 8, padding: 8, width: 140 },
     summaryContainer: { marginBottom: 24 },
     summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
     summaryCard: { flex: 1, padding: 16, borderRadius: 16, marginHorizontal: 4, elevation: 2, shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
     summaryTitle: { fontSize: 12, color: '#666', marginBottom: 4 },
-    summaryValue: { fontSize: 20, fontWeight: 'bold' },
+    summaryValue: { fontSize: 18, fontWeight: 'bold' },
     summaryUnit: { fontSize: 12, marginLeft: 2 },
     totalCard: { padding: 20, borderRadius: 16, alignItems: 'center', marginTop: 12 },
     totalLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '600' },
-    totalValue: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginTop: 4 },
+    totalValue: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 4 },
     exportRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
     exportBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, marginHorizontal: 6 },
-    exportBtnText: { fontWeight: 'bold', marginLeft: 8 },
+    exportBtnText: { fontWeight: 'bold', marginLeft: 8, fontSize: 13 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
     modalContent: { borderRadius: 20, padding: 24, elevation: 5 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },

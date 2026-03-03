@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useLesson } from '../../../src/contexts/LessonContext';
@@ -16,10 +17,11 @@ const IMAGE_SIZE = (width - (40) - (IMAGE_MARGIN * 2 * COLUMN_COUNT)) / COLUMN_C
 export default function SchoolGalleryScreen() {
     const { id } = useLocalSearchParams();
     const schoolName = Array.isArray(id) ? id[0] : id;
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const { user } = useAuth();
     const { membershipRole } = useOrg();
     const { schoolGalleries, addSchoolPhoto, deleteSchoolPhoto } = useLesson();
+    const { t } = useTranslation();
     const router = useRouter();
 
     const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
@@ -37,12 +39,16 @@ export default function SchoolGalleryScreen() {
 
     const photos = schoolGalleries[schoolName] || [];
 
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+
     if (isRestrictedAdmin) return null;
 
     const handleAddPhoto = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
-            Alert.alert("Permission Required", "You need to grant permission to access your photos.");
+            Alert.alert(t('gallery.permissionRequired'), t('gallery.permissionMsg'));
             return;
         }
 
@@ -59,7 +65,7 @@ export default function SchoolGalleryScreen() {
                 await addSchoolPhoto(schoolName, uri);
             } catch (error) {
                 console.error(error);
-                Alert.alert("Upload Failed", "There was an error uploading your photo.");
+                Alert.alert(t('gallery.uploadFailed'), t('gallery.uploadError'));
             } finally {
                 setUploading(false);
             }
@@ -68,12 +74,12 @@ export default function SchoolGalleryScreen() {
 
     const handleDeletePhoto = (url: string) => {
         Alert.alert(
-            "Delete Photo",
-            "Are you sure you want to delete this photo?",
+            t('gallery.deletePhoto'),
+            t('gallery.deletePhotoConfirm'),
             [
-                { text: "Cancel", style: "cancel" },
+                { text: t('common.cancel'), style: "cancel" },
                 {
-                    text: "Delete",
+                    text: t('schools.deleteSchool'), // Reuse deleteSchool text or common.delete if exists
                     style: "destructive",
                     onPress: async () => {
                         try {
@@ -81,7 +87,7 @@ export default function SchoolGalleryScreen() {
                             await deleteSchoolPhoto(schoolName, url);
                             setSelectedImage(null);
                         } catch (error) {
-                            Alert.alert("Error", "Failed to delete photo.");
+                            Alert.alert(t('common.error'), t('common.error'));
                         } finally {
                             setUploading(false);
                         }
@@ -94,7 +100,9 @@ export default function SchoolGalleryScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-                <Text style={[styles.title, { color: colors.text }]}>{schoolName} Gallery</Text>
+                <Text style={[styles.title, boldStyle]}>
+                    {t('gallery.title', { schoolName })}
+                </Text>
                 <TouchableOpacity
                     style={[styles.addButton, { backgroundColor: colors.primary }]}
                     onPress={handleAddPhoto}
@@ -105,7 +113,7 @@ export default function SchoolGalleryScreen() {
                     ) : (
                         <>
                             <Ionicons name="add" size={20} color="#fff" />
-                            <Text style={styles.addButtonText}>Add Photo</Text>
+                            <Text style={[styles.addButtonText, { fontFamily: fonts.bold }]}>{t('gallery.addPhoto')}</Text>
                         </>
                     )}
                 </TouchableOpacity>
@@ -115,11 +123,11 @@ export default function SchoolGalleryScreen() {
                 {photos.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Ionicons name="images-outline" size={64} color={colors.secondaryText} />
-                        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-                            No photos in this gallery yet.
+                        <Text style={[styles.emptyText, { color: colors.secondaryText, fontFamily: fonts.bold }]}>
+                            {t('gallery.noPhotos')}
                         </Text>
-                        <Text style={[styles.emptySubtext, { color: colors.secondaryText }]}>
-                            Add schedules, maps, or whiteboard notes.
+                        <Text style={[styles.emptySubtext, secondaryStyle]}>
+                            {t('gallery.emptySubtext')}
                         </Text>
                     </View>
                 ) : (

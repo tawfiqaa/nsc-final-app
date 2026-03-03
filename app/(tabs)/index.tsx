@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { endOfMonth, format, getDay, isSameDay, startOfMonth } from 'date-fns';
+import { endOfMonth, getDay, isSameDay, startOfMonth } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
 import { ScheduleCard } from '../../src/components/ScheduleCard';
@@ -14,12 +15,15 @@ import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { db } from '../../src/lib/firebase';
 import { AttendanceStatus, PayrollSettings } from '../../src/types';
+import { useFormatting } from '../../src/utils/formatters';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { schedules, logs, markAttendance, deleteLog, refresh, loading, updateLogNotes } = useLesson();
-  const { colors } = useTheme();
+  const { colors, fonts } = useTheme();
   const { membershipRole } = useOrg();
+  const { t } = useTranslation();
+  const { formatDate, formatNumber, formatCurrency } = useFormatting();
   const router = useRouter();
 
   const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
@@ -105,7 +109,6 @@ export default function Dashboard() {
   }, [schedules, logs]);
 
   // Recently updated logs (last 12 hours OR upcoming one-time lessons)
-  // This is a UI-only filter for the Dashboard feed. It does NOT delete data from Firestore.
   const recentLogs = useMemo(() => {
     const now = new Date();
     const cutoff = now.getTime() - (12 * 60 * 60 * 1000);
@@ -148,6 +151,10 @@ export default function Dashboard() {
     setEditingLog(null);
   };
 
+  const textStyle = { fontFamily: fonts.regular, color: colors.text };
+  const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+  const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -156,19 +163,18 @@ export default function Dashboard() {
       >
         <View style={styles.header}>
           <View>
-            <Text style={[styles.greeting, { color: colors.secondaryText }]}>Good day,</Text>
-            <Text style={[styles.username, { color: colors.text }]}>{user?.email?.split('@')[0]}</Text>
+            <Text style={[styles.greeting, secondaryStyle]}>{t('dashboard.goodDay')}</Text>
+            <Text style={[styles.username, boldStyle]}>{user?.name || user?.email?.split('@')[0]}</Text>
           </View>
           <View style={styles.headerRight}>
-            <Text style={[styles.date, { color: colors.primary }]}>{format(today, 'EEE, MMM d')}</Text>
-            {/* ThemeToggle is in generic header usually, but good here too */}
+            <Text style={[styles.date, { color: colors.primary, fontFamily: fonts.bold }]}>{formatDate(today, { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
             <ThemeToggle />
           </View>
         </View>
 
         <View style={styles.statsRow}>
-          <StatsWidget title="Hours (Mo)" value={monthlyStats.totalHours.toFixed(1)} unit="h" />
-          <StatsWidget title="Distance (Mo)" value={monthlyStats.totalDistance.toFixed(1)} unit="km" />
+          <StatsWidget title={t('dashboard.hoursMonth')} value={formatNumber(monthlyStats.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="h" />
+          <StatsWidget title={t('dashboard.distanceMonth')} value={formatNumber(monthlyStats.totalDistance, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" />
         </View>
 
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
@@ -176,20 +182,20 @@ export default function Dashboard() {
             style={[styles.totalCardHome, { backgroundColor: colors.card, borderColor: colors.primary, borderWidth: 1 }]}
             onPress={() => router.push('/payroll' as any)}
           >
-            <Text style={[styles.totalLabelHome, { color: colors.secondaryText }]}>TOTAL (MO)</Text>
-            <Text style={[styles.totalValueHome, { color: colors.primary }]}>
-              {monthlyStats.ratesMissing ? 'SET RATES' : `${payrollSettings?.currency || 'ILS'} ${monthlyStats.totalPay.toFixed(0)}`}
+            <Text style={[styles.totalLabelHome, secondaryStyle]}>{t('dashboard.totalMonth')}</Text>
+            <Text style={[styles.totalValueHome, { color: colors.primary, fontFamily: fonts.bold }]}>
+              {monthlyStats.ratesMissing ? t('dashboard.setRates') : formatCurrency(monthlyStats.totalPay, payrollSettings?.currency || 'ILS')}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Text style={{ color: colors.secondaryText, fontSize: 11 }}>Tap to view details</Text>
+              <Text style={[secondaryStyle, { fontSize: 11 }]}>{t('dashboard.tapToViewDetails')}</Text>
               <Ionicons name="chevron-forward" size={12} color={colors.secondaryText} style={{ marginLeft: 4 }} />
             </View>
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Today&apos;s Lessons</Text>
+        <Text style={[styles.sectionTitle, boldStyle]}>{t('dashboard.todaysLessons')}</Text>
         {todaysLessons.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.secondaryText }]}>No more lessons today.</Text>
+          <Text style={[styles.emptyText, secondaryStyle]}>{t('dashboard.noMoreLessonsToday')}</Text>
         ) : (
           todaysLessons.map(schedule => (
             <ScheduleCard
@@ -200,9 +206,9 @@ export default function Dashboard() {
           ))
         )}
 
-        <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>Recently Updated</Text>
+        <Text style={[styles.sectionTitle, boldStyle, { marginTop: 24 }]}>{t('dashboard.recentlyUpdated')}</Text>
         {recentLogs.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.secondaryText }]}>No recent activity.</Text>
+          <Text style={[styles.emptyText, secondaryStyle]}>{t('dashboard.noRecentActivity')}</Text>
         ) : (
           recentLogs.map(log => (
             <LogCard
@@ -234,13 +240,13 @@ export default function Dashboard() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              {markingSchedule ? 'Lesson Notes (Optional)' : editingLog?.notes ? 'Edit Note' : 'Add Note'}
+            <Text style={[styles.modalTitle, boldStyle]}>
+              {markingSchedule ? t('dashboard.lessonNotesOptional') : editingLog?.notes ? t('dashboard.editNote') : t('dashboard.addNote')}
             </Text>
 
             <TextInput
-              style={[styles.textInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              placeholder="e.g. Covered Chapter 3, student was late..."
+              style={[styles.textInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
+              placeholder={t('dashboard.notesPlaceholder')}
               placeholderTextColor={colors.secondaryText}
               value={notesInput}
               onChangeText={setNotesInput}
@@ -257,20 +263,19 @@ export default function Dashboard() {
                   setEditingLog(null);
                 }}
               >
-                <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
+                <Text style={[textStyle, { fontWeight: '600' }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: colors.primary }]}
                 onPress={markingSchedule ? confirmMark : confirmEditNote}
               >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Save</Text>
+                <Text style={{ color: '#fff', fontWeight: '600', fontFamily: fonts.bold }}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-
     </View>
   );
 }

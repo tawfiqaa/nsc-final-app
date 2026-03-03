@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
 type Theme = 'light' | 'dark';
@@ -16,6 +17,10 @@ interface ThemeContextType {
         border: string;
         error: string;
         success: string;
+    };
+    fonts: {
+        regular: string;
+        bold: string;
     };
 }
 
@@ -81,8 +86,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         },
     };
 
+    const { i18n } = useTranslation();
+
+    const fonts = {
+        regular: i18n.language === 'ar' ? 'NotoSansArabic_400Regular' :
+            i18n.language === 'he' ? 'NotoSansHebrew_400Regular' :
+                'NotoSans_400Regular',
+        bold: i18n.language === 'ar' ? 'NotoSansArabic_700Bold' :
+            i18n.language === 'he' ? 'NotoSansHebrew_700Bold' :
+                'NotoSans_700Bold',
+    };
+
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, colors: colors[theme] }}>
+        <ThemeContext.Provider value={{ theme, toggleTheme, colors: colors[theme], fonts }}>
             {children}
         </ThemeContext.Provider>
     );

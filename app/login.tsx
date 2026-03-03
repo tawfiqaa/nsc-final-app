@@ -1,6 +1,7 @@
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ThemeToggle } from '../src/components/ThemeToggle';
 import { useAuth } from '../src/contexts/AuthContext';
@@ -9,12 +10,13 @@ import { useTheme } from '../src/contexts/ThemeContext';
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
     const [name, setName] = useState('');
     const { login, register, loginWithGoogle } = useAuth();
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
 
     // Google Sign In Hook
@@ -24,36 +26,27 @@ export default function LoginScreen() {
     });
 
     useEffect(() => {
-        if (request) {
-            console.log("DEBUG: Google Auth Redirect URI:", request.redirectUri);
-        }
-    }, [request]);
-
-    useEffect(() => {
         if (response?.type === 'success') {
             const { id_token } = response.params;
             if (id_token) {
                 setIsLoading(true);
                 loginWithGoogle(id_token)
-                    .then(() => {
-                        // Success handled by auth state change
-                    })
                     .catch(e => {
-                        Alert.alert("Google Sign In Failed", e.message);
+                        Alert.alert(t('auth.googleSignInFailed'), e.message);
                     })
                     .finally(() => setIsLoading(false));
             }
         }
-    }, [response, loginWithGoogle]);
+    }, [response, loginWithGoogle, t]);
 
     const handleAuth = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please enter email and password');
+            Alert.alert(t('common.error'), t('auth.errorEmptyFields'));
             return;
         }
 
         if (isRegistering && !name) {
-            Alert.alert('Error', 'Please enter your full name');
+            Alert.alert(t('common.error'), t('auth.errorEmptyName'));
             return;
         }
 
@@ -65,11 +58,15 @@ export default function LoginScreen() {
                 await login(email, password);
             }
         } catch (e: any) {
-            Alert.alert('Authentication Failed', e.message);
+            Alert.alert(t('auth.authFailed'), e.message);
         } finally {
             setIsLoading(false);
         }
     };
+
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
 
     return (
         <KeyboardAvoidingView
@@ -78,19 +75,19 @@ export default function LoginScreen() {
         >
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
-                    <Text style={[styles.title, { color: colors.text }]}>Teacher Tracker</Text>
+                    <Text style={[styles.title, boldStyle]}>{t('common.teacherTracker')}</Text>
                     <ThemeToggle />
                 </View>
 
                 <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.text }]}>
-                    <Text style={[styles.subtitle, { color: colors.text }]}>
-                        {isRegistering ? 'Create Account' : 'Welcome Back'}
+                    <Text style={[styles.subtitle, boldStyle]}>
+                        {isRegistering ? t('auth.createAccount') : t('auth.welcomeBack')}
                     </Text>
 
                     <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>Email</Text>
+                        <Text style={[styles.label, secondaryStyle]}>{t('auth.email')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
                             placeholder="email@example.com"
                             placeholderTextColor={colors.secondaryText}
                             value={email}
@@ -101,9 +98,9 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.inputContainer}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>Password</Text>
+                        <Text style={[styles.label, secondaryStyle]}>{t('auth.password')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
                             placeholder="********"
                             placeholderTextColor={colors.secondaryText}
                             value={password}
@@ -114,10 +111,10 @@ export default function LoginScreen() {
 
                     {isRegistering && (
                         <View style={styles.inputContainer}>
-                            <Text style={[styles.label, { color: colors.secondaryText }]}>Full Name</Text>
+                            <Text style={[styles.label, secondaryStyle]}>{t('auth.fullName')}</Text>
                             <TextInput
-                                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-                                placeholder="Your Name"
+                                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
+                                placeholder={t('auth.fullName')}
                                 placeholderTextColor={colors.secondaryText}
                                 value={name}
                                 onChangeText={setName}
@@ -133,7 +130,7 @@ export default function LoginScreen() {
                         {isLoading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>{isRegistering ? 'Sign Up' : 'Sign In'}</Text>
+                            <Text style={[styles.buttonText, { fontFamily: fonts.bold }]}>{isRegistering ? t('auth.signUp') : t('auth.login')}</Text>
                         )}
                     </TouchableOpacity>
 
@@ -142,16 +139,16 @@ export default function LoginScreen() {
                         onPress={() => promptAsync()}
                         disabled={!request || isLoading}
                     >
-                        <Text style={[styles.googleButtonText, { color: colors.text }]}>
-                            Sign in with Google
+                        <Text style={[styles.googleButtonText, boldStyle]}>
+                            {t('auth.signInGoogle')}
                         </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)} style={styles.switchContainer}>
-                        <Text style={[styles.switchText, { color: colors.secondaryText }]}>
-                            {isRegistering ? 'Already have an account? ' : "Don't have an account? "}
-                            <Text style={{ color: colors.primary, fontWeight: 'bold' }}>
-                                {isRegistering ? 'Sign In' : 'Sign Up'}
+                        <Text style={[styles.switchText, secondaryStyle]}>
+                            {isRegistering ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}
+                            <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>
+                                {isRegistering ? t('auth.login') : t('auth.signUp')}
                             </Text>
                         </Text>
                     </TouchableOpacity>

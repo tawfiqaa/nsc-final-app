@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
@@ -9,10 +10,11 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { exportToExcel, generateSchoolHistoryData } from '../../src/utils/export';
 
 export default function SchoolsScreen() {
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const { user } = useAuth();
     const { schedules, logs, deleteSchool } = useLesson();
     const { membershipRole } = useOrg();
+    const { t } = useTranslation();
     const router = useRouter();
 
     const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
@@ -23,7 +25,7 @@ export default function SchoolsScreen() {
         if (isRestrictedAdmin) {
             router.replace('/(tabs)/admin');
         }
-    }, [isRestrictedAdmin]);
+    }, [isRestrictedAdmin, router]);
 
     if (isRestrictedAdmin) return null;
 
@@ -62,17 +64,17 @@ export default function SchoolsScreen() {
             await exportToExcel(data, `${schoolName.replace(/\s+/g, '_')}_history.xlsx`);
         } catch (e: any) {
             console.error(e);
-            alert("Export failed");
+            Alert.alert(t('common.error'), t('schools.exportFailed'));
         }
     };
 
     const handleDeleteSchool = (schoolName: string) => {
         Alert.alert(
-            "Delete School",
-            `Are you sure you want to permanently delete "${schoolName}" and all associated data?`,
+            t('schools.deleteSchool'),
+            t('schools.deleteSchoolConfirm', { schoolName }),
             [
-                { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: "destructive", onPress: () => deleteSchool(schoolName) }
+                { text: t('common.cancel'), style: "cancel" },
+                { text: t('common.delete'), style: "destructive", onPress: () => deleteSchool(schoolName) }
             ]
         );
     };
@@ -87,8 +89,10 @@ export default function SchoolsScreen() {
                     <Ionicons name="school" size={24} color={colors.primary} />
                 </View>
                 <View style={styles.info}>
-                    <Text style={[styles.schoolName, { color: colors.text }]}>{item.name}</Text>
-                    <Text style={[styles.stats, { color: colors.secondaryText }]}>{item.lessonCount} {item.lessonCount === 1 ? 'Lesson' : 'Lessons'}</Text>
+                    <Text style={[styles.schoolName, { color: colors.text, fontFamily: fonts.bold }]}>{item.name}</Text>
+                    <Text style={[styles.stats, { color: colors.secondaryText, fontFamily: fonts.regular }]}>
+                        {t('schools.lessonCount', { count: item.lessonCount })}
+                    </Text>
                 </View>
             </TouchableOpacity>
 
@@ -116,10 +120,10 @@ export default function SchoolsScreen() {
                 renderItem={renderItem}
                 contentContainerStyle={styles.list}
                 ListHeaderComponent={
-                    <Text style={[styles.header, { color: colors.text }]}>My Schools</Text>
+                    <Text style={[styles.header, { color: colors.text, fontFamily: fonts.bold }]}>{t('schools.title')}</Text>
                 }
                 ListEmptyComponent={
-                    <Text style={[styles.empty, { color: colors.secondaryText }]}>No schools found. Add a lesson to see schools here.</Text>
+                    <Text style={[styles.empty, { color: colors.secondaryText, fontFamily: fonts.regular }]}>{t('schools.noSchoolsFound')}</Text>
                 }
             />
         </View>

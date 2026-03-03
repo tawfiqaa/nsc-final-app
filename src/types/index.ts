@@ -76,6 +76,11 @@ export interface User {
     migratedAt?: any;
     createdAt: number;
     updatedAt: number;
+    settings?: {
+        ui?: {
+            language?: string;
+        };
+    };
 }
 
 export interface School {

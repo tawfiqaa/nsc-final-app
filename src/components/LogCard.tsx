@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AttendanceLog } from '../types';
+import { useFormatting } from '../utils/formatters';
 
 interface LogCardProps {
     log: AttendanceLog;
@@ -16,18 +17,24 @@ interface LogCardProps {
 }
 
 export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, readOnly, deleteType = 'text' }) => {
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const { user } = useAuth();
+    const { t } = useTranslation();
+    const { formatDate } = useFormatting();
     const router = useRouter();
     const isPresent = log.status === 'present';
+
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
 
     return (
         <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.text }]}>
             <View style={styles.row}>
                 <View style={styles.info}>
-                    <Text style={[styles.school, { color: colors.text }]}>{log.school}</Text>
-                    <Text style={[styles.date, { color: colors.secondaryText }]}>
-                        {format(new Date(log.dateISO), 'MMM d, h:mm a')}
+                    <Text style={[styles.school, boldStyle]}>{log.school}</Text>
+                    <Text style={[styles.date, secondaryStyle]}>
+                        {formatDate(new Date(log.dateISO), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </Text>
                 </View>
 
@@ -37,8 +44,8 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
                         size={24}
                         color={isPresent ? colors.success : colors.error}
                     />
-                    <Text style={[styles.status, { color: isPresent ? colors.success : colors.error }]}>
-                        {isPresent ? 'Present' : 'Absent'}
+                    <Text style={[styles.status, { color: isPresent ? colors.success : colors.error, fontFamily: fonts.bold }]}>
+                        {isPresent ? t('logCard.present') : t('logCard.absent')}
                     </Text>
                 </View>
             </View>
@@ -46,7 +53,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
             {log.notes ? (
                 <View style={styles.notesContainer}>
                     <Ionicons name="document-text-outline" size={14} color={colors.secondaryText} />
-                    <Text style={[styles.notesText, { color: colors.secondaryText }]}>{log.notes}</Text>
+                    <Text style={[styles.notesText, secondaryStyle]}>{log.notes}</Text>
                 </View>
             ) : null}
 
@@ -56,21 +63,21 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
                         {deleteType === 'icon' ? (
                             <Ionicons name="trash-outline" size={20} color={colors.error} />
                         ) : (
-                            <Text style={[styles.actionLink, { color: colors.error }]}>
-                                Undo
+                            <Text style={[styles.actionLink, { color: colors.error, fontFamily: fonts.bold }]}>
+                                {t('logCard.undo')}
                             </Text>
                         )}
                     </TouchableOpacity>
                 )}
                 {(user?.migratedToV2 || !!log.createdBy) && (
                     <TouchableOpacity onPress={() => router.push({ pathname: '/lesson/[id]' as any, params: { id: log.id } })}>
-                        <Text style={[styles.actionLink, { color: colors.text }]}>Attendance</Text>
+                        <Text style={[styles.actionLink, boldStyle]}>{t('logCard.attendance')}</Text>
                     </TouchableOpacity>
                 )}
                 {!readOnly && onEditNote && (
                     <TouchableOpacity onPress={onEditNote}>
-                        <Text style={[styles.actionLink, { color: colors.primary }]}>
-                            {log.notes ? 'Edit Note' : 'Add Note'}
+                        <Text style={[styles.actionLink, { color: colors.primary, fontFamily: fonts.bold }]}>
+                            {log.notes ? t('dashboard.editNote') : t('dashboard.addNote')}
                         </Text>
                     </TouchableOpacity>
                 )}
@@ -89,7 +96,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 2,
         borderLeftWidth: 4,
-        borderLeftColor: 'transparent', // can be dynamic
+        borderLeftColor: 'transparent',
     },
     row: {
         flexDirection: 'row',

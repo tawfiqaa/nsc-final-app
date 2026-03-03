@@ -1,22 +1,25 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useLesson } from '../src/contexts/LessonContext';
 import { useOrg } from '../src/contexts/OrgContext';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { useFormatting } from '../src/utils/formatters';
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
 export default function EditLessonScreen() {
+    const { t } = useTranslation();
+    const { formatTime } = useFormatting();
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
     const { schedules, updateSchedule, deleteSchedule } = useLesson();
     const { user } = useAuth();
     const { membershipRole } = useOrg();
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
 
     const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
     const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
@@ -59,50 +62,51 @@ export default function EditLessonScreen() {
 
     const handleSave = async () => {
         if (!school.trim()) {
-            Alert.alert('Validation Error', 'School name is required');
+            Alert.alert(t('addLesson.validationError'), t('addLesson.schoolRequired'));
             return;
         }
         const dur = parseFloat(duration);
         if (isNaN(dur) || dur <= 0) {
-            Alert.alert('Validation Error', 'Duration must be greater than 0');
+            Alert.alert(t('addLesson.validationError'), t('addLesson.invalidDuration'));
             return;
         }
         const dist = parseFloat(distance);
         if (isNaN(dist) || dist < 0) {
-            Alert.alert('Validation Error', 'Distance must be valid');
+            Alert.alert(t('addLesson.validationError'), t('addLesson.invalidDistance'));
             return;
         }
 
         try {
             if (!id) return;
+            const timeStr = `${startTime.getHours().toString().padStart(2, '0')}:${startTime.getMinutes().toString().padStart(2, '0')}`;
             await updateSchedule(id, {
                 school,
                 dayOfWeek,
-                startTime: format(startTime, 'HH:mm'),
+                startTime: timeStr,
                 duration: dur,
                 distance: dist,
             });
             router.back();
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to update lesson');
+            Alert.alert(t('common.error'), t('addLesson.saveFailed') || 'Failed');
         }
     };
 
     const handleDelete = async () => {
         Alert.alert(
-            "Delete Schedule",
-            "Are you sure you want to delete this schedule?",
+            t('editLesson.deleteSchedule'),
+            t('editLesson.deleteScheduleConfirm'),
             [
-                { text: "Cancel", style: "cancel" },
+                { text: t('common.cancel'), style: "cancel" },
                 {
-                    text: "Delete", style: "destructive", onPress: async () => {
+                    text: t('common.delete'), style: "destructive", onPress: async () => {
                         try {
                             if (id) await deleteSchedule(id);
                             router.back();
                         } catch (error) {
                             console.error(error);
-                            Alert.alert("Error", "Failed to delete");
+                            Alert.alert(t('common.error'), t('common.deleteFailed') || 'Delete failed');
                         }
                     }
                 }
@@ -117,27 +121,31 @@ export default function EditLessonScreen() {
         }
     };
 
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
 
                 <View style={styles.formGroup}>
-                    <Text style={[styles.label, { color: colors.secondaryText }]}>School Name</Text>
+                    <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.schoolName')}</Text>
                     <TextInput
-                        style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+                        style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
                         value={school}
                         onChangeText={setSchool}
-                        placeholder="e.g. Lincoln High"
+                        placeholder={t('addLesson.schoolPlaceholder')}
                         placeholderTextColor={colors.secondaryText}
                     />
                 </View>
 
                 <View style={styles.formGroup}>
-                    <Text style={[styles.label, { color: colors.secondaryText }]}>Day of Week</Text>
+                    <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.daysOfWeek')}</Text>
                     <View style={styles.daysContainer}>
-                        {DAYS.map((day, index) => (
+                        {DAYS_KEYS.map((dayKey, index) => (
                             <TouchableOpacity
-                                key={day}
+                                key={dayKey}
                                 style={[
                                     styles.dayChip,
                                     dayOfWeek === index ? { backgroundColor: colors.primary } : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }
@@ -146,21 +154,22 @@ export default function EditLessonScreen() {
                             >
                                 <Text style={[
                                     styles.dayText,
+                                    { fontFamily: fonts.bold },
                                     dayOfWeek === index ? { color: '#fff' } : { color: colors.text }
-                                ]}>{day}</Text>
+                                ]}>{t(`days.${dayKey}`)}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
                 </View>
 
                 <View style={styles.formGroup}>
-                    <Text style={[styles.label, { color: colors.secondaryText }]}>Start Time</Text>
+                    <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.startTime')}</Text>
                     {Platform.OS === 'web' ? (
                         <View style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card, paddingVertical: 0 }]}>
                             {React.createElement('input', {
                                 type: 'time',
                                 lang: 'en-GB',
-                                value: format(startTime, 'HH:mm'),
+                                value: `${startTime.getHours().toString().padStart(2, '0')}:${startTime.getMinutes().toString().padStart(2, '0')}`,
                                 onChange: (e: any) => {
                                     const [h, m] = e.target.value.split(':');
                                     const d = new Date(startTime);
@@ -182,7 +191,7 @@ export default function EditLessonScreen() {
                                     width: '100%',
                                     height: '100%',
                                     outline: 'none',
-                                    fontFamily: 'inherit',
+                                    fontFamily: fonts.regular,
                                     cursor: 'pointer'
                                 }
                             })}
@@ -193,7 +202,9 @@ export default function EditLessonScreen() {
                                 style={[styles.input, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.card }]}
                                 onPress={() => setShowTimePicker(true)}
                             >
-                                <Text style={{ color: colors.text, fontSize: 16 }}>{format(startTime, 'HH:mm')}</Text>
+                                <Text style={[textStyle, { fontSize: 16 }]}>
+                                    {startTime.getHours().toString().padStart(2, '0')}:{startTime.getMinutes().toString().padStart(2, '0')}
+                                </Text>
                             </TouchableOpacity>
                             {showTimePicker && (
                                 <DateTimePicker
@@ -210,18 +221,18 @@ export default function EditLessonScreen() {
 
                 <View style={styles.row}>
                     <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>Duration (hrs)</Text>
+                        <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.duration')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
                             value={duration}
                             onChangeText={setDuration}
                             keyboardType="numeric"
                         />
                     </View>
                     <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>Distance (km)</Text>
+                        <Text style={[styles.label, secondaryStyle, { fontFamily: fonts.bold }]}>{t('addLesson.distance')}</Text>
                         <TextInput
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
                             value={distance}
                             onChangeText={setDistance}
                             keyboardType="numeric"
@@ -233,7 +244,7 @@ export default function EditLessonScreen() {
                     style={[styles.deleteButton, { borderColor: colors.error }]}
                     onPress={handleDelete}
                 >
-                    <Text style={[styles.deleteText, { color: colors.error }]}>Delete Schedule</Text>
+                    <Text style={[styles.deleteText, { color: colors.error, fontFamily: fonts.bold }]}>{t('editLesson.deleteSchedule')}</Text>
                 </TouchableOpacity>
 
             </ScrollView>
@@ -243,7 +254,7 @@ export default function EditLessonScreen() {
                     style={[styles.saveButton, { backgroundColor: colors.primary }]}
                     onPress={handleSave}
                 >
-                    <Text style={styles.saveButtonText}>Update Schedule</Text>
+                    <Text style={[styles.saveButtonText, { fontFamily: fonts.bold }]}>{t('editLesson.updateSchedule')}</Text>
                 </TouchableOpacity>
             </View>
         </View>

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -10,9 +11,10 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function SchoolHistoryScreen() {
     const { logs, deleteLog, updateLogNotes } = useLesson();
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const { user } = useAuth();
     const { membershipRole } = useOrg();
+    const { t } = useTranslation();
     const router = useRouter();
     const params = useLocalSearchParams();
 
@@ -24,15 +26,11 @@ export default function SchoolHistoryScreen() {
         if (isRestrictedAdmin) {
             router.replace('/(tabs)/admin');
         }
-    }, [isRestrictedAdmin]);
+    }, [isRestrictedAdmin, router]);
 
     if (isRestrictedAdmin) return null;
 
-    // Note: params.teacherUid might be passed if Admin is viewing, 
-    // but useLesson context should already be set to that teacherUid by the Admin screen logic.
-    // We'll trust the context is correct.
-
-    const initialSchoolFilter = typeof params.school === 'string' ? params.school : 'All Schools';
+    const initialSchoolFilter = typeof params.school === 'string' ? params.school : t('history.allSchools');
     const [selectedSchool, setSelectedSchool] = useState(initialSchoolFilter);
     const [showFilter, setShowFilter] = useState(false);
 
@@ -52,33 +50,37 @@ export default function SchoolHistoryScreen() {
 
     const schools = useMemo(() => {
         const schoolSet = new Set(logs.map(l => l.school));
-        return ['All Schools', ...Array.from(schoolSet).sort()];
-    }, [logs]);
+        return [t('history.allSchools'), ...Array.from(schoolSet).sort()];
+    }, [logs, t]);
 
     const filteredLogs = useMemo(() => {
         let filtered = logs;
-        if (selectedSchool !== 'All Schools') {
+        if (selectedSchool !== t('history.allSchools')) {
             filtered = filtered.filter(l => l.school === selectedSchool);
         }
         return [...filtered].sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
-    }, [logs, selectedSchool]);
+    }, [logs, selectedSchool, t]);
 
     const totalLessons = filteredLogs.filter(l => l.status === 'present').length;
+
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
                 <View>
-                    <Text style={[styles.title, { color: colors.text }]}>History</Text>
+                    <Text style={[styles.title, boldStyle]}>{t('history.title')}</Text>
                     <TouchableOpacity onPress={() => setShowFilter(true)} style={styles.filterButton}>
-                        <Text style={[styles.filterText, { color: colors.primary }]}>
+                        <Text style={[styles.filterText, { color: colors.primary, fontFamily: fonts.bold }]}>
                             {selectedSchool}  <Ionicons name="chevron-down" size={12} />
                         </Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.stats}>
-                    <Text style={[styles.statValue, { color: colors.primary }]}>{totalLessons}</Text>
-                    <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Lessons</Text>
+                    <Text style={[styles.statValue, { color: colors.primary, fontFamily: fonts.bold }]}>{totalLessons}</Text>
+                    <Text style={[styles.statLabel, secondaryStyle]}>{t('history.lessons')}</Text>
                 </View>
             </View>
 
@@ -94,7 +96,7 @@ export default function SchoolHistoryScreen() {
                 )}
                 contentContainerStyle={styles.list}
                 ListEmptyComponent={
-                    <Text style={[styles.empty, { color: colors.secondaryText }]}>No history found.</Text>
+                    <Text style={[styles.empty, secondaryStyle]}>{t('history.noHistoryFound')}</Text>
                 }
             />
 
@@ -105,7 +107,7 @@ export default function SchoolHistoryScreen() {
                     onPress={() => setShowFilter(false)}
                 >
                     <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>Filter by School</Text>
+                        <Text style={[styles.modalTitle, boldStyle]}>{t('history.filterBySchool')}</Text>
                         {schools.map(school => (
                             <TouchableOpacity
                                 key={school}
@@ -117,7 +119,7 @@ export default function SchoolHistoryScreen() {
                             >
                                 <Text style={[
                                     styles.filterItemText,
-                                    { color: school === selectedSchool ? colors.primary : colors.text }
+                                    { color: school === selectedSchool ? colors.primary : colors.text, fontFamily: fonts.regular }
                                 ]}>{school}</Text>
                                 {school === selectedSchool && <Ionicons name="checkmark" size={20} color={colors.primary} />}
                             </TouchableOpacity>
@@ -135,14 +137,14 @@ export default function SchoolHistoryScreen() {
             >
                 <View style={[styles.modalOverlay, { padding: 20 }]}>
                     <View style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: undefined }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>{editingLog?.notes ? 'Edit Note' : 'Add Note'}</Text>
+                        <Text style={[styles.modalTitle, boldStyle]}>{editingLog?.notes ? t('dashboard.editNote') : t('dashboard.addNote')}</Text>
 
                         <TextInput
                             style={[
                                 styles.textInput,
-                                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }
+                                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
                             ]}
-                            placeholder="e.g. Covered Chapter 3, student was late..."
+                            placeholder={t('dashboard.notesPlaceholder')}
                             placeholderTextColor={colors.secondaryText}
                             value={notesInput}
                             onChangeText={setNotesInput}
@@ -156,14 +158,14 @@ export default function SchoolHistoryScreen() {
                                 style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
                                 onPress={() => setEditingLog(null)}
                             >
-                                <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
+                                <Text style={[textStyle, { fontWeight: '600' }]}>{t('common.cancel')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
                                 style={[styles.modalBtn, { backgroundColor: colors.primary }]}
                                 onPress={confirmEditNote}
                             >
-                                <Text style={{ color: '#fff', fontWeight: '600' }}>Save</Text>
+                                <Text style={{ color: '#fff', fontWeight: '600', fontFamily: fonts.bold }}>{t('common.save')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

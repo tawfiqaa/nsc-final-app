@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useLesson } from '../../../src/contexts/LessonContext';
@@ -13,10 +14,11 @@ import { Student } from '../../../src/types';
 export default function ManageStudentsScreen() {
     const { id } = useLocalSearchParams();
     const schoolId = Array.isArray(id) ? id[0] : id;
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const { user } = useAuth();
     const { activeOrgId, membershipStatus, membershipRole } = useOrg();
     const { deleteStudent } = useLesson();
+    const { t } = useTranslation();
     const router = useRouter();
 
     const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
@@ -34,6 +36,10 @@ export default function ManageStudentsScreen() {
     const [students, setStudents] = useState<Student[]>([]);
     const [newStudentName, setNewStudentName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
 
     useEffect(() => {
         if (!user || !schoolId || isRestrictedAdmin) return;
@@ -83,7 +89,7 @@ export default function ManageStudentsScreen() {
             setNewStudentName('');
         } catch (error) {
             console.error('Failed to add student', error);
-            Alert.alert('Error', 'Failed to add student');
+            Alert.alert(t('common.error'), t('students.addFailed'));
         } finally {
             setIsSaving(false);
         }
@@ -93,17 +99,17 @@ export default function ManageStudentsScreen() {
         if (!user || !schoolId) return;
         if (!orgMode && !user.migratedToV2) return;
         Alert.alert(
-            'Delete Student',
-            `Are you sure you want to permanently delete ${studentName}? This will remove all their data from this school's roster.`,
+            t('students.deleteStudent'),
+            t('students.deleteStudentConfirm', { studentName }),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                    text: 'Delete', style: 'destructive', onPress: async () => {
+                    text: t('schools.deleteSchool'), style: 'destructive', onPress: async () => {
                         try {
                             await deleteStudent(schoolId, studentId);
                         } catch (error) {
                             console.error('Failed to delete student', error);
-                            Alert.alert('Error', 'Failed to delete student');
+                            Alert.alert(t('common.error'), t('students.deleteFailed'));
                         }
                     }
                 }
@@ -116,7 +122,7 @@ export default function ManageStudentsScreen() {
 
     const renderStudent = ({ item }: { item: Student }) => (
         <View style={[styles.studentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.studentName, { color: colors.text }]}>{item.fullName}</Text>
+            <Text style={[styles.studentName, { color: colors.text, fontFamily: fonts.bold }]}>{item.fullName}</Text>
             <TouchableOpacity onPress={() => handleDeleteStudent(item.id, item.fullName)}>
                 <Ionicons name="trash-outline" size={20} color={colors.error || '#ff4444'} />
             </TouchableOpacity>
@@ -127,8 +133,8 @@ export default function ManageStudentsScreen() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.addSection}>
                 <TextInput
-                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-                    placeholder="New Student Name..."
+                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
+                    placeholder={t('students.newName')}
                     placeholderTextColor={colors.secondaryText}
                     value={newStudentName}
                     onChangeText={setNewStudentName}
@@ -147,13 +153,13 @@ export default function ManageStudentsScreen() {
                 data={activeStudents}
                 keyExtractor={item => item.id}
                 renderItem={renderStudent}
-                ListHeaderComponent={<Text style={[styles.sectionTitle, { color: colors.text }]}>Active Roster</Text>}
-                ListEmptyComponent={<Text style={[styles.empty, { color: colors.secondaryText }]}>No active students.</Text>}
+                ListHeaderComponent={<Text style={[styles.sectionTitle, boldStyle]}>{t('students.activeRoster')}</Text>}
+                ListEmptyComponent={<Text style={[styles.empty, secondaryStyle]}>{t('students.noActive')}</Text>}
                 contentContainerStyle={styles.listContent}
                 ListFooterComponent={
                     archivedStudents.length > 0 ? (
                         <View style={{ marginTop: 24 }}>
-                            <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Archived</Text>
+                            <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('students.archived')}</Text>
                             {archivedStudents.map(student => (
                                 <View key={student.id}>{renderStudent({ item: student })}</View>
                             ))}

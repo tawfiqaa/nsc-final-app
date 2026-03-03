@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
@@ -13,11 +14,13 @@ import { AttendanceLog, AttendanceRecord, AttendanceRecordStatus, Student } from
 export default function LessonDetailsScreen() {
     const { id } = useLocalSearchParams();
     const lessonId = Array.isArray(id) ? id[0] : id;
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const { user } = useAuth();
     const { activeOrgId, membershipStatus, membershipRole } = useOrg();
     const { logs, saveAttendance } = useLesson();
+    const { t } = useTranslation();
     const router = useRouter();
+
     const orgMode = useMemo(() => !!activeOrgId && membershipStatus === 'approved', [activeOrgId, membershipStatus]);
     const isAdmin = useMemo(() => membershipRole === 'admin' || membershipRole === 'owner', [membershipRole]);
 
@@ -125,9 +128,6 @@ export default function LessonDetailsScreen() {
 
         setDirtyRecords(prev => {
             const newDirty = { ...prev };
-            // If returning to original remote status (and no note changes), we could theoretically clear dirt, 
-            // but for simplicity we'll just track if we touched it. 
-            // Better optimization: check equality with original.
             if (nextStatus === originalStatus && prev[studentId]?.note === attendanceRecords[studentId]?.note) {
                 delete newDirty[studentId]; // Restored to original
             } else {
@@ -163,17 +163,16 @@ export default function LessonDetailsScreen() {
     const handleSave = async () => {
         const dirtyValues = Object.values(dirtyRecords);
         if (dirtyValues.length === 0) {
-            Alert.alert("No changes", "There are no changes to save.");
+            Alert.alert(t('attendance.noChanges'), t('attendance.noChangesMsg'));
             return;
         }
 
         setIsSaving(true);
         try {
-            await saveAttendance(lessonId, dirtyValues);
-            Alert.alert("Success", "Attendance saved successfully");
-            // `dirtyRecords` is cleared in onSnapshot auto-trigger anyway
+            await saveAttendance(lessonId as string, dirtyValues);
+            Alert.alert(t('common.success'), t('attendance.saveSuccess'));
         } catch (error) {
-            Alert.alert("Error", "Failed to save attendance.");
+            Alert.alert(t('common.error'), t('common.error'));
         } finally {
             setIsSaving(false);
         }
@@ -189,10 +188,14 @@ export default function LessonDetailsScreen() {
         }
     };
 
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+
     if (!orgMode && !user?.migratedToV2) {
         return (
             <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
-                <Text style={{ color: colors.text }}>This feature requires V2 migration or an active org.</Text>
+                <Text style={textStyle}>{t('attendance.v2Required')}</Text>
             </View>
         );
     }
@@ -202,8 +205,8 @@ export default function LessonDetailsScreen() {
             <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
                 <View style={[styles.errorBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <Ionicons name="warning" size={32} color={colors.error} />
-                    <Text style={[styles.errorText, { color: colors.text }]}>
-                        Lesson has no school assigned. Attendance unavailable.
+                    <Text style={[styles.errorText, textStyle]}>
+                        {t('attendance.noSchoolAssigned')}
                     </Text>
                 </View>
             </View>
@@ -213,10 +216,10 @@ export default function LessonDetailsScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.headerRow}>
-                <Text style={[styles.title, { color: colors.text }]}>Attendance Roster</Text>
+                <Text style={[styles.title, boldStyle]}>{t('attendance.title')}</Text>
                 {canEdit && (
                     <TouchableOpacity onPress={markAllPresent} style={[styles.quickBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={{ color: colors.primary, fontWeight: '600' }}>Mark All Present</Text>
+                        <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('attendance.markAllPresent')}</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -228,8 +231,8 @@ export default function LessonDetailsScreen() {
                 renderItem={({ item }) => (
                     <View style={[styles.studentCard, { backgroundColor: colors.card, borderColor: item.isDirty ? colors.primary : colors.border }]}>
                         <View style={styles.studentInfo}>
-                            <Text style={[styles.studentName, { color: colors.text }]}>{item.fullName}</Text>
-                            {item.note && <Text style={[styles.studentNote, { color: colors.secondaryText }]}>{item.note}</Text>}
+                            <Text style={[styles.studentName, boldStyle]}>{item.fullName}</Text>
+                            {item.note && <Text style={[styles.studentNote, secondaryStyle]}>{item.note}</Text>}
                         </View>
 
                         <TouchableOpacity
@@ -237,13 +240,13 @@ export default function LessonDetailsScreen() {
                             onPress={() => canEdit && handleTapStatus(item.studentId, item.status)}
                             disabled={!canEdit}
                         >
-                            <Text style={{ color: getStatusColor(item.status), fontWeight: 'bold', textTransform: 'capitalize' }}>
-                                {item.status}
+                            <Text style={{ color: getStatusColor(item.status), fontFamily: fonts.bold, textTransform: 'capitalize' }}>
+                                {t(`attendance.status.${item.status}`)}
                             </Text>
                         </TouchableOpacity>
                     </View>
                 )}
-                ListEmptyComponent={<Text style={[styles.empty, { color: colors.secondaryText }]}>No active students in roster.</Text>}
+                ListEmptyComponent={<Text style={[styles.empty, secondaryStyle]}>{t('attendance.noStudents')}</Text>}
             />
 
             {canEdit && (
@@ -253,7 +256,7 @@ export default function LessonDetailsScreen() {
                         onPress={handleSave}
                         disabled={Object.keys(dirtyRecords).length === 0 || isSaving}
                     >
-                        <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save Attendance'}</Text>
+                        <Text style={[styles.saveBtnText, { fontFamily: fonts.bold }]}>{isSaving ? t('common.saving') : t('attendance.saveAttendance')}</Text>
                     </TouchableOpacity>
                 </View>
             )}

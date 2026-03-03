@@ -1,3 +1,6 @@
+import { NotoSans_400Regular, NotoSans_700Bold } from '@expo-google-fonts/noto-sans';
+import { NotoSansArabic_400Regular, NotoSansArabic_700Bold } from '@expo-google-fonts/noto-sans-arabic';
+import { NotoSansHebrew_400Regular, NotoSansHebrew_700Bold } from '@expo-google-fonts/noto-sans-hebrew';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -8,6 +11,7 @@ import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { LessonProvider } from '../src/contexts/LessonContext';
 import { OrgProvider, useOrg } from '../src/contexts/OrgContext';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
+import '../src/i18n/i18n'; // Initialize i18n
 
 SplashScreen.preventAutoHideAsync();
 
@@ -124,6 +128,12 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     ...Ionicons.font,
+    NotoSans_400Regular,
+    NotoSans_700Bold,
+    NotoSansArabic_400Regular,
+    NotoSansArabic_700Bold,
+    NotoSansHebrew_400Regular,
+    NotoSansHebrew_700Bold,
   });
 
   useEffect(() => {
