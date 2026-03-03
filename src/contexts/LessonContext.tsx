@@ -658,14 +658,15 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
-    const updateSchoolLocation = async (schoolId: string, payload: { addressLabel: string; location: { lat: number; lng: number } | null }) => {
+    const updateSchoolLocation = async (schoolId: string, payload: { addressLabel?: string; locationLabel?: string; location: { lat: number; lng: number } | null }) => {
         if (!user) return;
         const now = Date.now();
-        const updateData = {
-            addressLabel: payload.addressLabel,
+        const updateData: any = {
             location: payload.location,
             updatedAt: now
         };
+        if (payload.addressLabel !== undefined) updateData.addressLabel = payload.addressLabel;
+        if (payload.locationLabel !== undefined) updateData.locationLabel = payload.locationLabel;
 
         try {
             if (orgMode && activeOrgId) {

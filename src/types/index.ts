@@ -94,6 +94,7 @@ export interface School {
     id: string; // school name acts as ID in many places, but this is the document ID
     name: string;
     addressLabel?: string;
+    locationLabel?: string;
     location?: {
         lat: number;
         lng: number;
@@ -194,5 +195,5 @@ export interface LessonContextType {
     refresh: () => Promise<void>;
     setTargetUid: (uid: string) => void;
     saveAttendance: (lessonId: string, records: AttendanceRecord[]) => Promise<void>;
-    updateSchoolLocation: (schoolId: string, payload: { addressLabel: string; location: { lat: number; lng: number } | null }) => Promise<void>;
+    updateSchoolLocation: (schoolId: string, payload: { addressLabel?: string; locationLabel?: string; location: { lat: number; lng: number } | null }) => Promise<void>;
 }

@@ -20,30 +20,29 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { LogCard } from '../../src/components/LogCard';
+import MapView, { Marker } from 'react-native-maps';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { db } from '../../src/lib/firebase';
 import { Student } from '../../src/types';
-import { buildGoogleMapsUrl, openWaze } from '../../src/utils/navigationLinks';
 
 const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 3;
 const IMAGE_MARGIN = 2;
-const IMAGE_SIZE = (width - 40 - IMAGE_MARGIN * 2 * COLUMN_COUNT) / COLUMN_COUNT;
-
-const DAYS_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const IMAGE_SIZE = (width - 40 - (IMAGE_MARGIN * 6)) / 3;
 
 type TabType = 'overview' | 'students' | 'gallery';
 
+const DAY_MAP: Record<number, string> = {
+    0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
+};
+
 export default function SchoolDetailsScreen() {
-    const { id } = useLocalSearchParams();
-    const schoolIdParam = Array.isArray(id) ? id[0] : id;
-    const { colors, fonts } = useTheme();
+    const { id: schoolIdParam } = useLocalSearchParams<{ id: string }>();
     const { user } = useAuth();
-    const { membershipRole, activeOrgId, membershipStatus } = useOrg();
+    const { activeOrgId, membershipRole, membershipStatus } = useOrg();
+    const { colors, fonts } = useTheme();
     const {
         schedules,
         logs,
@@ -78,12 +77,11 @@ export default function SchoolDetailsScreen() {
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
     // Overview states
-    const [editingLog, setEditingLog] = useState<typeof logs[0] | null>(null);
+    const [editingLog, setEditingLog] = useState<any>(null);
     const [notesInput, setNotesInput] = useState('');
     const [showLocationModal, setShowLocationModal] = useState(false);
-    const [addrInput, setAddrInput] = useState('');
-    const [latInput, setLatInput] = useState('');
-    const [lngInput, setLngInput] = useState('');
+    const [tempLocation, setTempLocation] = useState<{ lat: number, lng: number } | null>(null);
+    const [locationLabelInput, setLocationLabelInput] = useState('');
     const [savingLocation, setSavingLocation] = useState(false);
 
     // Students states
@@ -95,67 +93,93 @@ export default function SchoolDetailsScreen() {
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-    const schoolName = schoolIdParam; // Use param as name for identification
+    const schoolName = schoolIdParam;
 
     const stats = useMemo(() => {
-        const schoolSchedules = schedules.filter(s => s.school === schoolName);
         const schoolLogs = logs
             .filter(l => l.school === schoolName)
             .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
 
         const schoolDoc = schools.find(s => s.name === schoolName || s.id === schoolIdParam);
-
         const attendedCount = schoolLogs.filter(l => l.status === 'present').length;
 
         return {
-            attendedCount,
-            schoolSchedules,
             schoolLogs,
-            schoolDoc
+            schoolDoc,
+            attendedCount,
+            schoolSchedules: schedules.filter(s => s.school === schoolName)
         };
-    }, [schedules, logs, schools, schoolName, schoolIdParam]);
+    }, [logs, schools, schedules, schoolName, schoolIdParam]);
 
-    // Fetch Students
     useEffect(() => {
-        if (!user || !schoolIdParam || isRestrictedAdmin || activeTab !== 'students') return;
+        if (!user || !schoolIdParam) return;
 
-        let studentsRef;
-        if (orgMode && activeOrgId) {
-            studentsRef = collection(db, 'orgs', activeOrgId, 'schools', schoolIdParam, 'students');
-        } else if (user.migratedToV2) {
-            studentsRef = collection(db, 'users', user.uid, 'schools', schoolIdParam, 'students');
-        } else {
+        const studentsCol = orgMode && activeOrgId
+            ? collection(db, 'orgs', activeOrgId, 'schools', schoolIdParam, 'students')
+            : collection(db, 'users', user.uid, 'schools', schoolIdParam, 'students');
+
+        const unsubscribe = onSnapshot(studentsCol, (snapshot) => {
+            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+            setStudents(list.sort((a, b) => a.fullName.localeCompare(b.fullName)));
+        });
+
+        return () => unsubscribe();
+    }, [user, schoolIdParam, orgMode, activeOrgId]);
+
+    const handleOpenEditLocation = () => {
+        setShowMoreMenu(false);
+        setTempLocation(stats.schoolDoc?.location || null);
+        setLocationLabelInput(stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || '');
+        setShowLocationModal(true);
+    };
+
+    const handleSaveLocation = async () => {
+        if (!tempLocation) {
+            Alert.alert(t('common.error'), t('schoolDetails.noLocationSet'));
             return;
         }
 
-        const unsub = onSnapshot(studentsRef, (snap) => {
-            const loadedStudents: Student[] = [];
-            snap.forEach(d => {
-                loadedStudents.push(d.data() as Student);
+        setSavingLocation(true);
+        try {
+            const schoolId = stats.schoolDoc?.id || schoolIdParam!;
+            await updateSchoolLocation(schoolId, {
+                location: tempLocation,
+                locationLabel: locationLabelInput.trim() || undefined
             });
-            loadedStudents.sort((a, b) => a.fullName.localeCompare(b.fullName));
-            setStudents(loadedStudents);
-        });
-
-        return () => unsub();
-    }, [user, schoolIdParam, orgMode, activeOrgId, isRestrictedAdmin, activeTab]);
-
-    if (isRestrictedAdmin) return null;
-
-    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
-    const textStyle = { fontFamily: fonts.regular, color: colors.text };
-    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
-
-    // Handlers
-    const handleEditNote = (log: typeof logs[0]) => {
-        setEditingLog(log);
-        setNotesInput(log.notes || '');
+            setShowLocationModal(false);
+        } catch (e) {
+            Alert.alert(t('common.error'), "Failed to save location");
+        } finally {
+            setSavingLocation(false);
+        }
     };
 
-    const confirmEditNote = async () => {
-        if (!editingLog) return;
-        await updateLogNotes(editingLog.id, notesInput.trim());
-        setEditingLog(null);
+    const handleNavigate = () => {
+        const loc = stats.schoolDoc?.location;
+        if (!loc) {
+            Alert.alert(t('schoolDetails.noLocationSet'), t('schoolDetails.noLocationSet'));
+            return;
+        }
+
+        const label = stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || schoolName;
+        const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+        const latLng = `${loc.lat},${loc.lng}`;
+        const url = Platform.select({
+            ios: `${scheme}${label}@${latLng}`,
+            android: `${scheme}${latLng}(${label})`
+        });
+
+        const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${latLng}`;
+
+        Linking.canOpenURL(url!).then(supported => {
+            if (supported) {
+                Linking.openURL(url!);
+            } else {
+                Linking.openURL(fallbackUrl);
+            }
+        }).catch(() => {
+            Linking.openURL(fallbackUrl);
+        });
     };
 
     const handleDeleteSchoolConfirm = () => {
@@ -173,7 +197,7 @@ export default function SchoolDetailsScreen() {
                             await deleteSchool(schoolName!);
                             router.replace('/(tabs)/schools');
                         } catch (e) {
-                            Alert.alert(t('common.error'), t('common.deleteFailed') || "Failed");
+                            Alert.alert(t('common.error'), t('common.deleteFailed'));
                         }
                     }
                 }
@@ -181,65 +205,18 @@ export default function SchoolDetailsScreen() {
         );
     };
 
-    const handleOpenEditLocation = () => {
-        setShowMoreMenu(false);
-        setAddrInput(stats.schoolDoc?.addressLabel || '');
-        setLatInput(stats.schoolDoc?.location?.lat?.toString() || '');
-        setLngInput(stats.schoolDoc?.location?.lng?.toString() || '');
-        setShowLocationModal(true);
-    };
-
-    const handleSaveLocation = async () => {
-        if (!addrInput.trim()) {
-            Alert.alert(t('common.error'), t('addLesson.schoolRequired'));
-            return;
-        }
-
-        let location = null;
-        if (latInput.trim() || lngInput.trim()) {
-            const lat = parseFloat(latInput);
-            const lng = parseFloat(lngInput);
-            if (isNaN(lat) || isNaN(lng)) {
-                Alert.alert(t('common.error'), t('schoolDetails.invalidCoordinates'));
-                return;
-            }
-            location = { lat, lng };
-        }
-
-        setSavingLocation(true);
-        try {
-            const schoolId = stats.schoolDoc?.id || schoolIdParam!;
-            await updateSchoolLocation(schoolId, { addressLabel: addrInput.trim(), location });
-            setShowLocationModal(false);
-        } catch (e) {
-            Alert.alert(t('common.error'), "Failed to save location");
-        } finally {
-            setSavingLocation(false);
-        }
-    };
-
     const handleAddStudent = async () => {
         const name = newStudentName.trim();
-        if (!name) return;
-        if (!user || !schoolIdParam) return;
-        if (!orgMode && !user.migratedToV2) return;
-
+        if (!name || !user || !schoolIdParam) return;
         setIsSavingStudent(true);
         try {
             const studentsCol = orgMode && activeOrgId
                 ? collection(db, 'orgs', activeOrgId, 'schools', schoolIdParam, 'students')
                 : collection(db, 'users', user.uid, 'schools', schoolIdParam, 'students');
             const studentRef = doc(studentsCol);
-            const newStudent: Student = {
-                id: studentRef.id,
-                fullName: name,
-                isActive: true,
-                createdAt: Date.now(),
-            };
-            await setDoc(studentRef, newStudent);
+            await setDoc(studentRef, { id: studentRef.id, fullName: name, isActive: true, createdAt: Date.now() });
             setNewStudentName('');
         } catch (error) {
-            console.error('Failed to add student', error);
             Alert.alert(t('common.error'), t('students.addFailed'));
         } finally {
             setIsSavingStudent(false);
@@ -249,24 +226,16 @@ export default function SchoolDetailsScreen() {
     const handleAddPhoto = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
-            Alert.alert(t('gallery.permissionRequired'), t('gallery.permissionMsg'));
+            Alert.alert(t('common.error'), t('gallery.permissionDenied'));
             return;
         }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            quality: 0.8,
-        });
-
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-            const uri = result.assets[0].uri;
+        const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.8 });
+        if (!result.canceled) {
             setUploadingPhoto(true);
             try {
-                await addSchoolPhoto(schoolName!, uri);
-            } catch (error) {
-                console.error(error);
-                Alert.alert(t('gallery.uploadFailed'), t('gallery.uploadError'));
+                await addSchoolPhoto(schoolName!, result.assets[0].uri);
+            } catch (e) {
+                Alert.alert(t('common.error'), t('gallery.uploadFailed'));
             } finally {
                 setUploadingPhoto(false);
             }
@@ -274,37 +243,33 @@ export default function SchoolDetailsScreen() {
     };
 
     const handleDeletePhotoConfirm = (url: string) => {
-        Alert.alert(
-            t('gallery.deletePhoto'),
-            t('gallery.deletePhotoConfirm'),
-            [
-                { text: t('common.cancel'), style: "cancel" },
-                {
-                    text: t('common.delete'),
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            setUploadingPhoto(true);
-                            await deleteSchoolPhoto(schoolName!, url);
-                            setSelectedImage(null);
-                        } catch (error) {
-                            Alert.alert(t('common.error'), t('common.error'));
-                        } finally {
-                            setUploadingPhoto(false);
-                        }
+        Alert.alert(t('common.confirm'), t('gallery.deleteConfirm'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+                text: t('common.delete'),
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await deleteSchoolPhoto(schoolName!, url);
+                        setSelectedImage(null);
+                    } catch (e) {
+                        Alert.alert(t('common.error'), t('gallery.deleteFailed'));
                     }
                 }
-            ]
-        );
+            }
+        ]);
     };
 
-    // Render Components
+    const boldStyle = { fontFamily: fonts.bold, color: colors.text };
+    const textStyle = { fontFamily: fonts.regular, color: colors.text };
+    const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
+
     const renderOverview = () => (
         <ScrollView contentContainerStyle={styles.tabContent}>
-            {/* Lessons count card */}
+            {/* Stat Card */}
             <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.statValue, { color: colors.primary, fontFamily: fonts.bold }]}>{stats.attendedCount}</Text>
-                <Text style={[secondaryStyle, { fontSize: 12 }]}>{t('history.lessons')}</Text>
+                <Text style={[styles.statValue, boldStyle]}>{stats.attendedCount}</Text>
+                <Text style={secondaryStyle}>{t('schoolDetails.attendedLessons')}</Text>
             </View>
 
             {/* Location Card */}
@@ -313,163 +278,137 @@ export default function SchoolDetailsScreen() {
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 4 }]}>{t('schoolDetails.location')}</Text>
                         <Text style={[textStyle, { fontSize: 14 }]} numberOfLines={2}>
-                            {stats.schoolDoc?.addressLabel || t('schoolDetails.noLocationSet')}
+                            {stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || t('schoolDetails.noLocationSet')}
                         </Text>
                     </View>
+                    {stats.schoolDoc?.location && (
+                        <TouchableOpacity
+                            style={[styles.navigateBtn, { backgroundColor: colors.primary }]}
+                            onPress={handleNavigate}
+                        >
+                            <Ionicons name="paper-plane" size={20} color="#fff" />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
-                <View style={styles.navButtons}>
-                    <TouchableOpacity
-                        style={[styles.navBtn, { borderColor: colors.border }]}
-                        onPress={() => {
-                            const url = buildGoogleMapsUrl({
-                                addressLabel: stats.schoolDoc?.addressLabel,
-                                location: stats.schoolDoc?.location
-                            });
-                            if (url) Linking.openURL(url);
-                        }}
-                    >
-                        <Ionicons name="map-outline" size={18} color={colors.text} />
-                        <Text style={[textStyle, { fontSize: 13 }]}>{t('schoolDetails.openInGoogleMaps')}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.navBtn, { borderColor: colors.border }]}
-                        onPress={() => openWaze({
-                            addressLabel: stats.schoolDoc?.addressLabel,
-                            location: stats.schoolDoc?.location
-                        })}
-                    >
-                        <Ionicons name="navigate-outline" size={18} color={colors.text} />
-                        <Text style={[textStyle, { fontSize: 13 }]}>{t('schoolDetails.openInWaze')}</Text>
-                    </TouchableOpacity>
-                </View>
+                {stats.schoolDoc?.location ? (
+                    <View style={styles.mapPreviewContainer}>
+                        <MapView
+                            style={styles.mapPreview}
+                            scrollEnabled={false}
+                            zoomEnabled={false}
+                            rotateEnabled={false}
+                            pitchEnabled={false}
+                            region={{
+                                latitude: stats.schoolDoc.location.lat,
+                                longitude: stats.schoolDoc.location.lng,
+                                latitudeDelta: 0.01,
+                                longitudeDelta: 0.01,
+                            }}
+                        >
+                            <Marker
+                                coordinate={{
+                                    latitude: stats.schoolDoc.location.lat,
+                                    longitude: stats.schoolDoc.location.lng,
+                                }}
+                            />
+                        </MapView>
+                        {!isRestrictedAdmin && (
+                            <TouchableOpacity style={styles.editLocationText} onPress={handleOpenEditLocation}>
+                                <Text style={[textStyle, { color: colors.primary, fontFamily: fonts.bold }]}>{t('schoolDetails.editLocation')}</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                ) : (
+                    !isRestrictedAdmin && (
+                        <TouchableOpacity
+                            style={[styles.setBtn, { borderColor: colors.primary }]}
+                            onPress={handleOpenEditLocation}
+                        >
+                            <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('schoolDetails.editLocation')}</Text>
+                        </TouchableOpacity>
+                    )
+                )}
             </View>
 
-            {/* Weekly Schedule */}
-            <Text style={[boldStyle, { fontSize: 18, marginBottom: 16 }]}>{t('schoolDetails.weeklySchedule')}</Text>
+            {/* Schedule Section */}
+            <Text style={[styles.sectionTitle, boldStyle]}>{t('schoolDetails.weeklySchedule')}</Text>
             {stats.schoolSchedules.length === 0 ? (
-                <Text style={[styles.empty, secondaryStyle, { marginBottom: 24 }]}>{t('schoolDetails.noRecurringSchedules')}</Text>
+                <Text style={[secondaryStyle, styles.empty]}>{t('schoolDetails.noSchedule')}</Text>
             ) : (
-                <View style={{ marginBottom: 24 }}>
-                    {stats.schoolSchedules.map(sched => (
-                        <View key={sched.id} style={[styles.scheduleItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[boldStyle]}>
-                                    {t(`days.${DAYS_KEYS[sched.dayOfWeek]}`)}
-                                    {sched.isActive === false && <Text style={{ color: colors.error, fontFamily: fonts.bold }}> ({t('schoolDetails.inactive')})</Text>}
-                                </Text>
-                                <Text style={textStyle}>{sched.startTime} ({sched.duration}h)</Text>
-                                <Text style={secondaryStyle}>{sched.distance}km</Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                <TouchableOpacity onPress={() => router.push({ pathname: '/add-lesson', params: { scheduleId: sched.id } })}>
-                                    <Ionicons name="pencil" size={20} color={colors.primary} />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => {
-                                    Alert.alert(
-                                        t('editLesson.deleteSchedule'),
-                                        t('editLesson.deleteScheduleConfirm'),
-                                        [
-                                            { text: t('common.cancel'), style: "cancel" },
-                                            { text: t('common.delete'), style: "destructive", onPress: () => deleteSchedule(sched.id) }
-                                        ]
-                                    );
-                                }}>
-                                    <Ionicons name="trash-outline" size={20} color={colors.error} />
-                                </TouchableOpacity>
-                            </View>
+                stats.schoolSchedules.map(sch => (
+                    <View key={sch.id} style={[styles.scheduleItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <View>
+                            <Text style={[boldStyle, { fontSize: 16 }]}>{t(`days.${DAY_MAP[sch.dayOfWeek]}`)}</Text>
+                            <Text style={secondaryStyle}>{sch.startTime} - {sch.duration}h</Text>
                         </View>
-                    ))}
-                </View>
-            )}
-
-            {/* Recent History */}
-            <Text style={[boldStyle, { fontSize: 18, marginBottom: 16 }]}>{t('schoolDetails.recentHistory')}</Text>
-            {stats.schoolLogs.length === 0 ? (
-                <Text style={[styles.empty, secondaryStyle]}>{t('schoolDetails.noHistoryYet')}</Text>
-            ) : (
-                stats.schoolLogs.map(log => (
-                    <LogCard
-                        key={log.id}
-                        log={log}
-                        onDelete={() => {
-                            Alert.alert(t('schoolDetails.confirmDeletion'), t('schoolDetails.deleteLogConfirm'), [
-                                { text: t('common.cancel'), style: "cancel" },
-                                { text: t('common.delete'), style: "destructive", onPress: () => deleteLog(log.id) }
-                            ]);
-                        }}
-                        onEditNote={() => handleEditNote(log)}
-                        deleteType="icon"
-                    />
+                        {!isRestrictedAdmin && (
+                            <TouchableOpacity onPress={() => deleteSchedule(sch.id)}>
+                                <Ionicons name="trash-outline" size={20} color={colors.error} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 ))
             )}
+
+            {/* History Section */}
+            <Text style={[styles.sectionTitle, boldStyle, { marginTop: 24 }]}>{t('schoolDetails.recentHistory')}</Text>
+            {stats.schoolLogs.slice(0, 5).map(log => (
+                <View key={log.id} style={[styles.scheduleItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View>
+                        <Text style={boldStyle}>{log.localDayKey}</Text>
+                        <Text style={secondaryStyle}>{log.startTime} - {log.hours}h</Text>
+                        {log.notes && <Text style={[textStyle, { fontSize: 12, marginTop: 4 }]} numberOfLines={1}>{log.notes}</Text>}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <TouchableOpacity onPress={() => { setEditingLog(log); setNotesInput(log.notes || ''); }}>
+                            <Ionicons name="create-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                        {!isRestrictedAdmin && (
+                            <TouchableOpacity onPress={() => deleteLog(log.id)}>
+                                <Ionicons name="trash-outline" size={20} color={colors.error} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            ))}
         </ScrollView>
     );
 
     const renderStudents = () => (
         <View style={{ flex: 1 }}>
-            <View style={styles.addSection}>
-                <TextInput
-                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
-                    placeholder={t('students.newName')}
-                    placeholderTextColor={colors.secondaryText}
-                    value={newStudentName}
-                    onChangeText={setNewStudentName}
-                    onSubmitEditing={handleAddStudent}
-                />
-                <TouchableOpacity
-                    style={[styles.addBtn, { backgroundColor: colors.primary }, (!newStudentName.trim() || isSavingStudent) && { opacity: 0.5 }]}
-                    onPress={handleAddStudent}
-                    disabled={!newStudentName.trim() || isSavingStudent}
-                >
-                    {isSavingStudent ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="add" size={24} color="#fff" />}
-                </TouchableOpacity>
-            </View>
-
+            {!isRestrictedAdmin && (
+                <View style={styles.addSection}>
+                    <TextInput
+                        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
+                        placeholder={t('students.newName')}
+                        placeholderTextColor={colors.secondaryText}
+                        value={newStudentName}
+                        onChangeText={setNewStudentName}
+                    />
+                    <TouchableOpacity
+                        style={[styles.addBtn, { backgroundColor: colors.primary }]}
+                        onPress={handleAddStudent}
+                        disabled={isSavingStudent}
+                    >
+                        {isSavingStudent ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="add" size={24} color="#fff" />}
+                    </TouchableOpacity>
+                </View>
+            )}
             <FlatList
                 data={students.filter(s => s.isActive)}
                 keyExtractor={item => item.id}
                 renderItem={({ item }) => (
                     <View style={[styles.studentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <Text style={[styles.studentName, { color: colors.text, fontFamily: fonts.bold }]}>{item.fullName}</Text>
-                        <TouchableOpacity onPress={async () => {
-                            Alert.alert(
-                                t('students.deleteStudent'),
-                                t('students.deleteStudentConfirm', { studentName: item.fullName }),
-                                [
-                                    { text: t('common.cancel'), style: 'cancel' },
-                                    {
-                                        text: t('common.delete'), style: 'destructive', onPress: async () => {
-                                            try {
-                                                await deleteStudent(schoolIdParam!, item.id);
-                                            } catch (error) {
-                                                Alert.alert(t('common.error'), t('students.deleteFailed'));
-                                            }
-                                        }
-                                    }
-                                ]
-                            );
-                        }}>
-                            <Ionicons name="trash-outline" size={20} color={colors.error} />
-                        </TouchableOpacity>
+                        {!isRestrictedAdmin && (
+                            <TouchableOpacity onPress={() => deleteStudent(schoolIdParam!, item.id)}>
+                                <Ionicons name="trash-outline" size={20} color={colors.error} />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
-                ListHeaderComponent={<Text style={[styles.sectionTitle, boldStyle, { marginHorizontal: 20 }]}>{t('students.activeRoster')}</Text>}
-                ListEmptyComponent={<Text style={[styles.empty, secondaryStyle, { marginHorizontal: 20 }]}>{t('students.noActive')}</Text>}
-                contentContainerStyle={{ paddingBottom: 100 }}
-                ListFooterComponent={
-                    students.filter(s => !s.isActive).length > 0 ? (
-                        <View style={{ marginTop: 24, marginHorizontal: 20 }}>
-                            <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('students.archived')}</Text>
-                            {students.filter(s => !s.isActive).map(student => (
-                                <View key={student.id} style={[styles.studentCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.7 }]}>
-                                    <Text style={[styles.studentName, { color: colors.text, fontFamily: fonts.bold }]}>{student.fullName}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    ) : null
-                }
+                ListEmptyComponent={<Text style={[secondaryStyle, { textAlign: 'center', marginTop: 40 }]}>{t('students.noStudents')}</Text>}
             />
         </View>
     );
@@ -488,7 +427,6 @@ export default function SchoolDetailsScreen() {
                         {uploadingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="add" size={18} color="#fff" />}
                     </TouchableOpacity>
                 </View>
-
                 {photos.length === 0 ? (
                     <View style={styles.emptyGallery}>
                         <Ionicons name="images-outline" size={64} color={colors.secondaryText} />
@@ -497,11 +435,7 @@ export default function SchoolDetailsScreen() {
                 ) : (
                     <View style={styles.galleryGrid}>
                         {photos.map((url, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                onPress={() => setSelectedImage(url)}
-                                style={styles.imageContainer}
-                            >
+                            <TouchableOpacity key={index} onPress={() => setSelectedImage(url)} style={styles.imageContainer}>
                                 <Image source={{ uri: url }} style={styles.thumbnail} />
                             </TouchableOpacity>
                         ))}
@@ -513,7 +447,6 @@ export default function SchoolDetailsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            {/* Custom Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.headerIcon}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -524,36 +457,30 @@ export default function SchoolDetailsScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* Tab Bar */}
             <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
                 {(['overview', 'students', 'gallery'] as TabType[]).map(tab => (
                     <TouchableOpacity
                         key={tab}
                         onPress={() => setActiveTab(tab)}
-                        style={[
-                            styles.tabItem,
-                            activeTab === tab && { borderBottomColor: colors.primary }
-                        ]}
+                        style={[styles.tabItem, activeTab === tab && { borderBottomColor: colors.primary }]}
                     >
                         <Text style={[
                             styles.tabText,
                             { fontFamily: activeTab === tab ? fonts.bold : fonts.regular },
                             { color: activeTab === tab ? colors.primary : colors.secondaryText }
                         ]}>
-                            {t(`schoolDetails.${tab}`) || t(`tabs.${tab}`) || tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {t(`schoolDetails.${tab}`)}
                         </Text>
                     </TouchableOpacity>
                 ))}
             </View>
 
-            {/* Tab Content */}
             <View style={{ flex: 1 }}>
                 {activeTab === 'overview' && renderOverview()}
                 {activeTab === 'students' && renderStudents()}
                 {activeTab === 'gallery' && renderGallery()}
             </View>
 
-            {/* FAB */}
             {activeTab === 'overview' && (
                 <TouchableOpacity
                     style={[styles.fab, { backgroundColor: colors.primary }]}
@@ -563,24 +490,14 @@ export default function SchoolDetailsScreen() {
                 </TouchableOpacity>
             )}
 
-            {/* More Menu Modal */}
-            <Modal
-                visible={showMoreMenu}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowMoreMenu(false)}
-            >
-                <TouchableOpacity
-                    style={styles.menuOverlay}
-                    activeOpacity={1}
-                    onPress={() => setShowMoreMenu(false)}
-                >
+            {/* Modals */}
+            <Modal visible={showMoreMenu} transparent animationType="fade" onRequestClose={() => setShowMoreMenu(false)}>
+                <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setShowMoreMenu(false)}>
                     <View style={[styles.menuContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <TouchableOpacity style={styles.menuItem} onPress={handleOpenEditLocation}>
                             <Ionicons name="create-outline" size={20} color={colors.text} />
                             <Text style={[textStyle, { fontSize: 16 }]}>{t('schoolDetails.editLocation')}</Text>
                         </TouchableOpacity>
-
                         {(isOrgAdmin || isSuperAdmin) && (
                             <TouchableOpacity style={styles.menuItem} onPress={handleDeleteSchoolConfirm}>
                                 <Ionicons name="trash-outline" size={20} color={colors.error} />
@@ -591,133 +508,81 @@ export default function SchoolDetailsScreen() {
                 </TouchableOpacity>
             </Modal>
 
-            {/* Edit Location Modal */}
-            <Modal
-                visible={showLocationModal}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setShowLocationModal(false)}
-            >
-                <View style={[styles.modalOverlay, { padding: 20 }]}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                        <Text style={[styles.modalTitle, boldStyle]}>{t('schoolDetails.editLocation')}</Text>
-
-                        <Text style={[secondaryStyle, { marginBottom: 4, fontSize: 12 }]}>{t('schoolDetails.addressLabel')}</Text>
-                        <TextInput
-                            style={[
-                                styles.textInputSingle,
-                                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
-                            ]}
-                            placeholder="e.g. 123 Main St, Haifa"
-                            placeholderTextColor={colors.secondaryText}
-                            value={addrInput}
-                            onChangeText={setAddrInput}
-                        />
-
-                        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[secondaryStyle, { marginBottom: 4, fontSize: 12 }]}>{t('schoolDetails.latitude')}</Text>
-                                <TextInput
-                                    style={[
-                                        styles.textInputSingle,
-                                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
-                                    ]}
-                                    placeholder="32.1234"
-                                    placeholderTextColor={colors.secondaryText}
-                                    value={latInput}
-                                    onChangeText={setLatInput}
-                                    keyboardType="numeric"
+            <Modal visible={showLocationModal} transparent={false} animationType="slide" onRequestClose={() => setShowLocationModal(false)}>
+                <View style={[styles.mapModalContainer, { backgroundColor: colors.background }]}>
+                    <View style={[styles.mapModalHeader, { borderBottomColor: colors.border }]}>
+                        <TouchableOpacity onPress={() => setShowLocationModal(false)} style={styles.headerIcon}>
+                            <Ionicons name="close" size={24} color={colors.text} />
+                        </TouchableOpacity>
+                        <Text style={[boldStyle, { fontSize: 18, flex: 1, textAlign: 'center' }]}>{t('schoolDetails.editLocation')}</Text>
+                        <TouchableOpacity onPress={handleSaveLocation} style={styles.headerIcon} disabled={savingLocation}>
+                            {savingLocation ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('common.save')}</Text>}
+                        </TouchableOpacity>
+                    </View>
+                    <TextInput
+                        style={[styles.locationLabelInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
+                        placeholder={t('schoolDetails.addressLabel')}
+                        placeholderTextColor={colors.secondaryText}
+                        value={locationLabelInput}
+                        onChangeText={setLocationLabelInput}
+                    />
+                    <View style={{ flex: 1 }}>
+                        <MapView
+                            style={{ flex: 1 }}
+                            initialRegion={{
+                                latitude: tempLocation?.lat || 32.0853,
+                                longitude: tempLocation?.lng || 34.7818,
+                                latitudeDelta: 0.0922,
+                                longitudeDelta: 0.0421,
+                            }}
+                            onPress={(e) => {
+                                const { latitude, longitude } = e.nativeEvent.coordinate;
+                                setTempLocation({ lat: latitude, lng: longitude });
+                            }}
+                        >
+                            {tempLocation && (
+                                <Marker
+                                    draggable
+                                    coordinate={{ latitude: tempLocation.lat, longitude: tempLocation.lng }}
+                                    onDragEnd={(e) => setTempLocation({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}
                                 />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[secondaryStyle, { marginBottom: 4, fontSize: 12 }]}>{t('schoolDetails.longitude')}</Text>
-                                <TextInput
-                                    style={[
-                                        styles.textInputSingle,
-                                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
-                                    ]}
-                                    placeholder="34.1234"
-                                    placeholderTextColor={colors.secondaryText}
-                                    value={lngInput}
-                                    onChangeText={setLngInput}
-                                    keyboardType="numeric"
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.modalActions}>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
-                                onPress={() => setShowLocationModal(false)}
-                            >
-                                <Text style={[boldStyle, { fontWeight: '600' }]}>{t('common.cancel')}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
-                                onPress={handleSaveLocation}
-                                disabled={savingLocation}
-                            >
-                                <Text style={{ color: '#fff', fontWeight: '600', fontFamily: fonts.bold }}>
-                                    {savingLocation ? t('common.saving') : t('common.save')}
-                                </Text>
-                            </TouchableOpacity>
+                            )}
+                        </MapView>
+                        <View style={styles.mapInstruction}>
+                            <Text style={[secondaryStyle, { textAlign: 'center', fontSize: 12 }]}>{t('schoolDetails.mapInstruction')}</Text>
                         </View>
                     </View>
                 </View>
             </Modal>
 
-            {/* Note Edit Modal */}
-            <Modal
-                visible={!!editingLog}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setEditingLog(null)}
-            >
-                <View style={[styles.modalOverlay, { padding: 20 }]}>
+            <Modal visible={!!editingLog} transparent animationType="fade" onRequestClose={() => setEditingLog(null)}>
+                <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                        <Text style={[styles.modalTitle, boldStyle]}>{editingLog?.notes ? t('dashboard.editNote') : t('dashboard.addNote')}</Text>
-
+                        <Text style={[styles.modalTitle, boldStyle]}>{t('dashboard.editNote')}</Text>
                         <TextInput
-                            style={[
-                                styles.textInput,
-                                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }
-                            ]}
+                            style={[styles.textInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
                             placeholder={t('dashboard.notesPlaceholder')}
                             placeholderTextColor={colors.secondaryText}
                             value={notesInput}
                             onChangeText={setNotesInput}
                             multiline
-                            numberOfLines={4}
-                            textAlignVertical="top"
                         />
-
                         <View style={styles.modalActions}>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
-                                onPress={() => setEditingLog(null)}
-                            >
-                                <Text style={[boldStyle, { fontWeight: '600' }]}>{t('common.cancel')}</Text>
+                            <TouchableOpacity style={styles.modalBtn} onPress={() => setEditingLog(null)}>
+                                <Text style={boldStyle}>{t('common.cancel')}</Text>
                             </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
-                                onPress={confirmEditNote}
-                            >
-                                <Text style={{ color: '#fff', fontWeight: '600', fontFamily: fonts.bold }}>{t('common.save')}</Text>
+                            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.primary }]} onPress={async () => {
+                                if (editingLog) await updateLogNotes(editingLog.id, notesInput.trim());
+                                setEditingLog(null);
+                            }}>
+                                <Text style={{ color: '#fff', fontFamily: fonts.bold }}>{t('common.save')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
             </Modal>
 
-            {/* Full Screen Image Modal */}
-            <Modal
-                visible={!!selectedImage}
-                transparent={true}
-                onRequestClose={() => setSelectedImage(null)}
-                animationType="fade"
-            >
+            <Modal visible={!!selectedImage} transparent onRequestClose={() => setSelectedImage(null)} animationType="fade">
                 <View style={styles.fullScreenModal}>
                     <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedImage(null)}>
                         <Ionicons name="close" size={30} color="#fff" />
@@ -727,9 +592,7 @@ export default function SchoolDetailsScreen() {
                             <Ionicons name="trash" size={30} color="#ff4444" />
                         </TouchableOpacity>
                     )}
-                    {selectedImage && (
-                        <Image source={{ uri: selectedImage }} style={styles.fullImage} resizeMode="contain" />
-                    )}
+                    {selectedImage && <Image source={{ uri: selectedImage }} style={styles.fullImage} resizeMode="contain" />}
                 </View>
             </Modal>
         </View>
@@ -737,263 +600,51 @@ export default function SchoolDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 15,
-        paddingTop: Platform.OS === 'ios' ? 60 : 20,
-        paddingBottom: 15,
-        borderBottomWidth: 1,
-    },
-    headerIcon: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    tabBar: {
-        flexDirection: 'row',
-        borderBottomWidth: 1,
-    },
-    tabItem: {
-        flex: 1,
-        alignItems: 'center',
-        paddingVertical: 15,
-        borderBottomWidth: 2,
-        borderBottomColor: 'transparent',
-    },
-    tabText: {
-        fontSize: 14,
-    },
-    tabContent: {
-        padding: 20,
-        paddingBottom: 100,
-    },
-    statBox: {
-        padding: 20,
-        borderRadius: 16,
-        borderWidth: 1,
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    statValue: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        marginBottom: 4,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 16,
-    },
-    locationCard: {
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        marginBottom: 24,
-    },
-    locationHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    navButtons: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    navBtn: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 10,
-        borderRadius: 12,
-        borderWidth: 1,
-    },
-    scheduleItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        padding: 16,
-        borderWidth: 1,
-        borderRadius: 12,
-        marginBottom: 8,
-    },
-    empty: {
-        fontStyle: 'italic',
-    },
-    fab: {
-        position: 'absolute',
-        right: 20,
-        bottom: 30,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-    },
-    // Menu
-    menuOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        justifyContent: 'flex-start',
-        alignItems: 'flex-end',
-        paddingTop: Platform.OS === 'ios' ? 100 : 60,
-        paddingRight: 20,
-    },
-    menuContent: {
-        width: 200,
-        borderRadius: 12,
-        borderWidth: 1,
-        padding: 8,
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-    },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        padding: 12,
-    },
-    // Modal
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-    },
-    modalContent: {
-        borderRadius: 16,
-        padding: 20,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    textInput: {
-        borderWidth: 1,
-        borderRadius: 8,
-        padding: 12,
-        minHeight: 100,
-        fontSize: 16,
-        marginBottom: 20,
-    },
-    textInputSingle: {
-        borderWidth: 1,
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        marginBottom: 12,
-    },
-    modalActions: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        gap: 12,
-    },
-    modalBtn: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        minWidth: 80,
-        alignItems: 'center',
-    },
-    // Students
-    addSection: {
-        flexDirection: 'row',
-        padding: 20,
-        gap: 12,
-        alignItems: 'center',
-    },
-    input: {
-        flex: 1,
-        height: 50,
-        borderRadius: 8,
-        borderWidth: 1,
-        paddingHorizontal: 16,
-        fontSize: 16,
-    },
-    addBtn: {
-        height: 50,
-        width: 50,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    studentCard: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 8,
-        borderWidth: 1,
-        marginHorizontal: 20,
-        marginBottom: 8,
-    },
-    studentName: {
-        fontSize: 16,
-    },
-    // Gallery
-    miniAddBtn: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    galleryGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    imageContainer: {
-        margin: IMAGE_MARGIN,
-        width: IMAGE_SIZE,
-        height: IMAGE_SIZE,
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    thumbnail: {
-        width: '100%',
-        height: '100%',
-    },
-    emptyGallery: {
-        paddingVertical: 60,
-        alignItems: 'center',
-    },
-    fullScreenModal: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.9)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 50,
-        right: 20,
-        zIndex: 10,
-        padding: 10,
-    },
-    deletePicButton: {
-        position: 'absolute',
-        top: 50,
-        left: 20,
-        zIndex: 10,
-        padding: 10,
-    },
-    fullImage: {
-        width: '100%',
-        height: '80%',
-    },
+    container: { flex: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingTop: Platform.OS === 'ios' ? 60 : 20, paddingBottom: 15, borderBottomWidth: 1 },
+    headerIcon: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+    tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
+    tabItem: { flex: 1, alignItems: 'center', paddingVertical: 15, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+    tabText: { fontSize: 14 },
+    tabContent: { padding: 20, paddingBottom: 100 },
+    statBox: { padding: 20, borderRadius: 16, borderWidth: 1, alignItems: 'center', marginBottom: 20 },
+    statValue: { fontSize: 32, fontWeight: 'bold', marginBottom: 4 },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
+    locationCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginBottom: 24 },
+    locationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+    navigateBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+    mapPreviewContainer: { height: 150, borderRadius: 12, overflow: 'hidden', marginTop: 8 },
+    mapPreview: { ...StyleSheet.absoluteFillObject },
+    editLocationText: { position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.85)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    setBtn: { paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, marginTop: 8, borderStyle: 'dotted' },
+    scheduleItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderWidth: 1, borderRadius: 12, marginBottom: 8, alignItems: 'center' },
+    empty: { fontStyle: 'italic' },
+    fab: { position: 'absolute', right: 20, bottom: 30, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
+    menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: Platform.OS === 'ios' ? 100 : 60, paddingRight: 20 },
+    menuContent: { width: 220, borderRadius: 12, borderWidth: 1, padding: 8, elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
+    menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+    modalContent: { borderRadius: 16, padding: 20 },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
+    textInput: { borderWidth: 1, borderRadius: 8, padding: 12, minHeight: 100, fontSize: 16, marginBottom: 20 },
+    modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+    modalBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, minWidth: 80, alignItems: 'center' },
+    addSection: { flexDirection: 'row', padding: 20, gap: 12, alignItems: 'center' },
+    input: { flex: 1, height: 50, borderRadius: 8, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
+    addBtn: { height: 50, width: 50, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+    studentCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 8, borderWidth: 1, marginHorizontal: 20, marginBottom: 8 },
+    studentName: { fontSize: 16 },
+    miniAddBtn: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    galleryGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+    imageContainer: { margin: IMAGE_MARGIN, width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 8, overflow: 'hidden' },
+    thumbnail: { width: '100%', height: '100%' },
+    emptyGallery: { paddingVertical: 60, alignItems: 'center' },
+    fullScreenModal: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
+    closeButton: { position: 'absolute', top: 50, right: 20, zIndex: 10, padding: 10 },
+    deletePicButton: { position: 'absolute', top: 50, left: 20, zIndex: 10, padding: 10 },
+    fullImage: { width: '100%', height: '80%' },
+    mapModalContainer: { flex: 1 },
+    mapModalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 15, borderBottomWidth: 1 },
+    locationLabelInput: { padding: 15, margin: 15, borderRadius: 10, borderWidth: 1, fontSize: 16 },
+    mapInstruction: { position: 'absolute', bottom: 20, left: 20, right: 20, backgroundColor: 'rgba(255,255,255,0.9)', padding: 10, borderRadius: 20 },
 });
