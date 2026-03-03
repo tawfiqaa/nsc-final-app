@@ -237,11 +237,6 @@ export default function Dashboard() {
         <SectionContainer
           title={t('dashboard.sections.today')}
           subtitle={formatDate(today, { weekday: 'long', day: 'numeric', month: 'long' })}
-          rightAction={
-            <TouchableOpacity onPress={() => router.push('/history' as any)}>
-              <Text style={{ color: colors.accentPrimary, fontSize: 13, fontFamily: fonts.bold }}>{t('common.viewAll')}</Text>
-            </TouchableOpacity>
-          }
         >
           {todaysLessons.length === 0 ? (
             <DashboardEmptyState icon="calendar-outline" message={t('dashboard.noMoreLessonsToday')} />
@@ -279,11 +274,6 @@ export default function Dashboard() {
 
         <SectionContainer
           title={t('dashboard.sections.recentActivity')}
-          rightAction={
-            <TouchableOpacity onPress={() => router.push('/history' as any)}>
-              <Text style={{ color: colors.accentPrimary, fontSize: 13, fontFamily: fonts.bold }}>{t('common.viewAll')}</Text>
-            </TouchableOpacity>
-          }
         >
           {recentLogs.length === 0 ? (
             <DashboardEmptyState icon="flash-outline" message={t('dashboard.noRecentActivity')} />
