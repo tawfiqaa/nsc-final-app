@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { TouchableOpacity } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -11,6 +12,7 @@ export default function TabsLayout() {
   const { user } = useAuth();
   const { membershipRole } = useOrg();
   const { t } = useTranslation();
+  const router = useRouter();
 
   if (!user) return null;
 
@@ -25,7 +27,23 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: colors.card,
+        },
+        headerShadowVisible: false,
+        headerTitleStyle: {
+          fontFamily: fonts.bold,
+          color: colors.text,
+        },
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => router.push('/settings' as any)}
+            style={{ marginRight: 15, padding: 5 }}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
+        ),
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
@@ -46,6 +64,7 @@ export default function TabsLayout() {
         options={{
           href: showTeacherTabs ? '/' : null,
           title: t('tabs.dashboard'),
+          headerTitle: t('tabs.dashboard'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -57,6 +76,7 @@ export default function TabsLayout() {
         options={{
           href: showTeacherTabs ? '/schools' : null,
           title: t('tabs.schools'),
+          headerTitle: t('tabs.schools'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="school-outline" size={size} color={color} />
           ),
@@ -68,6 +88,7 @@ export default function TabsLayout() {
         options={{
           href: showTeacherTabs ? '/school-history' : null,
           title: t('tabs.history'),
+          headerTitle: t('tabs.history'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" size={size} color={color} />
           ),
@@ -79,18 +100,9 @@ export default function TabsLayout() {
         options={{
           href: isAdmin ? '/(tabs)/admin' : null,
           title: t('tabs.admin'),
+          headerTitle: t('tabs.admin'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: t('tabs.settings'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
           ),
         }}
       />

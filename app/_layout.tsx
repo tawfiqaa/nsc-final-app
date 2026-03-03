@@ -121,6 +121,8 @@ function RootLayoutNav() {
       <Stack.Screen name="add-lesson" options={{ title: 'Add Lesson', presentation: 'modal' }} />
       <Stack.Screen name="edit-lesson" options={{ title: 'Edit Lesson', presentation: 'modal' }} />
       <Stack.Screen name="payroll" options={{ title: 'Payroll Report' }} />
+      <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+      <Stack.Screen name="admin/org-management" options={{ title: 'Organization Management' }} />
     </Stack>
   );
 }

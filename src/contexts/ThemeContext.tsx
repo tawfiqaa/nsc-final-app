@@ -8,6 +8,7 @@ type Theme = 'light' | 'dark';
 interface ThemeContextType {
     theme: Theme;
     toggleTheme: () => void;
+    setTheme: (theme: Theme) => void;
     colors: {
         background: string;
         card: string;
@@ -65,7 +66,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const colors = {
         light: {
-            background: '#FFFFFF',
+            background: '#F3F4F6',
             card: '#FFFFFF',
             text: '#1F2937',
             secondaryText: '#6B7280',
@@ -97,8 +98,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 'NotoSans_700Bold',
     };
 
+    const explicitSetTheme = async (newTheme: Theme) => {
+        setTheme(newTheme);
+        try {
+            await AsyncStorage.setItem('app_theme', newTheme);
+        } catch (e) {
+            console.error('Failed to save theme', e);
+        }
+    };
+
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, colors: colors[theme], fonts }}>
+        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme: explicitSetTheme, colors: colors[theme], fonts }}>
             {children}
         </ThemeContext.Provider>
     );

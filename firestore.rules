@@ -33,15 +33,11 @@ service cloud.firestore {
         (getOrgMember(orgId).role == 'admin' || getOrgMember(orgId).role == 'owner');
     }
 
-    function isOrgOwner(orgId) {
-      return isApprovedOrgMember(orgId) && getOrgMember(orgId).role == 'owner';
-    }
 
     // ── USERS ───────────────────────────────────────────────
     match /users/{uid} {
-      allow read: if isAuth();
-      allow create: if isAuth() && isOwner(uid);
-      allow update: if isAuth() && (isOwner(uid) || isSuperAdmin());
+      allow read, create, update: if isAuth() && (isOwner(uid) || isSuperAdmin());
+      allow delete: if false;
 
       // User's org membership index (read by owner, written by org admin actions too)
       match /orgMemberships/{orgId} {
@@ -78,8 +74,8 @@ service cloud.firestore {
       allow create: if isSuperAdmin();
       // Only org admin/owner or super admin can update
       allow update: if isOrgAdminOrOwner(orgId) || isSuperAdmin();
-      // Only org owner or super admin can delete
-      allow delete: if isOrgOwner(orgId) || isSuperAdmin();
+      // Deletion must be done via Cloud Function to ensure full cleanup
+      allow delete: if false;
 
       // ── MEMBERS ─────────────────────────────────────────
       match /members/{memberId} {

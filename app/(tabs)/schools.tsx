@@ -119,9 +119,6 @@ export default function SchoolsScreen() {
                 keyExtractor={item => item.name}
                 renderItem={renderItem}
                 contentContainerStyle={styles.list}
-                ListHeaderComponent={
-                    <Text style={[styles.header, { color: colors.text, fontFamily: fonts.bold }]}>{t('schools.title')}</Text>
-                }
                 ListEmptyComponent={
                     <Text style={[styles.empty, { color: colors.secondaryText, fontFamily: fonts.regular }]}>{t('schools.noSchoolsFound')}</Text>
                 }
@@ -136,7 +133,7 @@ const styles = StyleSheet.create({
     },
     list: {
         padding: 20,
-        paddingTop: 60,
+        paddingTop: 10,
     },
     header: {
         fontSize: 28,

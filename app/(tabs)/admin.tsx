@@ -204,12 +204,6 @@ export default function AdminScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Organization Admin</Text>
-                <Text style={[styles.orgName, { color: colors.secondaryText }]}>
-                    {activeOrg?.name || (isSuperAdmin ? 'Global Management' : 'No Active Organization')}
-                </Text>
-            </View>
 
             <FlatList
                 data={[]}
@@ -295,7 +289,7 @@ const styles = StyleSheet.create({
     header: { padding: 20, paddingTop: 50, borderBottomWidth: 1 },
     headerTitle: { fontSize: 24, fontWeight: '700' },
     orgName: { fontSize: 14, marginTop: 4 },
-    list: { padding: 16, paddingBottom: 32 },
+    list: { padding: 16, paddingTop: 8, paddingBottom: 32 },
     sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
     emptyText: { fontSize: 14, marginBottom: 16, fontStyle: 'italic' },
     memberCard: {

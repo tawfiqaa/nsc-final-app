@@ -230,5 +230,21 @@
         "deleteStudentConfirm": "האם אתה בטוח שברצונך למחוק לצמיתות את {{studentName}}? פעולה זו תסיר את כל הנתונים שלו מרשימת בית הספר.",
         "addFailed": "הוספת התלמיד נכשלה",
         "deleteFailed": "מחיקת התלמיד נכשלה"
+    },
+    "profile": {
+        "title": "פרופיל מורה",
+        "save": "שמור פרופיל",
+        "username": "שם משתמש",
+        "displayName": "שם תצוגה",
+        "phone": "מספר טלפון",
+        "dateOfBirth": "תאריך לידה",
+        "contactEmail": "אימייל ליצירת קשר",
+        "authEmail": "אימייל התחברות",
+        "invalidEmail": "אנא הזן אימייל תקין",
+        "changePhoto": "החלף תמונה",
+        "uploading": "מעלה...",
+        "saveSuccess": "הפרופיל עודכן בהצלחה!",
+        "saveError": "עדכון הפרופיל נכשל",
+        "pleaseSignIn": "אנא התחבר כדי לצפות בפרופיל שלך"
     }
 }

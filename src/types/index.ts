@@ -65,8 +65,15 @@ export interface OrgContextType {
 
 export interface User {
     uid: string;
-    email: string;
-    name?: string;
+    email: string; // Internal/legacy email field
+    authEmail: string; // Read-only from Auth
+    displayName?: string;
+    name?: string; // Legacy field for display name
+    username?: string;
+    phone?: string;
+    dateOfBirth?: string; // YYYY-MM-DD
+    photoURL?: string;
+    contactEmail?: string;
     role: UserRole;
     isApproved: boolean;
     activeOrgId?: string;

@@ -2,24 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { doc, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { ThemeToggle } from '../../src/components/ThemeToggle';
-import { useAuth } from '../../src/contexts/AuthContext';
-import { useLesson } from '../../src/contexts/LessonContext';
-import { useOrg } from '../../src/contexts/OrgContext';
-import { useTheme } from '../../src/contexts/ThemeContext';
-import { changeLanguage } from '../../src/i18n/i18n';
-import { db } from '../../src/lib/firebase';
-import { handleExportProcess } from '../../src/utils/exportExcel';
-import { useFormatting } from '../../src/utils/formatters';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ThemeToggle } from '../src/components/ThemeToggle';
+import { useAuth } from '../src/contexts/AuthContext';
+import { useLesson } from '../src/contexts/LessonContext';
+import { useOrg } from '../src/contexts/OrgContext';
+import { useTheme } from '../src/contexts/ThemeContext';
+import { changeLanguage } from '../src/i18n/i18n';
+import { db, functions } from '../src/lib/firebase';
+import { handleExportProcess } from '../src/utils/exportExcel';
+import { useFormatting } from '../src/utils/formatters';
 
 export default function SettingsScreen() {
     const { user, logout } = useAuth();
     const { schedules, logs } = useLesson();
     const { activeOrg, activeOrgId, membershipRole, userOrgs, switchOrg } = useOrg();
-    const { colors, fonts } = useTheme();
+    const { colors, fonts, theme } = useTheme();
     const { t, i18n } = useTranslation();
     const { formatDate } = useFormatting();
     const router = useRouter();
@@ -27,6 +28,9 @@ export default function SettingsScreen() {
     const [tempName, setTempName] = useState(user?.name || '');
     const [exportDate, setExportDate] = useState(new Date());
     const [exporting, setExporting] = useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
     const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
     const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
@@ -77,6 +81,30 @@ export default function SettingsScreen() {
         });
     };
 
+    const handleDeleteAccount = async () => {
+        if (deleteConfirmText !== 'DELETE MY ACCOUNT') {
+            Alert.alert(t('common.error'), 'Please type "DELETE MY ACCOUNT" exactly.');
+            return;
+        }
+
+        setIsDeletingAccount(true);
+        try {
+            const deleteMyAccountFn = httpsCallable(functions, 'deleteMyAccount');
+            await deleteMyAccountFn();
+
+            // On success, sign out and clean up
+            await logout();
+            setShowDeleteModal(false);
+            Alert.alert(t('common.success'), 'Your account and all data have been deleted.');
+            router.replace('/login');
+        } catch (error: any) {
+            console.error('Delete account error:', error);
+            Alert.alert(t('common.error'), error.message || 'Failed to delete account.');
+        } finally {
+            setIsDeletingAccount(false);
+        }
+    };
+
     const saveName = async () => {
         if (!user) return;
         try {
@@ -93,20 +121,45 @@ export default function SettingsScreen() {
     const boldStyle = { fontFamily: fonts.bold, color: colors.text };
     const secondaryStyle = { fontFamily: fonts.regular, color: colors.secondaryText };
 
+    const cardStyle = [
+        styles.section,
+        {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderWidth: 1,
+            // Subtle shadow
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: theme === 'light' ? 0.05 : 0.3,
+            shadowRadius: 10,
+            elevation: theme === 'light' ? 3 : 5,
+        }
+    ];
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
-                <Text style={[styles.title, boldStyle]}>{t('settings.title')}</Text>
 
-                <View style={[styles.section, { backgroundColor: colors.card }]}>
+                <View style={cardStyle}>
                     <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.account')}</Text>
+
+                    <TouchableOpacity
+                        style={[styles.row, { paddingVertical: 8 }]}
+                        onPress={() => router.push('/profile' as any)}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="person-circle-outline" size={24} color={colors.primary} style={{ marginRight: 12 }} />
+                            <Text style={[styles.label, textStyle]}>{t('profile.title')}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
+                    </TouchableOpacity>
 
                     <View style={styles.row}>
                         <Text style={[styles.label, textStyle]}>{t('settings.name')}</Text>
                         {editingName ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <TextInput
-                                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, fontFamily: fonts.regular }]}
+                                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
                                     value={tempName}
                                     onChangeText={setTempName}
                                 />
@@ -137,7 +190,7 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* Organization Section */}
-                <View style={[styles.section, { backgroundColor: colors.card }]}>
+                <View style={cardStyle}>
                     <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.organization')}</Text>
                     {activeOrg && (
                         <>
@@ -195,7 +248,7 @@ export default function SettingsScreen() {
 
                 {/* Show Reports only for Teachers & Super Admins */}
                 {showTeacherFeatures && (
-                    <View style={[styles.section, { backgroundColor: colors.card }]}>
+                    <View style={cardStyle}>
                         <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.reports')}</Text>
 
                         {/* Month Picker */}
@@ -228,7 +281,7 @@ export default function SettingsScreen() {
                     </View>
                 )}
 
-                <View style={[styles.section, { backgroundColor: colors.card }]}>
+                <View style={cardStyle}>
                     <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.preferences')}</Text>
                     <View style={styles.row}>
                         <Text style={[styles.label, textStyle]}>{t('settings.theme')}</Text>
@@ -260,11 +313,49 @@ export default function SettingsScreen() {
                     </View>
                 </View>
 
-                <View style={[styles.section, { backgroundColor: colors.card }]}>
+                {isSuperAdmin && (
+                    <View style={cardStyle}>
+                        <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.systemAdmin')}</Text>
+                        <TouchableOpacity
+                            style={[styles.row, { paddingVertical: 8 }]}
+                            onPress={() => router.push('/admin/org-management' as any)}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Ionicons name="business" size={24} color={colors.primary} style={{ marginRight: 12 }} />
+                                <Text style={[styles.label, textStyle]}>{t('settings.orgManagement')}</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                <View style={[cardStyle, { borderColor: colors.error + '40' }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.error, fontFamily: fonts.bold }]}>{t('settings.dangerZone')}</Text>
+                    <TouchableOpacity
+                        style={[styles.row, { marginBottom: 0 }]}
+                        onPress={() => setShowDeleteModal(true)}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="trash-outline" size={24} color={colors.error} style={{ marginRight: 12 }} />
+                            <Text style={[styles.label, { color: colors.error, fontFamily: fonts.regular }]}>{t('settings.deleteAccount')}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
+                    </TouchableOpacity>
+                </View>
+
+                <View style={cardStyle}>
                     <Text style={[styles.sectionTitle, { color: colors.secondaryText, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
                     <View style={styles.row}>
                         <Text style={[styles.label, textStyle]}>{t('common.version')}</Text>
                         <Text style={[styles.value, secondaryStyle]}>{Constants.expoConfig?.version || '1.0.0'}</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <Text style={[styles.label, textStyle]}>Build Date</Text>
+                        <Text style={[styles.value, secondaryStyle]}>{process.env.EXPO_PUBLIC_BUILD_DATE || new Date().toLocaleDateString()}</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <Text style={[styles.label, textStyle]}>Commit</Text>
+                        <Text style={[styles.value, secondaryStyle, { fontSize: 10 }]}>{process.env.EXPO_PUBLIC_GIT_COMMIT || 'development'}</Text>
                     </View>
                 </View>
 
@@ -275,6 +366,61 @@ export default function SettingsScreen() {
                     <Ionicons name="log-out-outline" size={20} color={colors.error} />
                     <Text style={[styles.logoutText, { color: colors.error, fontFamily: fonts.bold }]}>{t('settings.logout')}</Text>
                 </TouchableOpacity>
+
+                {/* Delete Account Modal */}
+                <Modal
+                    visible={showDeleteModal}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowDeleteModal(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                            <Text style={[styles.modalTitle, { color: colors.error, fontFamily: fonts.bold, fontSize: 20 }]}>Delete Your Account?</Text>
+                            <Text style={[textStyle, { fontSize: 16, marginBottom: 20, lineHeight: 22 }]}>
+                                This action is <Text style={{ fontWeight: 'bold' }}>permanent and cannot be undone</Text>. Your profile, all lessons, schedules, schools, students, and media will be wiped forever.
+                            </Text>
+
+                            <Text style={[secondaryStyle, { fontSize: 14, marginBottom: 8 }]}>
+                                Type <Text style={{ fontWeight: 'bold' }}>DELETE MY ACCOUNT</Text> to confirm:
+                            </Text>
+
+                            <TextInput
+                                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, paddingVertical: 12, height: undefined, width: '100%' }]}
+                                value={deleteConfirmText}
+                                onChangeText={setDeleteConfirmText}
+                                autoCapitalize="characters"
+                                placeholder="Type confirmation here"
+                                placeholderTextColor={colors.secondaryText}
+                            />
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+                                <TouchableOpacity
+                                    style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
+                                    onPress={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                                    disabled={isDeletingAccount}
+                                >
+                                    <Text style={textStyle}>{t('common.cancel')}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.modalBtn,
+                                        { backgroundColor: colors.error },
+                                        (deleteConfirmText !== 'DELETE MY ACCOUNT' || isDeletingAccount) && { opacity: 0.5 }
+                                    ]}
+                                    onPress={handleDeleteAccount}
+                                    disabled={deleteConfirmText !== 'DELETE MY ACCOUNT' || isDeletingAccount}
+                                >
+                                    {isDeletingAccount ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Wipe All Data</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
 
             </ScrollView>
         </View>
@@ -287,7 +433,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 20,
-        paddingTop: 60,
+        paddingTop: 10,
     },
     title: {
         fontSize: 32,
@@ -350,5 +496,27 @@ const styles = StyleSheet.create({
     langButtonText: {
         fontSize: 14,
         fontWeight: '500',
-    }
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        borderRadius: 16,
+        padding: 24,
+        elevation: 5,
+    },
+    modalTitle: {
+        fontSize: 18,
+        marginBottom: 16,
+    },
+    modalBtn: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        minWidth: 100,
+        alignItems: 'center',
+    },
 });

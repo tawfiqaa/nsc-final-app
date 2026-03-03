@@ -1,5 +1,8 @@
 {
     "version": 2,
+    "installCommand": "npm install",
+    "buildCommand": "npx expo export -p web && node scripts/fix-web-icons.js",
+    "framework": null,
     "builds": [
         {
             "src": "package.json",

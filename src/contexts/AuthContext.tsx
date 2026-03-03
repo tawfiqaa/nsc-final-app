@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import { createUserWithEmailAndPassword, User as FirebaseUser, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import i18n, { applyRTLLogic, LANGUAGE_KEY } from '../i18n/i18n';
@@ -56,6 +56,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const unsubscribe = onSnapshot(userDocRef, async (docSnap) => {
                 if (docSnap.exists()) {
                     const userData = docSnap.data() as User;
+
+                    // If authEmail is missing, sync it
+                    if (!userData.authEmail && firebaseUser.email) {
+                        await setDoc(userDocRef, {
+                            authEmail: firebaseUser.email,
+                            updatedAt: serverTimestamp()
+                        }, { merge: true });
+                    }
+
                     setUser(userData);
                     await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(userData));
 
@@ -70,17 +79,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                         if (currentIsRTL !== newIsRTL && Platform.OS !== 'web') {
                             applyRTLLogic(dbLang);
-                            // We might need to reload here, but be careful with loops
-                            // Usually, if it's during initial load, we don't reload if we can avoid it
-                            // But if the app already started with wrong RTL, we MUST reload.
                             Updates.reloadAsync();
                         } else {
                             applyRTLLogic(dbLang);
                         }
                     }
                 } else {
-                    // Needed if the user doc is missing for some reason
-                    console.warn("User doc missing for auth user");
+                    // Create new user if not exists (e.g. email/password login first time)
+                    console.log("Creating missing user doc for:", firebaseUser.email);
+                    const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(firebaseUser.email?.toLowerCase() || '');
+                    const newUser: User = {
+                        uid: firebaseUser.uid,
+                        email: firebaseUser.email || '',
+                        authEmail: firebaseUser.email || '',
+                        displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
+                        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
+                        role: isSuperAdmin ? 'super_admin' : 'teacher',
+                        isApproved: true,
+                        isSuperAdmin: isSuperAdmin || undefined,
+                        migratedToV2: true,
+                        migrationVersion: 2,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now() as any,
+                    };
+                    const userToSave = { ...newUser };
+                    if (!isSuperAdmin) delete (userToSave as any).isSuperAdmin;
+                    await setDoc(userDocRef, { ...userToSave, updatedAt: serverTimestamp() });
                 }
                 setLoading(false);
             });
@@ -113,6 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             newUser = {
                 uid,
                 email: firebaseUser.email!,
+                authEmail: firebaseUser.email!,
+                displayName: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
                 name: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
                 role: isSuperAdmin ? 'super_admin' : 'teacher',
                 isApproved: true,
@@ -120,25 +146,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 migratedToV2: true,
                 migrationVersion: 2,
                 createdAt: Date.now(),
-                updatedAt: Date.now(),
+                updatedAt: Date.now() as any,
             };
             // Remove undefined fields to avoid Firestore errors
             if (!isSuperAdmin) delete (newUser as any).isSuperAdmin;
-            await setDoc(docRef, newUser);
+            await setDoc(docRef, { ...newUser, updatedAt: serverTimestamp() });
 
-            // We don't need to create empty teacherData doc for V2 users
-            // unless we really want to, but it's not strictly necessary. 
-            // We'll leave it out for V2 to cleanly cut over.
         } else {
-            // Update existing user with name if missing? Or just load it.
-            // Let's just load it or ensure name is synced if valid.
             const existingData = docSnap.data() as User;
-            // If name is missing in DB but exists in Google, maybe update?
-            // For now just use existing.
             newUser = existingData;
-            if (!newUser.name && firebaseUser.displayName) {
-                await setDoc(docRef, { name: firebaseUser.displayName }, { merge: true });
-                newUser.name = firebaseUser.displayName;
+            // Sync fields if missing
+            const updates: any = {};
+            if (!newUser.authEmail && firebaseUser.email) updates.authEmail = firebaseUser.email;
+            if (!newUser.displayName && firebaseUser.displayName) updates.displayName = firebaseUser.displayName;
+            if (!newUser.name && firebaseUser.displayName) updates.name = firebaseUser.displayName;
+            if (!newUser.photoURL && firebaseUser.photoURL) updates.photoURL = firebaseUser.photoURL;
+
+            if (Object.keys(updates).length > 0) {
+                updates.updatedAt = serverTimestamp();
+                await setDoc(docRef, updates, { merge: true });
+                newUser = { ...newUser, ...updates };
             }
         }
 
@@ -156,6 +183,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newUser: User = {
             uid,
             email,
+            authEmail: email,
+            displayName: name || email.split('@')[0],
             name: name || email.split('@')[0],
             role: isSuperAdmin ? 'super_admin' : 'teacher',
             isApproved: true,
@@ -163,12 +192,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             migratedToV2: true,
             migrationVersion: 2,
             createdAt: Date.now(),
-            updatedAt: Date.now(),
+            updatedAt: Date.now() as any,
         };
         // Remove undefined fields to avoid Firestore errors
         const userToSave = { ...newUser };
         if (!isSuperAdmin) delete (userToSave as any).isSuperAdmin;
-        await setDoc(doc(db, 'users', uid), userToSave);
+        await setDoc(doc(db, 'users', uid), { ...userToSave, updatedAt: serverTimestamp() });
 
         // Empty teacherData is not needed for new V2 users
 

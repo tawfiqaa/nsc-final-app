@@ -71,7 +71,6 @@ export default function SchoolHistoryScreen() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
                 <View>
-                    <Text style={[styles.title, boldStyle]}>{t('history.title')}</Text>
                     <TouchableOpacity onPress={() => setShowFilter(true)} style={styles.filterButton}>
                         <Text style={[styles.filterText, { color: colors.primary, fontFamily: fonts.bold }]}>
                             {selectedSchool}  <Ionicons name="chevron-down" size={12} />
@@ -181,7 +180,7 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 20,
-        paddingTop: 60, // Safe area
+        paddingTop: 10, // Safe area handled by native header
         borderBottomWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',

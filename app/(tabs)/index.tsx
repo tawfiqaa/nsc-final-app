@@ -8,7 +8,6 @@ import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, Touchab
 import { LogCard } from '../../src/components/LogCard';
 import { ScheduleCard } from '../../src/components/ScheduleCard';
 import { StatsWidget } from '../../src/components/StatsWidget';
-import { ThemeToggle } from '../../src/components/ThemeToggle';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useOrg } from '../../src/contexts/OrgContext';
@@ -165,10 +164,6 @@ export default function Dashboard() {
           <View>
             <Text style={[styles.greeting, secondaryStyle]}>{t('dashboard.goodDay')}</Text>
             <Text style={[styles.username, boldStyle]}>{user?.name || user?.email?.split('@')[0]}</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <Text style={[styles.date, { color: colors.primary, fontFamily: fonts.bold }]}>{formatDate(today, { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
-            <ThemeToggle />
           </View>
         </View>
 
