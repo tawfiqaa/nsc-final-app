@@ -287,7 +287,7 @@ export default function AdminScreen() {
                                         }
                                     ]}>
                                         <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.teacherCount}</Text>
-                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Teachers</Text>
+                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('admin.activeTeachers')}</Text>
                                     </View>
                                     <View style={[
                                         styles.statCard,
@@ -303,7 +303,7 @@ export default function AdminScreen() {
                                         }
                                     ]}>
                                         <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.totalHours.toFixed(1)}h</Text>
-                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Hours (Month)</Text>
+                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('admin.stats.monthlyHours')}</Text>
                                     </View>
                                 </View>
 
@@ -311,7 +311,7 @@ export default function AdminScreen() {
                                 {pendingMembers.length > 0 && (
                                     <>
                                         <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.bold }]}>
-                                            Pending Requests ({pendingMembers.length})
+                                            {t('admin.teacherRequests')} ({pendingMembers.length})
                                         </Text>
                                         {pendingMembers.map(item => (
                                             <View key={item.uid}>{renderPendingItem({ item })}</View>
@@ -321,7 +321,7 @@ export default function AdminScreen() {
 
                                 {/* Org Members */}
                                 <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 24, fontFamily: fonts.bold }]}>
-                                    Organization Members ({approvedMembers.length})
+                                    {t('admin.manageTeachers')} ({approvedMembers.length})
                                 </Text>
                                 {approvedMembers.map(item => (
                                     <View key={item.uid}>{renderApprovedItem({ item })}</View>
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
     statCard: { flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
     statValue: { fontSize: 24, fontWeight: 'bold' },
-    statLabel: { fontSize: 12, marginTop: 4, textTransform: 'uppercase', fontWeight: '600' },
+    statLabel: { fontSize: 12, marginTop: 4, fontWeight: '600' },
     superAdminSection: {
         padding: 16,
         borderRadius: 12,

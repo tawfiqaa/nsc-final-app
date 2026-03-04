@@ -17,6 +17,9 @@ const resources = {
 
 export const LANGUAGE_KEY = 'user-language';
 
+// Promise for initialization status
+let initPromise: Promise<void> | null = null;
+
 const initI18n = async () => {
     let savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
 
@@ -41,6 +44,12 @@ const initI18n = async () => {
             react: {
                 useSuspense: false,
             },
+            saveMissing: true,
+            missingKeyHandler: (lng, ns, key, fallbackValue) => {
+                if (__DEV__) {
+                    console.warn(`[i18next] Missing key: "${key}" in language: "${lng}"`);
+                }
+            }
         });
 
     applyRTLLogic(savedLanguage);
@@ -78,7 +87,8 @@ export const changeLanguage = async (lang: string, skipReload = false) => {
 
 // Only initialize if not in a static rendering environment or if we are on native
 if (Platform.OS !== 'web' || typeof window !== 'undefined') {
-    initI18n().catch(err => console.error('i18n init failed', err));
+    initPromise = initI18n();
 }
 
+export { initPromise };
 export default i18n;

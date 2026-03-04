@@ -54,7 +54,6 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 12,
         fontWeight: '600',
-        textTransform: 'uppercase',
         marginBottom: 4,
     },
     valueContainer: {

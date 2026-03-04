@@ -33,6 +33,43 @@
         "edit": "Edit",
         "confirm": "Confirm"
     },
+    "admin": {
+        "title": "Admin Dashboard",
+        "manageTeachers": "Manage Teachers",
+        "manageOrgs": "Manage Organizations",
+        "totalTeachers": "Total Teachers",
+        "pendingApproval": "Pending Approval",
+        "teacherRequests": "Teacher Requests",
+        "activeTeachers": "Active Teachers",
+        "stats": {
+            "title": "Statistics Overview",
+            "monthlyHours": "Total Hours",
+            "monthlyKm": "Total KM",
+            "activeSchools": "Active Schools"
+        }
+    },
+    "teacherDetails": {
+        "recentActivity": "Recent Activity",
+        "exportAll": "Export All",
+        "noActivity": "No recent activity recorded.",
+        "management": "Teacher Management",
+        "editProfile": "Edit Profile",
+        "reassign": "Reassign Teacher",
+        "dangerZone": "Danger Zone",
+        "suspendAccess": "Suspend Access",
+        "restoreAccess": "Restore Access",
+        "permanentDelete": "Permanent Delete",
+        "stats": {
+            "monthlyHours": "Mo. Hours",
+            "monthlyKm": "Mo. KM",
+            "attendance": "Attendance",
+            "estPayroll": "Est. Payroll",
+            "schoolCount": "Schools"
+        },
+        "activeSchedules": "Active Schedules",
+        "ongoingWorkloads": "Ongoing Workloads",
+        "noSchedules": "No active schedules assigned."
+    },
     "settings": {
         "title": "Settings",
         "account": "Account",

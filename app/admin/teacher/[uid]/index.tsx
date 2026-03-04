@@ -183,8 +183,12 @@ export default function TeacherDetailsScreen() {
         const presentCount = recentLogs.filter(l => l.status === 'present').length;
         const attendanceRate = recentLogs.length > 0 ? (presentCount / recentLogs.length) * 100 : 100;
 
-        return { totalHours, totalDistance, totalPay, attendanceRate };
-    }, [logs, teacherPayrollSettings]);
+        // Calculate Unique Schools
+        const uniqueSchools = new Set(schedules.map(s => s.school).filter(Boolean));
+        const schoolCount = uniqueSchools.size;
+
+        return { totalHours, totalDistance, totalPay, attendanceRate, schoolCount };
+    }, [logs, schedules, teacherPayrollSettings]);
 
     if (loading) {
         return (
@@ -272,7 +276,7 @@ export default function TeacherDetailsScreen() {
                 {/* Quick Stats Row */}
                 <View style={styles.statsContainer}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScroll}>
-                        <StatCard label={t('teacherDetails.stats.monthlyHours')} value={formatNumber(stats.totalHours, { maximumFractionDigits: 1 })} unit="h" icon="time-outline" />
+                        <StatCard label={t('teacherDetails.stats.schoolCount')} value={formatNumber(stats.schoolCount)} icon="school-outline" />
                         <StatCard label={t('teacherDetails.stats.monthlyKm')} value={formatNumber(stats.totalDistance, { maximumFractionDigits: 1 })} unit="km" icon="car-outline" />
                         <StatCard label={t('teacherDetails.stats.attendance')} value={formatNumber(stats.attendanceRate, { maximumFractionDigits: 0 })} unit="%" icon="checkmark-circle-outline" />
                         <StatCard label={t('teacherDetails.stats.estPayroll')} value={formatCurrency(stats.totalPay, teacherPayrollSettings?.currency || 'ILS')} icon="cash-outline" />

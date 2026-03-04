@@ -33,6 +33,42 @@
         "edit": "تعديل",
         "confirm": "تأكيد"
     },
+    "admin": {
+        "title": "لوحة إدارة المسؤول",
+        "manageTeachers": "إدارة المعلمين",
+        "manageOrgs": "إدارة المنظمات",
+        "totalTeachers": "إجمالي المعلمين",
+        "pendingApproval": "في انتظار الموافقة",
+        "teacherRequests": "طلبات المعلمين",
+        "activeTeachers": "المعلمون النشطون",
+        "stats": {
+            "title": "نظرة عامة على الإحصائيات",
+            "monthlyHours": "إجمالي الساعات",
+            "monthlyKm": "إجمالي الكيلومترات",
+            "activeSchools": "المدارس النشطة"
+        }
+    },
+    "teacherDetails": {
+        "recentActivity": "النشاط الأخير",
+        "exportAll": "تصدير الكل",
+        "noActivity": "لا يوجد نشاط حديث مسجل.",
+        "management": "إدارة المعلم",
+        "editProfile": "تعديل الملف الشخصي",
+        "reassign": "إعادة تعيين المعلم",
+        "dangerZone": "منطقة الخطر",
+        "suspendAccess": "تعليق الوصول",
+        "restoreAccess": "استعادة الوصول",
+        "permanentDelete": "حذف نهائي",
+        "stats": {
+            "monthlyHours": "ساعات شهرية",
+            "monthlyKm": "كم شهري",
+            "attendance": "الحضور",
+            "estPayroll": "الراتب التقديري",
+            "schoolCount": "المدارس"
+        },
+        "activeSchedules": "الجداول النشطة",
+        "ongoingWorkloads": "أعباء العمل المستمرة"
+    },
     "settings": {
         "title": "الإعدادات",
         "account": "الحساب",

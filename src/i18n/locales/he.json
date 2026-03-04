@@ -110,6 +110,42 @@
         "admin": "ניהול",
         "settings": "הגדרות"
     },
+    "admin": {
+        "title": "לוח ניהול",
+        "manageTeachers": "ניהול מורים",
+        "manageOrgs": "ניהול ארגונים",
+        "totalTeachers": "סה\"כ מורים",
+        "pendingApproval": "ממתינים לאישור",
+        "teacherRequests": "בקשות מורים",
+        "activeTeachers": "מורים פעילים",
+        "stats": {
+            "title": "סקירת סטטיסטיקה",
+            "monthlyHours": "סה\"כ שעות",
+            "monthlyKm": "סה\"כ ק\"מ",
+            "activeSchools": "בתי ספר פעילים"
+        }
+    },
+    "teacherDetails": {
+        "recentActivity": "פעילות אחרונה",
+        "exportAll": "ייצוא הכל",
+        "noActivity": "לא נרשמה פעילות אחרונה.",
+        "management": "ניהול מורה",
+        "editProfile": "ערוך פרופיל",
+        "reassign": "הקצאה מחדש",
+        "dangerZone": "אזור סכנה",
+        "suspendAccess": "השהיית גישה",
+        "restoreAccess": "שחזור גישה",
+        "permanentDelete": "מחיקה לצמיתות",
+        "stats": {
+            "monthlyHours": "שעות חודשיות",
+            "monthlyKm": "ק\"מ חודשי",
+            "attendance": "נוכחות",
+            "estPayroll": "שכר משוער",
+            "schoolCount": "בתי ספר"
+        },
+        "activeSchedules": "לוחות זמנים פעילים",
+        "ongoingWorkloads": "עומסי עבודה שוטפים"
+    },
     "payroll": {
         "title": "דוח שכר",
         "ratesNotConfigured": "תעריפים לא מוגדרים",

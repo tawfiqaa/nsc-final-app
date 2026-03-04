@@ -21,6 +21,7 @@ import {
     View
 } from 'react-native';
 import SchoolMap, { Marker } from '../../components/SchoolMap';
+import { LogCard } from '../../src/components/LogCard';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useOrg } from '../../src/contexts/OrgContext';
@@ -349,26 +350,28 @@ export default function SchoolDetailsScreen() {
             )}
 
             {/* History Section */}
-            <Text style={[styles.sectionTitle, boldStyle, { marginTop: 24 }]}>{t('schoolDetails.recentHistory')}</Text>
-            {stats.schoolLogs.slice(0, 5).map(log => (
-                <View key={log.id} style={[styles.scheduleItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <View>
-                        <Text style={boldStyle}>{log.localDayKey}</Text>
-                        <Text style={secondaryStyle}>{log.startTime} - {log.hours}h</Text>
-                        {log.notes && <Text style={[textStyle, { fontSize: 12, marginTop: 4 }]} numberOfLines={1}>{log.notes}</Text>}
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 12 }}>
-                        <TouchableOpacity onPress={() => { setEditingLog(log); setNotesInput(log.notes || ''); }}>
-                            <Ionicons name="create-outline" size={20} color={colors.primary} />
-                        </TouchableOpacity>
-                        {!isRestrictedAdmin && (
-                            <TouchableOpacity onPress={() => deleteLog(log.id)}>
-                                <Ionicons name="trash-outline" size={20} color={colors.error} />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-            ))}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
+                <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 0 }]}>{t('schoolDetails.recentHistory')}</Text>
+                {stats.schoolLogs.length > 5 && (
+                    <TouchableOpacity onPress={() => router.push({ pathname: '/school-history' as any, params: { school: schoolName } })}>
+                        <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('common.viewAll')}</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            {stats.schoolLogs.length === 0 ? (
+                <Text style={[secondaryStyle, { textAlign: 'center', marginTop: 10 }]}>{t('schoolDetails.noHistoryYet')}</Text>
+            ) : (
+                stats.schoolLogs.slice(0, 5).map(log => (
+                    <LogCard
+                        key={log.id}
+                        log={log}
+                        onDelete={() => deleteLog(log.id)}
+                        onEditNote={() => { setEditingLog(log); setNotesInput(log.notes || ''); }}
+                        readOnly={isRestrictedAdmin}
+                    />
+                ))
+            )}
         </ScrollView>
     );
 

@@ -5,13 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { LessonProvider } from '../src/contexts/LessonContext';
 import { OrgProvider, useOrg } from '../src/contexts/OrgContext';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
-import '../src/i18n/i18n'; // Initialize i18n
+import { initPromise } from '../src/i18n/i18n'; // Initialize i18n
 
 SplashScreen.preventAutoHideAsync();
 
@@ -128,6 +128,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [i18nReady, setI18nReady] = useState(false);
   const [loaded, error] = useFonts({
     ...Ionicons.font,
     NotoSans_400Regular,
@@ -142,12 +143,16 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (loaded || error || Platform.OS === 'web') {
+    initPromise?.then(() => setI18nReady(true)).catch(() => setI18nReady(true));
+  }, []);
+
+  useEffect(() => {
+    if ((loaded || error || Platform.OS === 'web') && i18nReady) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, error]);
+  }, [loaded, error, i18nReady]);
 
-  if (!loaded && Platform.OS !== 'web') return null;
+  if ((!loaded || !i18nReady) && Platform.OS !== 'web') return null;
 
   return (
     <ThemeProvider>
