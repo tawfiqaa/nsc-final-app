@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useOrg } from '../../../../../../src/contexts/OrgContext';
 import { useTheme } from '../../../../../../src/contexts/ThemeContext';
 import { db } from '../../../../../../src/lib/firebase';
 import { TeacherData } from '../../../../../../src/types';
@@ -15,6 +16,7 @@ const IMAGE_SIZE = (width - (40) - (IMAGE_MARGIN * 2 * COLUMN_COUNT)) / COLUMN_C
 export default function AdminSchoolGalleryScreen() {
     const { uid, schoolName } = useLocalSearchParams<{ uid: string, schoolName: string }>();
     const { colors } = useTheme();
+    const { activeOrgId } = useOrg();
     const router = useRouter();
 
     const [photos, setPhotos] = useState<string[]>([]);
@@ -32,11 +34,31 @@ export default function AdminSchoolGalleryScreen() {
     const fetchGallery = async (targetUid: string, targetSchool: string) => {
         try {
             setLoading(true);
-            const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
-            if (dataSnap.exists()) {
-                const data = dataSnap.data() as TeacherData;
-                const galleries = data.schoolGalleries || {};
-                setPhotos(galleries[targetSchool] || []);
+
+            if (activeOrgId) {
+                // --- ORG MODE ---
+                const schoolSnap = await getDoc(doc(db, 'orgs', activeOrgId, 'schools', targetSchool));
+                if (schoolSnap.exists()) {
+                    setPhotos(schoolSnap.data().gallery || []);
+                }
+            } else {
+                // --- LEGACY or V2 ---
+                const targetUserSnap = await getDoc(doc(db, 'users', targetUid));
+                const isMigrated = targetUserSnap.exists() && targetUserSnap.data()?.migratedToV2;
+
+                if (isMigrated) {
+                    const schoolSnap = await getDoc(doc(db, 'users', targetUid, 'schools', targetSchool));
+                    if (schoolSnap.exists()) {
+                        setPhotos(schoolSnap.data().gallery || []);
+                    }
+                } else {
+                    const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
+                    if (dataSnap.exists()) {
+                        const data = dataSnap.data() as TeacherData;
+                        const galleries = data.schoolGalleries || {};
+                        setPhotos(galleries[targetSchool] || []);
+                    }
+                }
             }
         } catch (error) {
             console.error(error);

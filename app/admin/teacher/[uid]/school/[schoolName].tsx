@@ -4,10 +4,11 @@ import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firesto
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../../../../src/components/LogCard';
+import { ScheduleCard } from '../../../../../src/components/ScheduleCard';
 import { useOrg } from '../../../../../src/contexts/OrgContext';
 import { useTheme } from '../../../../../src/contexts/ThemeContext';
 import { db } from '../../../../../src/lib/firebase';
-import { AttendanceLog, User } from '../../../../../src/types';
+import { AttendanceLog, Schedule, User } from '../../../../../src/types';
 
 export default function SchoolLessonsScreen() {
     const { uid, schoolName } = useLocalSearchParams<{ uid: string, schoolName: string }>();
@@ -16,6 +17,7 @@ export default function SchoolLessonsScreen() {
     const { activeOrgId } = useOrg();
 
     const [teacher, setTeacher] = useState<User | null>(null);
+    const [schoolSchedules, setSchoolSchedules] = useState<Schedule[]>([]);
     const [schoolLogs, setSchoolLogs] = useState<AttendanceLog[]>([]);
     const [schoolPhotos, setSchoolPhotos] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,37 +41,74 @@ export default function SchoolLessonsScreen() {
 
             // Fetch Teacher Data
             if (activeOrgId) {
-                // Org Mode
+                // --- ORG MODE ---
                 const logsRef = collection(db, 'orgs', activeOrgId, 'lessons');
-                const schoolsRef = collection(db, 'orgs', activeOrgId, 'schools');
+                const schedulesRef = collection(db, 'orgs', activeOrgId, 'schedules');
+                const schoolSnap = await getDoc(doc(db, 'orgs', activeOrgId, 'schools', targetSchool));
 
-                const [logsSnap, schoolSnap] = await Promise.all([
+                const [logsQuerySnap, schedulesQuerySnap] = await Promise.all([
                     getDocs(query(logsRef, where('createdBy', '==', targetUid), where('school', '==', targetSchool))),
-                    getDoc(doc(db, 'orgs', activeOrgId, 'schools', targetSchool))
+                    getDocs(query(schedulesRef, where('createdBy', '==', targetUid), where('school', '==', targetSchool)))
                 ]);
 
                 const loadedLogs: AttendanceLog[] = [];
-                logsSnap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
+                logsQuerySnap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
                 loadedLogs.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
                 setSchoolLogs(loadedLogs);
+
+                const loadedSchedules: Schedule[] = [];
+                schedulesQuerySnap.forEach(d => loadedSchedules.push(d.data() as Schedule));
+                setSchoolSchedules(loadedSchedules);
 
                 if (schoolSnap.exists()) {
                     setSchoolPhotos(schoolSnap.data().gallery || []);
                 }
             } else {
-                // Legacy
-                const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
-                if (dataSnap.exists()) {
-                    const data = dataSnap.data();
-                    const allLogs = (data.attendanceLogs || []) as AttendanceLog[];
-                    // Filter logs for the specific school
-                    const filtered = allLogs.filter(log => log.school === targetSchool);
-                    // Sort by date desc
-                    filtered.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
-                    setSchoolLogs(filtered);
+                // --- LEGACY or V2 ---
+                const targetUserSnap = await getDoc(doc(db, 'users', targetUid));
+                const isMigrated = targetUserSnap.exists() && targetUserSnap.data()?.migratedToV2;
 
-                    const galleries = data.schoolGalleries || {};
-                    setSchoolPhotos(galleries[targetSchool] || []);
+                if (isMigrated) {
+                    // V2 Subcollections
+                    const logsRef = collection(db, 'users', targetUid, 'lessons');
+                    const schedulesRef = collection(db, 'users', targetUid, 'schedules');
+                    const schoolSnap = await getDoc(doc(db, 'users', targetUid, 'schools', targetSchool));
+
+                    const [logsQuerySnap, schedulesQuerySnap] = await Promise.all([
+                        getDocs(query(logsRef, where('school', '==', targetSchool))),
+                        getDocs(query(schedulesRef, where('school', '==', targetSchool)))
+                    ]);
+
+                    const loadedLogs: AttendanceLog[] = [];
+                    logsQuerySnap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
+                    loadedLogs.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
+                    setSchoolLogs(loadedLogs);
+
+                    const loadedSchedules: Schedule[] = [];
+                    schedulesQuerySnap.forEach(d => loadedSchedules.push(d.data() as Schedule));
+                    setSchoolSchedules(loadedSchedules);
+
+                    if (schoolSnap.exists()) {
+                        setSchoolPhotos(schoolSnap.data().gallery || []);
+                    }
+                } else {
+                    // Legacy Document (V1)
+                    const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
+                    if (dataSnap.exists()) {
+                        const data = dataSnap.data();
+
+                        const allLogs = (data.attendanceLogs || []) as AttendanceLog[];
+                        const filteredLogs = allLogs.filter(log => log.school === targetSchool);
+                        filteredLogs.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
+                        setSchoolLogs(filteredLogs);
+
+                        const allSchedules = (data.schedules || []) as Schedule[];
+                        const filteredSchedules = allSchedules.filter(s => s.school === targetSchool);
+                        setSchoolSchedules(filteredSchedules);
+
+                        const galleries = data.schoolGalleries || {};
+                        setSchoolPhotos(galleries[targetSchool] || []);
+                    }
                 }
             }
         } catch (e) {
@@ -101,15 +140,13 @@ export default function SchoolLessonsScreen() {
                         {teacher ? `Lessons by ${teacher.name || teacher.email}` : 'Loading...'}
                     </Text>
                 </View>
-                {schoolPhotos.length > 0 && (
-                    <TouchableOpacity
-                        style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border }}
-                        onPress={() => router.push({ pathname: '/admin/teacher/[uid]/school/[schoolName]/gallery' as any, params: { uid, schoolName } })}
-                    >
-                        <Ionicons name="images-outline" size={20} color={colors.text} />
-                        <Text style={{ color: colors.text, fontWeight: '600' }}>Gallery ({schoolPhotos.length})</Text>
-                    </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                    style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.border }}
+                    onPress={() => router.push({ pathname: '/admin/teacher/[uid]/school/[schoolName]/gallery' as any, params: { uid, schoolName } })}
+                >
+                    <Ionicons name="images-outline" size={20} color={colors.text} />
+                    <Text style={{ color: colors.text, fontWeight: '600' }}>Gallery ({schoolPhotos.length})</Text>
+                </TouchableOpacity>
             </View>
 
             <FlatList
@@ -124,12 +161,31 @@ export default function SchoolLessonsScreen() {
                 contentContainerStyle={styles.list}
                 ListHeaderComponent={
                     <View style={styles.summaryContainer}>
-                        <Text style={[styles.summaryText, { color: colors.text }]}>
-                            Values: {schoolLogs.length} lessons found
+                        {schoolSchedules.length > 0 && (
+                            <View style={{ marginBottom: 20 }}>
+                                <Text style={[styles.sectionHeader, { color: colors.text }]}>Active Schedules</Text>
+                                {schoolSchedules.map(schedule => (
+                                    <ScheduleCard
+                                        key={schedule.id}
+                                        schedule={schedule}
+                                        readOnly={true}
+                                        compact={true}
+                                    />
+                                ))}
+                            </View>
+                        )}
+                        <Text style={[styles.sectionHeader, { color: colors.text }]}>
+                            Attendance History ({schoolLogs.length} found)
                         </Text>
                     </View>
                 }
-                ListEmptyComponent={<Text style={{ color: colors.secondaryText, textAlign: 'center', marginTop: 20 }}>No lessons found for this school.</Text>}
+                ListEmptyComponent={
+                    schoolSchedules.length === 0 ? (
+                        <Text style={{ color: colors.secondaryText, textAlign: 'center', marginTop: 20 }}>
+                            No schedules or logs found for this school.
+                        </Text>
+                    ) : null
+                }
             />
         </View>
     );
@@ -169,5 +225,11 @@ const styles = StyleSheet.create({
     summaryText: {
         fontSize: 16,
         fontWeight: '600',
+    },
+    sectionHeader: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 12,
+        marginTop: 8,
     }
 });
