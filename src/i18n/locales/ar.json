@@ -45,7 +45,7 @@
             "title": "نظرة عامة على الإحصائيات",
             "monthlyHours": "إجمالي الساعات",
             "monthlyKm": "إجمالي الكيلومترات",
-            "activeSchools": "المدارس النشطة"
+            "activeSchools": "إجمالي المدارس"
         },
         "noTeachersFound": "لم يتم العثور على معلمين يطابقون بحثك.",
         "orgJoinId": "معرف الانضمام للمنظمة (شاركه مع المعلمين)"
@@ -66,7 +66,7 @@
             "monthlyKm": "كم شهري",
             "attendance": "الحضور",
             "estPayroll": "الراتب التقديري",
-            "schoolCount": "المدارس"
+            "schoolCount": "عدد المدارس"
         },
         "activeSchedules": "الجداول النشطة",
         "ongoingWorkloads": "أعباء العمل المستمرة"

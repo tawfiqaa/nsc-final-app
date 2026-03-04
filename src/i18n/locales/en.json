@@ -45,7 +45,7 @@
             "title": "Statistics Overview",
             "monthlyHours": "Total Hours",
             "monthlyKm": "Total KM",
-            "activeSchools": "Active Schools"
+            "activeSchools": "Total Schools"
         },
         "noTeachersFound": "No teachers found matching your search.",
         "orgJoinId": "Organization Join ID (Share with teachers)"
@@ -66,7 +66,7 @@
             "monthlyKm": "Mo. KM",
             "attendance": "Attendance",
             "estPayroll": "Est. Payroll",
-            "schoolCount": "Schools"
+            "schoolCount": "Number of Schools"
         },
         "activeSchedules": "Active Schedules",
         "ongoingWorkloads": "Ongoing Workloads",

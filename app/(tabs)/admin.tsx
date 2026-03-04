@@ -20,7 +20,7 @@ export default function AdminScreen() {
 
     const [pendingMembers, setPendingMembers] = useState<OrgMembership[]>([]);
     const [approvedMembers, setApprovedMembers] = useState<OrgMembership[]>([]);
-    const [orgStats, setOrgStats] = useState({ totalHours: 0, teacherCount: 0 });
+    const [orgStats, setOrgStats] = useState({ schoolCount: 0, teacherCount: 0 });
     const [loading, setLoading] = useState(true);
 
     const isOwner = membershipRole === 'owner';
@@ -56,31 +56,16 @@ export default function AdminScreen() {
             }
         );
 
-        // Fetch Org Stats (Lessons this month)
-        const startOfMo = new Date();
-        startOfMo.setDate(1);
-        startOfMo.setHours(0, 0, 0, 0);
-
-        const lessonsRef = collection(db, 'orgs', activeOrgId, 'lessons');
-        const statsUnsub = onSnapshot(
-            query(lessonsRef, where('createdAt', '>=', startOfMo.getTime())),
-            (snap) => {
-                let hours = 0;
-                snap.forEach(d => {
-                    const data = d.data();
-                    if (data.status === 'present') {
-                        // Defensive: ensure numeric to avoid .toFixed() crashes on strings
-                        hours += Number(data.hours || 0);
-                    }
-                });
-                setOrgStats(prev => ({ ...prev, totalHours: hours }));
-            }
-        );
+        // Fetch Org Stats (Schools count)
+        const schoolsRef = collection(db, 'orgs', activeOrgId, 'schools');
+        const schoolsUnsub = onSnapshot(schoolsRef, (snap) => {
+            setOrgStats(prev => ({ ...prev, schoolCount: snap.size }));
+        });
 
         return () => {
             pendingUnsub();
             approvedUnsub();
-            statsUnsub();
+            schoolsUnsub();
         };
     }, [activeOrgId, isAdmin, isSuperAdmin]);
 
@@ -307,8 +292,8 @@ export default function AdminScreen() {
                                             elevation: theme === 'light' ? 2 : 4,
                                         }
                                     ]}>
-                                        <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.totalHours.toFixed(1)}h</Text>
-                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('admin.stats.monthlyHours')}</Text>
+                                        <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.schoolCount}</Text>
+                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('admin.stats.activeSchools')}</Text>
                                     </View>
                                 </View>
 
