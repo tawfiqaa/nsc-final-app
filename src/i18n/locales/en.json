@@ -1,4 +1,4 @@
-{
+﻿{
     "auth": {
         "login": "Sign In",
         "signUp": "Sign Up",
@@ -28,7 +28,10 @@
         "ok": "OK",
         "version": "Version",
         "saving": "Saving...",
-        "viewAll": "View All"
+        "viewAll": "View All",
+        "delete": "Delete",
+        "edit": "Edit",
+        "confirm": "Confirm"
     },
     "settings": {
         "title": "Settings",
@@ -59,11 +62,23 @@
         "logout": "Logout",
         "english": "English",
         "hebrew": "עברית",
-        "arabic": "العربية",
-        "dangerZone": "Danger Zone",
-        "deleteAccount": "Delete My Account",
-        "orgManagement": "Organization Management",
-        "systemAdmin": "System Administration"
+        "arabic": "العربية"
+    },
+    "profile": {
+        "title": "Profile",
+        "save": "Save Profile",
+        "username": "Username",
+        "displayName": "Display Name",
+        "phone": "Phone Number",
+        "dateOfBirth": "Date of Birth",
+        "contactEmail": "Contact Email",
+        "authEmail": "Auth Email",
+        "invalidEmail": "Please enter a valid email",
+        "changePhoto": "Change Photo",
+        "uploading": "Uploading...",
+        "saveSuccess": "Profile updated successfully!",
+        "saveError": "Failed to update profile",
+        "pleaseSignIn": "Please sign in to view your profile"
     },
     "dashboard": {
         "goodDay": "Good day,",
@@ -73,7 +88,6 @@
         "setRates": "SET RATES",
         "tapToViewDetails": "Tap to view details",
         "todaysLessons": "Today's Lessons",
-        "noMoreLessonsToday": "No more lessons today.",
         "recentlyUpdated": "Recently Updated",
         "noRecentActivity": "No recent activity.",
         "lessonNotesOptional": "Lesson Notes (Optional)",
@@ -83,10 +97,11 @@
         "sections": {
             "today": "Today",
             "upcoming": "Upcoming",
-            "recentActivity": "Recent Activity",
-            "nextSevenDays": "Next 7 days"
+            "nextSevenDays": "Next 7 Days",
+            "recentActivity": "Recent Activity"
         },
-        "noUpcomingLessons": "No upcoming lessons found."
+        "noMoreLessonsToday": "No more lessons today.",
+        "noUpcomingLessons": "No upcoming lessons."
     },
     "tabs": {
         "dashboard": "Dashboard",
@@ -183,6 +198,14 @@
         "updateSchedule": "Update Schedule"
     },
     "schoolDetails": {
+        "overview": "Overview",
+        "attendedLessons": "Attended Lessons",
+        "location": "Location",
+        "noLocationSet": "No location set",
+        "editLocation": "Edit Location",
+        "noSchedule": "No schedule set",
+        "addressLabel": "Address Label (e.g. Main Entrance)",
+        "mapInstruction": "Tap on the map to set school location",
         "gallery": "Gallery",
         "students": "Students",
         "addPastLesson": "Add Past Lesson",
@@ -242,43 +265,5 @@
         "deleteStudentConfirm": "Are you sure you want to permanently delete {{studentName}}? This will remove all their data from this school's roster.",
         "addFailed": "Failed to add student",
         "deleteFailed": "Failed to delete student"
-    },
-    "profile": {
-        "title": "Teacher Profile",
-        "save": "Save Profile",
-        "username": "Username",
-        "displayName": "Display Name",
-        "phone": "Phone Number",
-        "dateOfBirth": "Date of Birth",
-        "contactEmail": "Contact Email",
-        "authEmail": "Login Email",
-        "invalidEmail": "Please enter a valid email",
-        "changePhoto": "Change Photo",
-        "uploading": "Uploading...",
-        "saveSuccess": "Profile updated successfully!",
-        "saveError": "Failed to update profile",
-        "pleaseSignIn": "Please sign in to view your profile"
-    },
-    "teacherDetails": {
-        "title": "Teacher Profile",
-        "activeSchedules": "Active Schedules",
-        "ongoingWorkloads": "ongoing workloads",
-        "noSchedules": "No active schedules found.",
-        "recentActivity": "Recent Activity",
-        "noActivity": "No recent activity recorded.",
-        "exportAll": "Export All",
-        "management": "Management",
-        "editProfile": "Edit Profile",
-        "reassign": "Reassign",
-        "suspendAccess": "Suspend Access",
-        "restoreAccess": "Restore Access",
-        "permanentDelete": "Permanent Delete",
-        "dangerZone": "Danger Zone",
-        "stats": {
-            "monthlyHours": "Monthly Hours",
-            "monthlyKm": "Monthly KM",
-            "attendance": "Attendance",
-            "estPayroll": "Est. Payroll"
-        }
     }
 }

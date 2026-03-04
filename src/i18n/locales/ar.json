@@ -1,4 +1,4 @@
-{
+﻿{
     "auth": {
         "login": "تسجيل الدخول",
         "signUp": "إنشاء حساب",
@@ -28,7 +28,10 @@
         "ok": "موافق",
         "version": "الإصدار",
         "saving": "جاري الحفظ...",
-        "viewAll": "عرض الكل"
+        "viewAll": "عرض الكل",
+        "delete": "حذف",
+        "edit": "تعديل",
+        "confirm": "تأكيد"
     },
     "settings": {
         "title": "الإعدادات",
@@ -58,8 +61,24 @@
         "appInfo": "معلومات التطبيق",
         "logout": "تسجيل الخروج",
         "english": "English",
-        "hebrew": "عبري",
+        "hebrew": "עברית",
         "arabic": "العربية"
+    },
+    "profile": {
+        "title": "الملف الشخصي",
+        "save": "حفظ الملف الشخصي",
+        "username": "اسم المستخدم",
+        "displayName": "الاسم المعروض",
+        "phone": "رقم الهاتف",
+        "dateOfBirth": "تاريخ الميلاد",
+        "contactEmail": "بريد التواصل",
+        "authEmail": "بريد المصادقة",
+        "invalidEmail": "يرجى إدخال بريد إلكتروني صالح",
+        "changePhoto": "تغيير الصورة",
+        "uploading": "جاري الرفع...",
+        "saveSuccess": "تم تحديث الملف الشخصي بنجاح!",
+        "saveError": "فشل تحديث الملف الشخصي",
+        "pleaseSignIn": "يرجى تسجيل الدخول لعرض ملفك الشخصي"
     },
     "dashboard": {
         "goodDay": "يوم سعيد،",
@@ -78,11 +97,11 @@
         "notesPlaceholder": "مثال: تمت تغطية الفصل 3، تأخر الطالب...",
         "sections": {
             "today": "اليوم",
-            "upcoming": "قادمة",
-            "recentActivity": "النشاط الأخير",
-            "nextSevenDays": "الأيام السبعة القادمة"
+            "upcoming": "القادم",
+            "nextSevenDays": "الأيام السبعة القادمة",
+            "recentActivity": "النشاط الأخير"
         },
-        "noUpcomingLessons": "لم يتم العثور على دروس قادمة."
+        "noUpcomingLessons": "لا توجد دروس قادمة."
     },
     "tabs": {
         "dashboard": "الرئيسية",
@@ -93,7 +112,7 @@
     },
     "payroll": {
         "title": "تقرير الرواتب",
-        "ratesNotConfigured": "الأسعار غير مكوّنة",
+        "ratesNotConfigured": "الأسعار غير مكونة",
         "setRatesToSeeTotals": "قم بتعيين أسعار الساعة والكيلومتر لرؤية إجمالي الرواتب.",
         "dateRange": "نطاق التاريخ",
         "thisMonth": "هذا الشهر",
@@ -164,10 +183,10 @@
         "schedulesSaved": "تم حفظ {{count}} جدول(أو جداول)."
     },
     "days": {
-        "sun": "حد",
-        "mon": "ثنين",
-        "tue": "ثلاثا",
-        "wed": "ربعا",
+        "sun": "أحد",
+        "mon": "إثنين",
+        "tue": "ثلاثاء",
+        "wed": "أربعاء",
         "thu": "خميس",
         "fri": "جمعة",
         "sat": "سبت"
@@ -179,6 +198,14 @@
         "updateSchedule": "تحديث الجدول"
     },
     "schoolDetails": {
+        "overview": "نظرة عامة",
+        "attendedLessons": "الدروس التي تم حضورها",
+        "location": "الموقع",
+        "noLocationSet": "لم يتم تعيين موقع",
+        "editLocation": "تعديل الموقع",
+        "noSchedule": "لم يتم تعيين جدول",
+        "addressLabel": "تسمية العنوان (مثل المدخل الرئيسي)",
+        "mapInstruction": "انقر على الخريطة لتعيين موقع المدرسة",
         "gallery": "المعرض",
         "students": "الطلاب",
         "addPastLesson": "إضافة درس سابق",
@@ -238,43 +265,5 @@
         "deleteStudentConfirm": "هل أنت متأكد من رغبتك في حذف {{studentName}} نهائياً؟ سيؤدي هذا إلى إزالة جميع بياناتهم من قائمة هذه المدرسة.",
         "addFailed": "فشل إضافة الطالب",
         "deleteFailed": "فشل حذف الطالب"
-    },
-    "profile": {
-        "title": "الملف الشخصي",
-        "save": "حفظ الملف الشخصي",
-        "username": "اسم المستخدم",
-        "displayName": "اسم العرض",
-        "phone": "رقم الهاتف",
-        "dateOfBirth": "تاريخ الميلاد",
-        "contactEmail": "بريد الاتصال",
-        "authEmail": "بريد تسجيل الدخول",
-        "invalidEmail": "يرجى إدخال بريد إلكتروني صالح",
-        "changePhoto": "تغيير الصورة",
-        "uploading": "جاري الرفع...",
-        "saveSuccess": "تم تحديث الملف الشخصي بنجاح!",
-        "saveError": "فشل تحديث الملف الشخصي",
-        "pleaseSignIn": "يرجى تسجيل الدخول لعرض ملفك الشخصي"
-    },
-    "teacherDetails": {
-        "title": "ملف المعلم",
-        "activeSchedules": "الجداول النشطة",
-        "ongoingWorkloads": "أعباء عمل جارية",
-        "noSchedules": "لم يتم العثور على جداول نشطة.",
-        "recentActivity": "النشاط الأخير",
-        "noActivity": "لم يتم تسجيل أي نشاط حديث.",
-        "exportAll": "تصدير الكل",
-        "management": "الإدارة",
-        "editProfile": "تعديل الملف الشخصي",
-        "reassign": "إعادة تعيين",
-        "suspendAccess": "تعليق الوصول",
-        "restoreAccess": "استعادة الوصول",
-        "permanentDelete": "الحذف الدائم",
-        "dangerZone": "منطقة الخطر",
-        "stats": {
-            "monthlyHours": "الساعات الشهرية",
-            "monthlyKm": "كم الشهرية",
-            "attendance": "الحضور",
-            "estPayroll": "الراتب التقديري"
-        }
     }
 }

@@ -17,6 +17,7 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { db } from '../../src/lib/firebase';
 import { AttendanceStatus, PayrollSettings } from '../../src/types';
 import { useFormatting } from '../../src/utils/formatters';
+import { computePayrollTotals } from '../../src/utils/payroll';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -28,17 +29,7 @@ export default function Dashboard() {
   const { formatDate, formatNumber, formatCurrency } = useFormatting();
   const router = useRouter();
 
-  const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
-  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
-  const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
-
-  React.useEffect(() => {
-    if (isRestrictedAdmin) {
-      router.replace('/(tabs)/admin');
-    }
-  }, [isRestrictedAdmin]);
-
-  if (isRestrictedAdmin) return null; // Prevent flicker before redirect
+  // No role-based redirect here to match previous state
 
   const [markingSchedule, setMarkingSchedule] = useState<{ id: string, status: AttendanceStatus } | null>(null);
   const [editingLog, setEditingLog] = useState<typeof logs[0] | null>(null);
@@ -72,20 +63,7 @@ export default function Dashboard() {
     const start = startOfMonth(now);
     const end = endOfMonth(now);
 
-    const monthLogs = logs.filter(log => {
-      const d = new Date(log.dateISO);
-      return d >= start && d <= end && log.status === 'present';
-    });
-
-    const totalHours = monthLogs.reduce((acc, log) => acc + log.hours, 0);
-    const totalDistance = monthLogs.reduce((acc, log) => acc + log.distance, 0);
-
-    const hourlyRate = payrollSettings?.hourlyRate || 0;
-    const kmRate = payrollSettings?.kmRate || 0;
-    const totalPay = (totalHours * hourlyRate) + (totalDistance * kmRate);
-    const ratesMissing = !payrollSettings || (hourlyRate === 0 && kmRate === 0);
-
-    return { totalHours, totalDistance, totalPay, ratesMissing };
+    return computePayrollTotals(logs, payrollSettings, start, end);
   }, [logs, payrollSettings]);
 
   // Today's lessons (schedules that haven't been logged today)
@@ -110,23 +88,16 @@ export default function Dashboard() {
     });
   }, [schedules, logs]);
 
-  // Recently updated logs (last 24 hours OR upcoming one-time lessons)
+  // Recent Activity = last 3 by lesson date/time
   const recentLogs = useMemo(() => {
-    const now = new Date();
-    const cutoff = now.getTime() - (24 * 60 * 60 * 1000);
-
     return [...logs]
-      .filter(log => {
-        const lessonDate = new Date(log.dateISO);
-        // Rule 1: Always show one-time lessons if they are for today or the future
-        if (log.isOneTime && (isSameDay(lessonDate, now) || lessonDate > now)) {
-          return true;
-        }
-        // Rule 2: Show ANY lesson if it was updated recently
-        return log.updatedAt >= cutoff;
+      .sort((a, b) => {
+        const dateCompare = new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime();
+        if (dateCompare !== 0) return dateCompare;
+        // If same date, sort by start time (HH:mm)
+        return (b.startTime || '').localeCompare(a.startTime || '');
       })
-      .sort((a, b) => b.updatedAt - a.updatedAt) // Sort by update time for "Activity"
-      .slice(0, 10); // Don't overflow
+      .slice(0, 3);
   }, [logs]);
 
   // Upcoming lessons for next 7 days (recurring and one-time)
@@ -274,6 +245,13 @@ export default function Dashboard() {
 
         <SectionContainer
           title={t('dashboard.sections.recentActivity')}
+          rightAction={
+            <TouchableOpacity onPress={() => router.push('/school-history' as any)}>
+              <Text style={{ color: colors.accentPrimary, fontFamily: fonts.bold, fontSize: 13 }}>
+                {t('common.viewAll')}
+              </Text>
+            </TouchableOpacity>
+          }
         >
           {recentLogs.length === 0 ? (
             <DashboardEmptyState icon="flash-outline" message={t('dashboard.noRecentActivity')} />

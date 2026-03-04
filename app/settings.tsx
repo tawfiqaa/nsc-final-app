@@ -400,6 +400,10 @@ export default function SettingsScreen() {
                         <Text style={[styles.label, textStyle]}>Commit</Text>
                         <Text style={[styles.value, secondaryStyle, { fontSize: 10 }]}>{process.env.EXPO_PUBLIC_GIT_COMMIT || 'development'}</Text>
                     </View>
+                    <View style={styles.row}>
+                        <Text style={[styles.label, textStyle]}>Sync Time</Text>
+                        <Text style={[styles.value, secondaryStyle, { fontSize: 10 }]}>04/03 02:35</Text>
+                    </View>
                 </View>
 
                 <TouchableOpacity
