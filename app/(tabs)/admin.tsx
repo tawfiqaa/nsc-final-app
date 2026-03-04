@@ -20,11 +20,7 @@ export default function AdminScreen() {
 
     const [pendingMembers, setPendingMembers] = useState<OrgMembership[]>([]);
     const [approvedMembers, setApprovedMembers] = useState<OrgMembership[]>([]);
-<<<<<<< HEAD
     const [orgStats, setOrgStats] = useState({ schoolCount: 0, teacherCount: 0 });
-=======
-    const [orgStats, setOrgStats] = useState({ totalSchools: 0, teacherCount: 0 });
->>>>>>> origin/master
     const [loading, setLoading] = useState(true);
 
     const isOwner = membershipRole === 'owner';
@@ -60,7 +56,6 @@ export default function AdminScreen() {
             }
         );
 
-<<<<<<< HEAD
         // Fetch Org Stats (Schools count)
         const schoolsRef = collection(db, 'orgs', activeOrgId, 'schools');
         const schedulesRef = collection(db, 'orgs', activeOrgId, 'schedules');
@@ -104,36 +99,14 @@ export default function AdminScreen() {
             });
             lessonSchools = names;
             updateTotalSchools();
-=======
-        // Fetch Org Stats (Unique Schools per teacher)
-        const schedulesRef = collection(db, 'orgs', activeOrgId, 'schedules');
-        const schedulesStatsUnsub = onSnapshot(schedulesRef, (snap) => {
-            const teacherSchools: Record<string, Set<string>> = {};
-            snap.forEach(d => {
-                const data = d.data();
-                if (data.createdBy && data.school) {
-                    if (!teacherSchools[data.createdBy]) {
-                        teacherSchools[data.createdBy] = new Set();
-                    }
-                    teacherSchools[data.createdBy].add(data.school);
-                }
-            });
-
-            const totalSchools = Object.values(teacherSchools).reduce((acc, set) => acc + set.size, 0);
-            setOrgStats(prev => ({ ...prev, totalSchools }));
->>>>>>> origin/master
         });
 
         return () => {
             pendingUnsub();
             approvedUnsub();
-<<<<<<< HEAD
             schoolsUnsub();
             schedulesUnsub();
             lessonsUnsub();
-=======
-            schedulesStatsUnsub();
->>>>>>> origin/master
         };
     }, [activeOrgId, isAdmin, isSuperAdmin]);
 
@@ -297,7 +270,6 @@ export default function AdminScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
-
             <FlatList
                 data={[]}
                 renderItem={() => null}
@@ -360,13 +332,8 @@ export default function AdminScreen() {
                                             elevation: theme === 'light' ? 2 : 4,
                                         }
                                     ]}>
-<<<<<<< HEAD
                                         <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.schoolCount}</Text>
                                         <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('admin.stats.activeSchools')}</Text>
-=======
-                                        <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{orgStats.totalSchools}</Text>
-                                        <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Schools</Text>
->>>>>>> origin/master
                                     </View>
                                 </View>
 
@@ -409,8 +376,6 @@ export default function AdminScreen() {
                                 </View>
                             </>
                         )}
-
-
                     </>
                 }
                 contentContainerStyle={styles.list}
