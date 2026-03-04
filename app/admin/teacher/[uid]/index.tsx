@@ -177,22 +177,14 @@ export default function TeacherDetailsScreen() {
         const kmRate = teacherPayrollSettings?.kmRate || 0;
         const totalPay = (totalHours * hourlyRate) + (totalDistance * kmRate);
 
-        const last30Days = new Date();
-        last30Days.setDate(last30Days.getDate() - 30);
-        const recentLogs = logs.filter(log => new Date(log.dateISO) >= last30Days);
-        const presentCount = recentLogs.filter(l => l.status === 'present').length;
-        const attendanceRate = recentLogs.length > 0 ? (presentCount / recentLogs.length) * 100 : 100;
-
         // Calculate Unique Schools
         const uniqueSchools = new Set(schedules.map(s => s.school).filter(Boolean));
         const schoolCount = uniqueSchools.size;
 
         return {
-            totalHours: Number(totalHours || 0),
-            totalDistance: Number(totalDistance || 0),
             totalPay: Number(totalPay || 0),
-            attendanceRate,
-            schoolCount
+            schoolCount,
+            hasPayroll: !!teacherPayrollSettings && (teacherPayrollSettings.hourlyRate > 0 || teacherPayrollSettings.kmRate > 0)
         };
     }, [logs, schedules, teacherPayrollSettings]);
 
@@ -217,11 +209,17 @@ export default function TeacherDetailsScreen() {
             <View style={[styles.statIconContainer, { backgroundColor: colors.accentPrimary + '15' }]}>
                 <Ionicons name={icon} size={16} color={colors.accentPrimary} />
             </View>
-            <View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.statValue, { color: colors.textPrimary, fontFamily: fonts.bold }]}>
                     {value}<Text style={{ fontSize: 10, fontFamily: fonts.regular, opacity: 0.7 }}> {unit}</Text>
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
+                <Text
+                    style={[styles.statLabel, { color: colors.textSecondary }]}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                >
+                    {label}
+                </Text>
             </View>
         </View>
     );
@@ -281,12 +279,20 @@ export default function TeacherDetailsScreen() {
 
                 {/* Quick Stats Row */}
                 <View style={styles.statsContainer}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScroll}>
-                        <StatCard label={t('teacherDetails.stats.schoolCount')} value={formatNumber(stats.schoolCount)} icon="school-outline" />
-                        <StatCard label={t('teacherDetails.stats.monthlyKm')} value={formatNumber(stats.totalDistance, { maximumFractionDigits: 1 })} unit="km" icon="car-outline" />
-                        <StatCard label={t('teacherDetails.stats.attendance')} value={formatNumber(stats.attendanceRate, { maximumFractionDigits: 0 })} unit="%" icon="checkmark-circle-outline" />
-                        <StatCard label={t('teacherDetails.stats.estPayroll')} value={formatCurrency(stats.totalPay, teacherPayrollSettings?.currency || 'ILS')} icon="cash-outline" />
-                    </ScrollView>
+                    <View style={styles.statsGrid}>
+                        <StatCard
+                            label={t('teacherDetails.stats.schoolCount')}
+                            value={formatNumber(stats.schoolCount)}
+                            icon="school-outline"
+                        />
+                        {stats.hasPayroll && (
+                            <StatCard
+                                label={t('teacherDetails.stats.estPayroll')}
+                                value={formatCurrency(stats.totalPay, teacherPayrollSettings?.currency || 'ILS')}
+                                icon="cash-outline"
+                            />
+                        )}
+                    </View>
                 </View>
 
                 {/* Active Schedules Section */}
@@ -444,16 +450,17 @@ const styles = StyleSheet.create({
     statsContainer: {
         marginBottom: 24,
     },
-    statsScroll: {
-        paddingRight: 16,
+    statsGrid: {
+        flexDirection: 'row',
         gap: 12,
+        flexWrap: 'wrap',
     },
     statCard: {
         padding: 14,
-        width: 140,
+        flex: 1,
+        minWidth: 140,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
     },
     statIconContainer: {
         width: 32,
