@@ -18,7 +18,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import LocationPickerMap from '../src/components/LocationPickerMap';
 import { useLesson } from '../src/contexts/LessonContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { SchoolLocation } from '../src/types';
@@ -38,7 +38,7 @@ export default function LocationPickerScreen() {
     // @ts-ignore
     const { schoolId } = router.useLocalSearchParams();
 
-    const [region, setRegion] = useState<Region>({
+    const [region, setRegion] = useState<any>({
         latitude: 32.0853, // Default to Tel Aviv
         longitude: 34.7818,
         latitudeDelta: 0.01,
@@ -54,7 +54,7 @@ export default function LocationPickerScreen() {
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    const mapRef = useRef<MapView>(null);
+    const mapRef = useRef<any>(null);
     const searchTimeout = useRef<NodeJS.Timeout | null>(null);
     const geocodeTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -128,7 +128,7 @@ export default function LocationPickerScreen() {
         }).start();
     };
 
-    const onRegionChangeComplete = (newRegion: Region) => {
+    const onRegionChangeComplete = (newRegion: any) => {
         setRegion(newRegion);
         Animated.spring(pinAnim, {
             toValue: 0,
@@ -188,16 +188,12 @@ export default function LocationPickerScreen() {
 
             {/* Map Section */}
             <View style={styles.mapContainer}>
-                <MapView
-                    ref={mapRef}
-                    style={styles.map}
-                    provider={PROVIDER_GOOGLE}
-                    initialRegion={region}
+                <LocationPickerMap
+                    mapRef={mapRef}
+                    region={region}
+                    colors={colors}
                     onRegionChange={onRegionChangeStart}
                     onRegionChangeComplete={onRegionChangeComplete}
-                    showsUserLocation={true}
-                    showsMyLocationButton={false}
-                    showsCompass={false}
                 />
 
                 {/* Center Pin Indicator */}
