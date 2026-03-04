@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, query, serverTimestamp, where, writeBatch } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next'; // Added this import based on the instruction's intent
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useOrg } from '../../src/contexts/OrgContext';
@@ -15,6 +16,7 @@ export default function AdminScreen() {
     const { radius, interaction } = tokens;
     const { user } = useAuth();
     const { activeOrgId, activeOrg, membershipRole } = useOrg();
+    const { t } = useTranslation();
 
     const [pendingMembers, setPendingMembers] = useState<OrgMembership[]>([]);
     const [approvedMembers, setApprovedMembers] = useState<OrgMembership[]>([]);
@@ -66,7 +68,10 @@ export default function AdminScreen() {
                 let hours = 0;
                 snap.forEach(d => {
                     const data = d.data();
-                    if (data.status === 'present') hours += (data.hours || 0);
+                    if (data.status === 'present') {
+                        // Defensive: ensure numeric to avoid .toFixed() crashes on strings
+                        hours += Number(data.hours || 0);
+                    }
                 });
                 setOrgStats(prev => ({ ...prev, totalHours: hours }));
             }
@@ -341,7 +346,7 @@ export default function AdminScreen() {
                                         elevation: 2,
                                     }
                                 ]}>
-                                    <Text style={[styles.orgIdLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>Organization Join ID (Share with teachers)</Text>
+                                    <Text style={[styles.orgIdLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('admin.orgJoinId')}</Text>
                                     <Text style={[styles.orgIdText, { color: colors.accentPrimary, fontFamily: fonts.bold }]} selectable>{activeOrgId}</Text>
                                 </View>
                             </>

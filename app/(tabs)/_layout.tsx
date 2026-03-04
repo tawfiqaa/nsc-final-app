@@ -100,12 +100,19 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="admin"
         options={{
-          href: isAdmin ? '/(tabs)/admin' : null,
+          href: isAdmin ? '/admin' : null,
           title: t('tabs.admin'),
           headerTitle: t('tabs.admin'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="school-history"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

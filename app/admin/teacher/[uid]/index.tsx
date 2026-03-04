@@ -187,7 +187,13 @@ export default function TeacherDetailsScreen() {
         const uniqueSchools = new Set(schedules.map(s => s.school).filter(Boolean));
         const schoolCount = uniqueSchools.size;
 
-        return { totalHours, totalDistance, totalPay, attendanceRate, schoolCount };
+        return {
+            totalHours: Number(totalHours || 0),
+            totalDistance: Number(totalDistance || 0),
+            totalPay: Number(totalPay || 0),
+            attendanceRate,
+            schoolCount
+        };
     }, [logs, schedules, teacherPayrollSettings]);
 
     if (loading) {

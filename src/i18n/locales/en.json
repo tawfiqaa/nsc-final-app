@@ -46,7 +46,9 @@
             "monthlyHours": "Total Hours",
             "monthlyKm": "Total KM",
             "activeSchools": "Active Schools"
-        }
+        },
+        "noTeachersFound": "No teachers found matching your search.",
+        "orgJoinId": "Organization Join ID (Share with teachers)"
     },
     "teacherDetails": {
         "recentActivity": "Recent Activity",

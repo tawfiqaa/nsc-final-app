@@ -123,7 +123,9 @@
             "monthlyHours": "סה\"כ שעות",
             "monthlyKm": "סה\"כ ק\"מ",
             "activeSchools": "בתי ספר פעילים"
-        }
+        },
+        "noTeachersFound": "לא נמצאו מורים המתאימים לחיפוש.",
+        "orgJoinId": "מזהה הצטרפות לארגון (שתף עם מורים)"
     },
     "teacherDetails": {
         "recentActivity": "פעילות אחרונה",

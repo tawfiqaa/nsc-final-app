@@ -46,7 +46,9 @@
             "monthlyHours": "إجمالي الساعات",
             "monthlyKm": "إجمالي الكيلومترات",
             "activeSchools": "المدارس النشطة"
-        }
+        },
+        "noTeachersFound": "لم يتم العثور على معلمين يطابقون بحثك.",
+        "orgJoinId": "معرف الانضمام للمنظمة (شاركه مع المعلمين)"
     },
     "teacherDetails": {
         "recentActivity": "النشاط الأخير",
