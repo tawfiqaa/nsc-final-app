@@ -20,7 +20,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+<<<<<<< HEAD
 import { LogCard } from '../../src/components/LogCard';
+=======
+import SchoolMap, { Marker } from '../../components/SchoolMap';
+>>>>>>> origin/master
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
 import { useOrg } from '../../src/contexts/OrgContext';
@@ -76,6 +80,13 @@ export default function SchoolDetailsScreen() {
     // Overview states
     const [editingLog, setEditingLog] = useState<any>(null);
     const [notesInput, setNotesInput] = useState('');
+<<<<<<< HEAD
+=======
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [tempLocation, setTempLocation] = useState<{ lat: number, lng: number } | null>(null);
+    const [locationLabelInput, setLocationLabelInput] = useState('');
+    const [savingLocation, setSavingLocation] = useState(false);
+>>>>>>> origin/master
 
     // Students states
     const [students, setStudents] = useState<Student[]>([]);
@@ -121,6 +132,7 @@ export default function SchoolDetailsScreen() {
 
     const handleOpenEditLocation = () => {
         setShowMoreMenu(false);
+<<<<<<< HEAD
         const schoolId = stats.schoolDoc?.id || schoolIdParam!;
         router.push({
             pathname: '/location-picker' as any,
@@ -141,12 +153,64 @@ export default function SchoolDetailsScreen() {
         }
 
         if (!url) {
+=======
+        setTempLocation(stats.schoolDoc?.location || null);
+        setLocationLabelInput(stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || '');
+        setShowLocationModal(true);
+    };
+
+    const handleSaveLocation = async () => {
+        if (!tempLocation) {
+            Alert.alert(t('common.error'), t('schoolDetails.noLocationSet'));
+            return;
+        }
+
+        setSavingLocation(true);
+        try {
+            const schoolId = stats.schoolDoc?.id || schoolIdParam!;
+            await updateSchoolLocation(schoolId, {
+                location: tempLocation,
+                locationLabel: locationLabelInput.trim() || undefined
+            });
+            setShowLocationModal(false);
+        } catch (e) {
+            Alert.alert(t('common.error'), "Failed to save location");
+        } finally {
+            setSavingLocation(false);
+        }
+    };
+
+    const handleNavigate = () => {
+        const loc = stats.schoolDoc?.location;
+        if (!loc) {
+>>>>>>> origin/master
             Alert.alert(t('schoolDetails.noLocationSet'), t('schoolDetails.noLocationSet'));
             return;
         }
 
+<<<<<<< HEAD
         Linking.openURL(url).catch(() => {
             Alert.alert(t('common.error'), "Could not open maps");
+=======
+        const label = stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || schoolName;
+        const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+        const latLng = `${loc.lat},${loc.lng}`;
+        const url = Platform.select({
+            ios: `${scheme}${label}@${latLng}`,
+            android: `${scheme}${latLng}(${label})`
+        });
+
+        const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${latLng}`;
+
+        Linking.canOpenURL(url!).then(supported => {
+            if (supported) {
+                Linking.openURL(url!);
+            } else {
+                Linking.openURL(fallbackUrl);
+            }
+        }).catch(() => {
+            Linking.openURL(fallbackUrl);
+>>>>>>> origin/master
         });
     };
 
@@ -243,6 +307,7 @@ export default function SchoolDetailsScreen() {
             {/* Location Card */}
             <View style={[styles.locationCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.locationHeader}>
+<<<<<<< HEAD
                     <View style={[styles.iconBox, { backgroundColor: colors.primary + '10' }]}>
                         <Ionicons name="location" size={24} color={colors.primary} />
                     </View>
@@ -256,12 +321,22 @@ export default function SchoolDetailsScreen() {
                     </View>
 
                     {(stats.schoolDoc?.location || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel) ? (
+=======
+                    <View style={{ flex: 1 }}>
+                        <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 4 }]}>{t('schoolDetails.location')}</Text>
+                        <Text style={[textStyle, { fontSize: 14 }]} numberOfLines={2}>
+                            {stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || t('schoolDetails.noLocationSet')}
+                        </Text>
+                    </View>
+                    {stats.schoolDoc?.location && (
+>>>>>>> origin/master
                         <TouchableOpacity
                             style={[styles.navigateBtn, { backgroundColor: colors.primary }]}
                             onPress={handleNavigate}
                         >
                             <Ionicons name="paper-plane" size={20} color="#fff" />
                         </TouchableOpacity>
+<<<<<<< HEAD
                     ) : (
                         !isRestrictedAdmin && (
                             <TouchableOpacity
@@ -284,6 +359,48 @@ export default function SchoolDetailsScreen() {
                             {t('schoolDetails.editLocation')}
                         </Text>
                     </TouchableOpacity>
+=======
+                    )}
+                </View>
+
+                {stats.schoolDoc?.location ? (
+                    <View style={styles.mapPreviewContainer}>
+                        <SchoolMap
+                            style={styles.mapPreview}
+                            scrollEnabled={false}
+                            zoomEnabled={false}
+                            rotateEnabled={false}
+                            pitchEnabled={false}
+                            region={{
+                                latitude: stats.schoolDoc.location.lat,
+                                longitude: stats.schoolDoc.location.lng,
+                                latitudeDelta: 0.01,
+                                longitudeDelta: 0.01,
+                            }}
+                        >
+                            <Marker
+                                coordinate={{
+                                    latitude: stats.schoolDoc.location.lat,
+                                    longitude: stats.schoolDoc.location.lng,
+                                }}
+                            />
+                        </SchoolMap>
+                        {!isRestrictedAdmin && (
+                            <TouchableOpacity style={styles.editLocationText} onPress={handleOpenEditLocation}>
+                                <Text style={[textStyle, { color: colors.primary, fontFamily: fonts.bold }]}>{t('schoolDetails.editLocation')}</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                ) : (
+                    !isRestrictedAdmin && (
+                        <TouchableOpacity
+                            style={[styles.setBtn, { borderColor: colors.primary }]}
+                            onPress={handleOpenEditLocation}
+                        >
+                            <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('schoolDetails.editLocation')}</Text>
+                        </TouchableOpacity>
+                    )
+>>>>>>> origin/master
                 )}
             </View>
 
@@ -308,6 +425,7 @@ export default function SchoolDetailsScreen() {
             )}
 
             {/* History Section */}
+<<<<<<< HEAD
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
                 <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 0 }]}>{t('schoolDetails.recentHistory')}</Text>
                 {stats.schoolLogs.length > 5 && (
@@ -330,6 +448,28 @@ export default function SchoolDetailsScreen() {
                     />
                 ))
             )}
+=======
+            <Text style={[styles.sectionTitle, boldStyle, { marginTop: 24 }]}>{t('schoolDetails.recentHistory')}</Text>
+            {stats.schoolLogs.slice(0, 5).map(log => (
+                <View key={log.id} style={[styles.scheduleItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View>
+                        <Text style={boldStyle}>{log.localDayKey}</Text>
+                        <Text style={secondaryStyle}>{log.startTime} - {log.hours}h</Text>
+                        {log.notes && <Text style={[textStyle, { fontSize: 12, marginTop: 4 }]} numberOfLines={1}>{log.notes}</Text>}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <TouchableOpacity onPress={() => { setEditingLog(log); setNotesInput(log.notes || ''); }}>
+                            <Ionicons name="create-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                        {!isRestrictedAdmin && (
+                            <TouchableOpacity onPress={() => deleteLog(log.id)}>
+                                <Ionicons name="trash-outline" size={20} color={colors.error} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            ))}
+>>>>>>> origin/master
         </ScrollView>
     );
 
@@ -462,10 +602,63 @@ export default function SchoolDetailsScreen() {
                                 <Text style={[textStyle, { fontSize: 16, color: colors.error }]}>{t('schools.deleteSchool')}</Text>
                             </TouchableOpacity>
                         )}
+<<<<<<< HEAD
                     </View>
                 </TouchableOpacity>
             </Modal>
 
+=======
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            <Modal visible={showLocationModal} transparent={false} animationType="slide" onRequestClose={() => setShowLocationModal(false)}>
+                <View style={[styles.mapModalContainer, { backgroundColor: colors.background }]}>
+                    <View style={[styles.mapModalHeader, { borderBottomColor: colors.border }]}>
+                        <TouchableOpacity onPress={() => setShowLocationModal(false)} style={styles.headerIcon}>
+                            <Ionicons name="close" size={24} color={colors.text} />
+                        </TouchableOpacity>
+                        <Text style={[boldStyle, { fontSize: 18, flex: 1, textAlign: 'center' }]}>{t('schoolDetails.editLocation')}</Text>
+                        <TouchableOpacity onPress={handleSaveLocation} style={styles.headerIcon} disabled={savingLocation}>
+                            {savingLocation ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('common.save')}</Text>}
+                        </TouchableOpacity>
+                    </View>
+                    <TextInput
+                        style={[styles.locationLabelInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
+                        placeholder={t('schoolDetails.addressLabel')}
+                        placeholderTextColor={colors.secondaryText}
+                        value={locationLabelInput}
+                        onChangeText={setLocationLabelInput}
+                    />
+                    <View style={{ flex: 1 }}>
+                        <SchoolMap
+                            style={{ flex: 1 }}
+                            initialRegion={{
+                                latitude: tempLocation?.lat || 32.0853,
+                                longitude: tempLocation?.lng || 34.7818,
+                                latitudeDelta: 0.0922,
+                                longitudeDelta: 0.0421,
+                            }}
+                            onPress={(e: any) => {
+                                const { latitude, longitude } = e.nativeEvent.coordinate;
+                                setTempLocation({ lat: latitude, lng: longitude });
+                            }}
+                        >
+                            {tempLocation && (
+                                <Marker
+                                    draggable
+                                    coordinate={{ latitude: tempLocation.lat, longitude: tempLocation.lng }}
+                                    onDragEnd={(e: any) => setTempLocation({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}
+                                />
+                            )}
+                        </SchoolMap>
+                        <View style={styles.mapInstruction}>
+                            <Text style={[secondaryStyle, { textAlign: 'center', fontSize: 12 }]}>{t('schoolDetails.mapInstruction')}</Text>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+>>>>>>> origin/master
 
             <Modal visible={!!editingLog} transparent animationType="fade" onRequestClose={() => setEditingLog(null)}>
                 <View style={styles.modalOverlay}>
@@ -522,6 +715,7 @@ const styles = StyleSheet.create({
     statBox: { padding: 20, borderRadius: 16, borderWidth: 1, alignItems: 'center', marginBottom: 20 },
     statValue: { fontSize: 32, fontWeight: 'bold', marginBottom: 4 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
+<<<<<<< HEAD
     locationCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginBottom: 24, overflow: 'hidden' },
     locationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     iconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
@@ -529,6 +723,15 @@ const styles = StyleSheet.create({
     setBtnCompact: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', elevation: 2 },
     editBtnSimple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
     mapPreviewContainer: { height: 150, borderRadius: 12, overflow: 'hidden', marginTop: 8 },
+=======
+    locationCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginBottom: 24 },
+    locationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+    navigateBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+    mapPreviewContainer: { height: 150, borderRadius: 12, overflow: 'hidden', marginTop: 8 },
+    mapPreview: { ...StyleSheet.absoluteFillObject },
+    editLocationText: { position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.85)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    setBtn: { paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, marginTop: 8, borderStyle: 'dotted' },
+>>>>>>> origin/master
     scheduleItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderWidth: 1, borderRadius: 12, marginBottom: 8, alignItems: 'center' },
     empty: { fontStyle: 'italic' },
     fab: { position: 'absolute', right: 20, bottom: 30, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },

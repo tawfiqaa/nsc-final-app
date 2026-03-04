@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿{
     "auth": {
         "login": "Sign In",
@@ -15,19 +16,19 @@
         "authFailed": "Authentication Failed",
         "googleSignInFailed": "Google Sign In Failed"
     },
+=======
+{
+>>>>>>> origin/master
     "common": {
+        "loading": "Loading...",
         "error": "Error",
-        "teacherTracker": "Teacher Tracker",
-        "settings": "Settings",
-        "home": "Home",
         "save": "Save",
         "cancel": "Cancel",
-        "loading": "Loading...",
-        "language": "Language",
+        "delete": "Delete",
+        "confirm": "Confirm",
         "success": "Success",
-        "ok": "OK",
-        "version": "Version",
         "saving": "Saving...",
+<<<<<<< HEAD
         "viewAll": "View All",
         "delete": "Delete",
         "edit": "Edit",
@@ -145,85 +146,71 @@
         },
         "noMoreLessonsToday": "No more lessons today.",
         "noUpcomingLessons": "No upcoming lessons."
+=======
+        "deleteFailed": "Failed to delete"
+>>>>>>> origin/master
     },
     "tabs": {
         "dashboard": "Dashboard",
-        "schools": "My Schools",
+        "schools": "Schools",
         "history": "History",
         "admin": "Admin",
-        "settings": "Settings"
+        "settings": "Settings",
+        "payroll": "Payroll",
+        "reports": "Reports",
+        "roster": "Roster"
     },
-    "payroll": {
-        "title": "Payroll Report",
-        "ratesNotConfigured": "Rates not configured",
-        "setRatesToSeeTotals": "Set your hourly and KM rates to see pay totals.",
-        "dateRange": "Date Range",
-        "thisMonth": "This Month",
-        "lastMonth": "Last Month",
-        "custom": "Custom",
-        "totalHours": "Total Hours",
-        "totalKm": "Total KM",
-        "hoursPay": "Hours Pay",
-        "kmPay": "KM Pay",
-        "totalPayment": "Total Payment",
-        "exportCsv": "Export CSV",
-        "exportExcel": "Export Excel",
-        "exportNotice": "Exports include the full itemized list of lessons within this date range.",
-        "configTitle": "Payroll Rates Configuration",
-        "hourlyRate": "Hourly Rate",
-        "kmRate": "KM Rate",
-        "currency": "Currency",
-        "saveConfig": "Save Configuration",
-        "invalidInput": "Please enter valid numbers for rates.",
-        "saveSuccess": "Payroll settings saved.",
-        "saveFailed": "Save Failed",
-        "ratesMissing": "Rates Missing",
-        "setRatesBeforeExport": "Please set your payroll rates before exporting."
+    "schoolDetails": {
+        "overview": "Overview",
+        "gallery": "Gallery",
+        "students": "Students",
+        "addPastLesson": "Add Past Lesson",
+        "deleteSchoolConfirmLong": "Are you sure you want to permanently delete \"{{schoolName}}\"? This will wipe all schedules, attendance logs, and student records for this school. This action cannot be undone.",
+        "deleteEverything": "Delete Everything",
+        "weeklySchedule": "Weekly Routine",
+        "noRecurringSchedules": "No recurring schedules.",
+        "inactive": "Inactive",
+        "recentHistory": "Recent Activity",
+        "noHistoryYet": "No history yet.",
+        "confirmDeletion": "Confirm Deletion",
+        "deleteLogConfirm": "Are you sure you want to delete this log?",
+        "location": "Location",
+        "noLocationSet": "No location set",
+        "editLocation": "Edit School Location",
+        "addressLabel": "Address / Label (e.g. 123 Main St)",
+        "invalidCoordinates": "Invalid coordinates",
+        "attendedLessons": "Attended Lessons (Mo)",
+        "mapInstruction": "Tap on the map to place a pin or drag the existing pin to the exact location.",
+        "noSchedule": "No scheduled lessons for this school."
     },
     "schools": {
-        "title": "My Schools",
-        "lessonCount_one": "{{count}} Lesson",
-        "lessonCount_other": "{{count}} Lessons",
+        "title": "Schools",
+        "addSchool": "Add School",
         "deleteSchool": "Delete School",
-        "deleteSchoolConfirm": "Are you sure you want to permanently delete \"{{schoolName}}\" and all associated data?",
-        "noSchoolsFound": "No schools found. Add a lesson to see schools here.",
-        "exportFailed": "Export failed"
+        "schoolName": "School Name"
     },
-    "history": {
-        "title": "History",
-        "allSchools": "All Schools",
-        "filterBySchool": "Filter by School",
-        "noHistoryFound": "No history found.",
-        "lessons": "Lessons"
+    "dashboard": {
+        "totalPayment": "TOTAL (MO)",
+        "recentActivity": "Recent Activity",
+        "hours": "Hours",
+        "viewAll": "View All",
+        "addNote": "Add Note",
+        "editNote": "Edit Note",
+        "notesPlaceholder": "Add lesson details..."
     },
-    "addLesson": {
-        "titleAdd": "Add Lesson",
-        "titleEdit": "Edit Lesson",
-        "recurring": "Recurring",
-        "oneTime": "One-Time",
-        "editingSchedule": "Editing Schedule",
-        "schoolName": "School Name",
-        "schoolPlaceholder": "e.g. Lincoln High",
-        "daysOfWeek": "Days of Week",
-        "daysHelper": "Select all days that apply.",
-        "date": "Date",
-        "startTime": "Start Time",
-        "duration": "Duration (hrs)",
-        "distance": "Distance (km)",
-        "notes": "Notes (Optional)",
-        "notesPlaceholder": "e.g. Covered Chapter 4",
-        "saving": "Saving...",
-        "logOneTime": "Log One-Time Lesson",
-        "saveSchedules": "Save Schedule(s)",
-        "saveSchedule": "Save Schedule",
-        "validationError": "Validation Error",
-        "schoolRequired": "School name is required",
-        "selectDay": "Please select at least one day.",
-        "invalidDuration": "Duration must be greater than 0",
-        "invalidDistance": "Distance must be valid",
-        "updateSuccess": "Schedule updated.",
-        "oneTimeSuccess": "One-time lesson logged.",
-        "schedulesSaved": "Saved {{count}} schedule(s)."
+    "students": {
+        "title": "Students",
+        "newName": "Full Name",
+        "addFailed": "Add failed",
+        "archived": "Archived",
+        "noStudents": "No students found"
+    },
+    "gallery": {
+        "noPhotos": "No photos uploaded.",
+        "permissionDenied": "Storage permission denied",
+        "uploadFailed": "Upload failed",
+        "deleteConfirm": "Delete photo?",
+        "deleteFailed": "Delete failed"
     },
     "days": {
         "sun": "Sun",
@@ -233,6 +220,7 @@
         "thu": "Thu",
         "fri": "Fri",
         "sat": "Sat"
+<<<<<<< HEAD
     },
     "editLesson": {
         "title": "Edit Schedule",
@@ -318,5 +306,7 @@
         "panInstruction": "Pan the map to pick a location",
         "searchPlaceholder": "Search for address or place...",
         "useCurrentLocation": "Use my current location"
+=======
+>>>>>>> origin/master
     }
 }

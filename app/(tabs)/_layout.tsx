@@ -95,7 +95,21 @@ export default function TabsLayout() {
         }}
       />
 
+<<<<<<< HEAD
 
+=======
+      <Tabs.Screen
+        name="school-history"
+        options={{
+          href: null,
+          title: t('tabs.history'),
+          headerTitle: t('tabs.history'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" size={size} color={color} />
+          ),
+        }}
+      />
+>>>>>>> origin/master
 
       <Tabs.Screen
         name="admin"

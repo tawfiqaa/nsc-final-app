@@ -1,18 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useIsFocused } from '@react-navigation/native';
 import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
+import { useLesson } from '../src/contexts/LessonContext';
 import { useOrg } from '../src/contexts/OrgContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { db } from '../src/lib/firebase';
 import { AttendanceLog, PayrollSettings } from '../src/types';
 import { exportPayrollCSV, exportPayrollExcel } from '../src/utils/exportPayroll';
 import { useFormatting } from '../src/utils/formatters';
+import { computePayrollTotals } from '../src/utils/payroll';
 
 type RangeType = 'this_month' | 'last_month' | 'custom';
 
@@ -25,12 +28,14 @@ const CURRENCIES = [
 
 export default function PayrollScreen() {
     const { user } = useAuth();
-    const { membershipRole } = useOrg();
+    const { activeOrgId, membershipRole } = useOrg();
     const { colors, fonts, tokens, theme } = useTheme();
     const { radius, interaction } = tokens;
     const { t } = useTranslation();
     const { formatNumber, formatDate, formatCurrency } = useFormatting();
     const router = useRouter();
+    const isFocused = useIsFocused();
+    const { logs: contextLogs } = useLesson();
 
     const isOrgAdmin = membershipRole === 'admin' || membershipRole === 'owner';
     const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
@@ -70,14 +75,9 @@ export default function PayrollScreen() {
     // Load Settings
     useEffect(() => {
         if (!user || isRestrictedAdmin) return;
-        loadSettings();
-    }, [user, isRestrictedAdmin]);
 
-    const loadSettings = async () => {
-        if (!user) return;
-        try {
-            const docRef = doc(db, 'users', user.uid, 'settings', 'payroll');
-            const docSnap = await getDoc(docRef);
+        const docRef = doc(db, 'users', user.uid, 'settings', 'payroll');
+        const unsub = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data() as PayrollSettings;
                 setSettings(data);
@@ -88,12 +88,14 @@ export default function PayrollScreen() {
                 setSettings(null);
                 setShowSettingsModal(true);
             }
-        } catch (e) {
-            console.error('Failed to load payroll settings', e);
-        } finally {
             setLoading(false);
-        }
-    };
+        }, (err) => {
+            console.error('Failed to listen to payroll settings', err);
+            setLoading(false);
+        });
+
+        return () => unsub();
+    }, [user, isRestrictedAdmin]);
 
     const handleSaveSettings = async () => {
         if (!user) {
@@ -122,7 +124,6 @@ export default function PayrollScreen() {
             setSettings(dataToSave as any);
             setShowSettingsModal(false);
             Alert.alert(t('common.success'), t('payroll.saveSuccess'));
-            fetchLogsInRange();
         } catch (e: any) {
             console.error('Failed to save payroll settings', e);
             Alert.alert(t('payroll.saveFailed'), `Error: ${e.code || 'unknown'}\n${e.message || ''}`);
@@ -142,49 +143,60 @@ export default function PayrollScreen() {
         }
     }, [rangeType]);
 
+    // Fetch logs in range (Real-time)
     useEffect(() => {
-        if (!user || loading || isRestrictedAdmin) return;
-        fetchLogsInRange();
-    }, [user, loading, startDate, endDate, isRestrictedAdmin]);
+        if (!user || loading || isRestrictedAdmin || !isFocused) return;
 
-    const fetchLogsInRange = async () => {
-        if (!user) return;
         setFetchingLogs(true);
-        try {
-            const lessonsRef = collection(db, 'users', user.uid, 'lessons');
-            const startISO = startDate.toISOString();
-            const endISO = endDate.toISOString();
 
-            const q = query(
+        // Determine correct collection path (Org vs Personal)
+        const lessonsRef = activeOrgId
+            ? collection(db, 'orgs', activeOrgId, 'lessons')
+            : collection(db, 'users', user.uid, 'lessons');
+
+        // Start and End of days to be inclusive
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const startISO = start.toISOString();
+        const endISO = end.toISOString();
+
+        let q;
+        if (activeOrgId) {
+            // Org-mode lessons use 'createdBy' filter
+            q = query(
+                lessonsRef,
+                where('createdBy', '==', user.uid),
+                where('dateISO', '>=', startISO),
+                where('dateISO', '<=', endISO),
+                orderBy('dateISO', 'asc')
+            );
+        } else {
+            q = query(
                 lessonsRef,
                 where('dateISO', '>=', startISO),
                 where('dateISO', '<=', endISO),
                 orderBy('dateISO', 'asc')
             );
-
-            const querySnap = await getDocs(q);
-            const loadedLogs: AttendanceLog[] = [];
-            querySnap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
-            setLogs(loadedLogs);
-        } catch (e) {
-            console.error('Failed to fetch logs for payroll', e);
-        } finally {
-            setFetchingLogs(false);
         }
-    };
+
+        const unsub = onSnapshot(q, (snap) => {
+            const loadedLogs: AttendanceLog[] = [];
+            snap.forEach(d => loadedLogs.push(d.data() as AttendanceLog));
+            setLogs(loadedLogs);
+            setFetchingLogs(false);
+        }, (err) => {
+            console.error('Failed to fetch logs for payroll', err);
+            setFetchingLogs(false);
+        });
+
+        return () => unsub();
+    }, [user, loading, startDate, endDate, isRestrictedAdmin, activeOrgId, isFocused]);
 
     const summary = useMemo(() => {
-        const totalHours = logs.reduce((acc, log) => acc + (log.status === 'present' ? (log.hours || 0) : 0), 0);
-        const totalKm = logs.reduce((acc, log) => acc + (log.status === 'present' ? (log.distance || 0) : 0), 0);
-
-        const hRate = settings?.hourlyRate || 0;
-        const kRate = settings?.kmRate || 0;
-
-        const hoursPay = totalHours * hRate;
-        const kmPay = totalKm * kRate;
-        const totalPay = hoursPay + kmPay;
-
-        return { totalHours, totalKm, hoursPay, kmPay, totalPay };
+        return computePayrollTotals(logs, settings);
     }, [logs, settings]);
 
     const handleExport = async (formatType: 'csv' | 'excel') => {
@@ -265,7 +277,10 @@ export default function PayrollScreen() {
                 )}
 
                 <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: radius.large }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('payroll.dateRange')}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold, marginBottom: 0 }]}>{t('payroll.dateRange')}</Text>
+                        <Text style={{ fontSize: 11, color: colors.textSecondary, fontFamily: fonts.medium }}>{summary.totalLessonsCount} {t('common.lessons')}</Text>
+                    </View>
                     <View style={styles.rangeButtons}>
                         {(['this_month', 'last_month', 'custom'] as const).map((type) => (
                             <TouchableOpacity
@@ -313,7 +328,7 @@ export default function PayrollScreen() {
                     <View style={styles.summaryContainer}>
                         <View style={styles.summaryRow}>
                             <SummaryCard title={t('payroll.totalHours')} value={formatNumber(summary.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="h" color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
-                            <SummaryCard title={t('payroll.totalKm')} value={formatNumber(summary.totalKm, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
+                            <SummaryCard title={t('payroll.totalKm')} value={formatNumber(summary.totalDistance, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
                         </View>
                         {!ratesMissing && (
                             <>

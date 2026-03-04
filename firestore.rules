@@ -106,7 +106,11 @@ service cloud.firestore {
       // Only APPROVED members can access org data
       match /schools/{schoolId} {
         allow read: if isApprovedOrgMember(orgId) || isSuperAdmin();
-        allow write: if isApprovedOrgMember(orgId) || isSuperAdmin();
+        // Admins and Super Admins can do anything
+        allow write: if isOrgAdminOrOwner(orgId) || isSuperAdmin();
+        // Teachers can update gallery-related fields but not location or name
+        allow update: if isApprovedOrgMember(orgId) && 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gallery', 'updatedAt', 'galleryVersion']);
 
         match /students/{studentId} {
           allow read: if isApprovedOrgMember(orgId) || isSuperAdmin();

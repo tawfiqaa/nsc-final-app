@@ -15,6 +15,7 @@ import { db } from '../../../../src/lib/firebase';
 import { AttendanceLog, OrgMembership, PayrollSettings, Schedule, User } from '../../../../src/types';
 import { exportToExcel } from '../../../../src/utils/export';
 import { useFormatting } from '../../../../src/utils/formatters';
+import { computePayrollTotals } from '../../../../src/utils/payroll';
 
 export default function TeacherDetailsScreen() {
     const { uid } = useLocalSearchParams<{ uid: string }>();
@@ -165,17 +166,7 @@ export default function TeacherDetailsScreen() {
         const start = startOfMonth(now);
         const end = endOfMonth(now);
 
-        const monthLogs = logs.filter(log => {
-            const d = new Date(log.dateISO);
-            return d >= start && d <= end && log.status === 'present';
-        });
-
-        const totalHours = monthLogs.reduce((acc, log) => acc + log.hours, 0);
-        const totalDistance = monthLogs.reduce((acc, log) => acc + log.distance, 0);
-
-        const hourlyRate = teacherPayrollSettings?.hourlyRate || 0;
-        const kmRate = teacherPayrollSettings?.kmRate || 0;
-        const totalPay = (totalHours * hourlyRate) + (totalDistance * kmRate);
+        const payrollStats = computePayrollTotals(logs, teacherPayrollSettings, start, end);
 
         // Calculate Unique Schools (from both schedules and logs)
         const schoolNames = new Set<string>();
@@ -184,11 +175,20 @@ export default function TeacherDetailsScreen() {
         const schoolCount = schoolNames.size;
 
         return {
+<<<<<<< HEAD
             totalPay: Number(totalPay || 0),
             schoolCount,
             hasPayroll: !!teacherPayrollSettings && (teacherPayrollSettings.hourlyRate > 0 || teacherPayrollSettings.kmRate > 0)
         };
     }, [logs, schedules, teacherPayrollSettings]);
+=======
+            totalHours: payrollStats.totalHours,
+            totalDistance: payrollStats.totalDistance,
+            totalPay: payrollStats.totalPay,
+            attendanceRate
+        };
+    }, [logs, teacherPayrollSettings]);
+>>>>>>> origin/master
 
     if (loading) {
         return (

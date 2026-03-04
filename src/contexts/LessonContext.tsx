@@ -3,7 +3,11 @@ import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, qu
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { db, storage } from '../lib/firebase';
+<<<<<<< HEAD
 import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, School, SchoolLocation, TeacherData } from '../types';
+=======
+import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, School, TeacherData } from '../types';
+>>>>>>> origin/master
 import { STORAGE_KEYS } from '../utils/constants';
 import { useAuth } from './AuthContext';
 import { useOrg } from './OrgContext';
@@ -658,6 +662,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
+<<<<<<< HEAD
     const updateSchoolLocation = async (schoolId: string, payload: Partial<SchoolLocation> | { location: null }) => {
         if (!user) return;
         const now = Date.now();
@@ -688,6 +693,17 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 if (locationData.address !== undefined) updateData.addressLabel = locationData.address;
             }
         }
+=======
+    const updateSchoolLocation = async (schoolId: string, payload: { addressLabel?: string; locationLabel?: string; location: { lat: number; lng: number } | null }) => {
+        if (!user) return;
+        const now = Date.now();
+        const updateData: any = {
+            location: payload.location,
+            updatedAt: now
+        };
+        if (payload.addressLabel !== undefined) updateData.addressLabel = payload.addressLabel;
+        if (payload.locationLabel !== undefined) updateData.locationLabel = payload.locationLabel;
+>>>>>>> origin/master
 
         try {
             if (orgMode && activeOrgId) {
