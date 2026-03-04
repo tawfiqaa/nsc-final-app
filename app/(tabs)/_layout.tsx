@@ -113,7 +113,6 @@ export default function TabsLayout() {
         name="school-history"
         options={{
           href: null,
-          tabBarButton: () => null,
         }}
       />
     </Tabs>

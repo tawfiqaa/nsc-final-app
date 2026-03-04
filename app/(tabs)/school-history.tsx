@@ -23,31 +23,12 @@ export default function SchoolHistoryScreen() {
     const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
     const isRestrictedAdmin = isOrgAdmin && !isSuperAdmin;
 
-    React.useEffect(() => {
-        if (isRestrictedAdmin) {
-            router.replace('/(tabs)/admin');
-        }
-    }, [isRestrictedAdmin, router]);
-
-    if (isRestrictedAdmin) return null;
-
+    // ALL hooks MUST be called before any conditional return (React Rules of Hooks)
     const initialSchoolFilter = typeof params.school === 'string' ? params.school : t('history.allSchools');
     const [selectedSchool, setSelectedSchool] = useState(initialSchoolFilter);
     const [showFilter, setShowFilter] = useState(false);
-
     const [editingLog, setEditingLog] = useState<typeof logs[0] | null>(null);
     const [notesInput, setNotesInput] = useState('');
-
-    const handleEditNote = (log: typeof logs[0]) => {
-        setEditingLog(log);
-        setNotesInput(log.notes || '');
-    };
-
-    const confirmEditNote = async () => {
-        if (!editingLog) return;
-        await updateLogNotes(editingLog.id, notesInput.trim());
-        setEditingLog(null);
-    };
 
     const schools = useMemo(() => {
         const schoolSet = new Set(logs.map(l => l.school));
@@ -63,6 +44,26 @@ export default function SchoolHistoryScreen() {
     }, [logs, selectedSchool, t]);
 
     const totalLessons = filteredLogs.filter(l => l.status === 'present').length;
+
+    React.useEffect(() => {
+        if (isRestrictedAdmin) {
+            router.replace('/(tabs)/admin');
+        }
+    }, [isRestrictedAdmin, router]);
+
+    // Conditional return AFTER all hooks
+    if (isRestrictedAdmin) return null;
+
+    const handleEditNote = (log: typeof logs[0]) => {
+        setEditingLog(log);
+        setNotesInput(log.notes || '');
+    };
+
+    const confirmEditNote = async () => {
+        if (!editingLog) return;
+        await updateLogNotes(editingLog.id, notesInput.trim());
+        setEditingLog(null);
+    };
 
     const textStyle = { fontFamily: fonts.regular, color: colors.textPrimary };
     const boldStyle = { fontFamily: fonts.bold, color: colors.textPrimary };
