@@ -14,7 +14,10 @@
     "scheme": "teachertracker",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyCwR7GW4ir-PayHXp1IqcUW3DOEEbXgRBY"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +28,12 @@
       },
       "package": "com.teachertracker.app",
       "googleServicesFile": "./google-services.json",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCwR7GW4ir-PayHXp1IqcUW3DOEEbXgRBY"
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -47,7 +55,13 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-font",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ${PRODUCT_NAME} to use your location to help set school locations."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

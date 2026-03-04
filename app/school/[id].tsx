@@ -20,7 +20,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import SchoolMap, { Marker } from '../../components/SchoolMap';
 import { LogCard } from '../../src/components/LogCard';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
@@ -77,10 +76,6 @@ export default function SchoolDetailsScreen() {
     // Overview states
     const [editingLog, setEditingLog] = useState<any>(null);
     const [notesInput, setNotesInput] = useState('');
-    const [showLocationModal, setShowLocationModal] = useState(false);
-    const [tempLocation, setTempLocation] = useState<{ lat: number, lng: number } | null>(null);
-    const [locationLabelInput, setLocationLabelInput] = useState('');
-    const [savingLocation, setSavingLocation] = useState(false);
 
     // Students states
     const [students, setStudents] = useState<Student[]>([]);
@@ -126,57 +121,32 @@ export default function SchoolDetailsScreen() {
 
     const handleOpenEditLocation = () => {
         setShowMoreMenu(false);
-        setTempLocation(stats.schoolDoc?.location || null);
-        setLocationLabelInput(stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || '');
-        setShowLocationModal(true);
-    };
-
-    const handleSaveLocation = async () => {
-        if (!tempLocation) {
-            Alert.alert(t('common.error'), t('schoolDetails.noLocationSet'));
-            return;
-        }
-
-        setSavingLocation(true);
-        try {
-            const schoolId = stats.schoolDoc?.id || schoolIdParam!;
-            await updateSchoolLocation(schoolId, {
-                location: tempLocation,
-                locationLabel: locationLabelInput.trim() || undefined
-            });
-            setShowLocationModal(false);
-        } catch (e) {
-            Alert.alert(t('common.error'), "Failed to save location");
-        } finally {
-            setSavingLocation(false);
-        }
+        const schoolId = stats.schoolDoc?.id || schoolIdParam!;
+        router.push({
+            pathname: '/location-picker' as any,
+            params: { schoolId }
+        });
     };
 
     const handleNavigate = () => {
-        const loc = stats.schoolDoc?.location;
-        if (!loc) {
+        const school = stats.schoolDoc;
+        const location = school?.location;
+        const fallbackLabel = school?.locationLabel || school?.addressLabel;
+
+        let url = '';
+        if (location?.lat && location?.lng) {
+            url = `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`;
+        } else if (fallbackLabel) {
+            url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fallbackLabel)}`;
+        }
+
+        if (!url) {
             Alert.alert(t('schoolDetails.noLocationSet'), t('schoolDetails.noLocationSet'));
             return;
         }
 
-        const label = stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || schoolName;
-        const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
-        const latLng = `${loc.lat},${loc.lng}`;
-        const url = Platform.select({
-            ios: `${scheme}${label}@${latLng}`,
-            android: `${scheme}${latLng}(${label})`
-        });
-
-        const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${latLng}`;
-
-        Linking.canOpenURL(url!).then(supported => {
-            if (supported) {
-                Linking.openURL(url!);
-            } else {
-                Linking.openURL(fallbackUrl);
-            }
-        }).catch(() => {
-            Linking.openURL(fallbackUrl);
+        Linking.openURL(url).catch(() => {
+            Alert.alert(t('common.error'), "Could not open maps");
         });
     };
 
@@ -273,59 +243,47 @@ export default function SchoolDetailsScreen() {
             {/* Location Card */}
             <View style={[styles.locationCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.locationHeader}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 4 }]}>{t('schoolDetails.location')}</Text>
+                    <View style={[styles.iconBox, { backgroundColor: colors.primary + '10' }]}>
+                        <Ionicons name="location" size={24} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 2, fontSize: 16 }]}>
+                            {t('schoolDetails.location')}
+                        </Text>
                         <Text style={[textStyle, { fontSize: 14 }]} numberOfLines={2}>
-                            {stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || t('schoolDetails.noLocationSet')}
+                            {stats.schoolDoc?.location?.address || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel || t('schoolDetails.noLocationSet')}
                         </Text>
                     </View>
-                    {stats.schoolDoc?.location && (
+
+                    {(stats.schoolDoc?.location || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel) ? (
                         <TouchableOpacity
                             style={[styles.navigateBtn, { backgroundColor: colors.primary }]}
                             onPress={handleNavigate}
                         >
                             <Ionicons name="paper-plane" size={20} color="#fff" />
                         </TouchableOpacity>
+                    ) : (
+                        !isRestrictedAdmin && (
+                            <TouchableOpacity
+                                style={[styles.setBtnCompact, { backgroundColor: colors.primary }]}
+                                onPress={handleOpenEditLocation}
+                            >
+                                <Ionicons name="add" size={24} color="#fff" />
+                            </TouchableOpacity>
+                        )
                     )}
                 </View>
 
-                {stats.schoolDoc?.location ? (
-                    <View style={styles.mapPreviewContainer}>
-                        <SchoolMap
-                            style={styles.mapPreview}
-                            scrollEnabled={false}
-                            zoomEnabled={false}
-                            rotateEnabled={false}
-                            pitchEnabled={false}
-                            region={{
-                                latitude: stats.schoolDoc.location.lat,
-                                longitude: stats.schoolDoc.location.lng,
-                                latitudeDelta: 0.01,
-                                longitudeDelta: 0.01,
-                            }}
-                        >
-                            <Marker
-                                coordinate={{
-                                    latitude: stats.schoolDoc.location.lat,
-                                    longitude: stats.schoolDoc.location.lng,
-                                }}
-                            />
-                        </SchoolMap>
-                        {!isRestrictedAdmin && (
-                            <TouchableOpacity style={styles.editLocationText} onPress={handleOpenEditLocation}>
-                                <Text style={[textStyle, { color: colors.primary, fontFamily: fonts.bold }]}>{t('schoolDetails.editLocation')}</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                ) : (
-                    !isRestrictedAdmin && (
-                        <TouchableOpacity
-                            style={[styles.setBtn, { borderColor: colors.primary }]}
-                            onPress={handleOpenEditLocation}
-                        >
-                            <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('schoolDetails.editLocation')}</Text>
-                        </TouchableOpacity>
-                    )
+                {(!isRestrictedAdmin && (stats.schoolDoc?.location || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel)) && (
+                    <TouchableOpacity
+                        style={[styles.editBtnSimple, { borderTopColor: colors.border }]}
+                        onPress={handleOpenEditLocation}
+                    >
+                        <Ionicons name="create-outline" size={16} color={colors.primary} />
+                        <Text style={{ color: colors.primary, fontFamily: fonts.bold, marginLeft: 6, fontSize: 13 }}>
+                            {t('schoolDetails.editLocation')}
+                        </Text>
+                    </TouchableOpacity>
                 )}
             </View>
 
@@ -508,52 +466,6 @@ export default function SchoolDetailsScreen() {
                 </TouchableOpacity>
             </Modal>
 
-            <Modal visible={showLocationModal} transparent={false} animationType="slide" onRequestClose={() => setShowLocationModal(false)}>
-                <View style={[styles.mapModalContainer, { backgroundColor: colors.background }]}>
-                    <View style={[styles.mapModalHeader, { borderBottomColor: colors.border }]}>
-                        <TouchableOpacity onPress={() => setShowLocationModal(false)} style={styles.headerIcon}>
-                            <Ionicons name="close" size={24} color={colors.text} />
-                        </TouchableOpacity>
-                        <Text style={[boldStyle, { fontSize: 18, flex: 1, textAlign: 'center' }]}>{t('schoolDetails.editLocation')}</Text>
-                        <TouchableOpacity onPress={handleSaveLocation} style={styles.headerIcon} disabled={savingLocation}>
-                            {savingLocation ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('common.save')}</Text>}
-                        </TouchableOpacity>
-                    </View>
-                    <TextInput
-                        style={[styles.locationLabelInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
-                        placeholder={t('schoolDetails.addressLabel')}
-                        placeholderTextColor={colors.secondaryText}
-                        value={locationLabelInput}
-                        onChangeText={setLocationLabelInput}
-                    />
-                    <View style={{ flex: 1 }}>
-                        <SchoolMap
-                            style={{ flex: 1 }}
-                            initialRegion={{
-                                latitude: tempLocation?.lat || 32.0853,
-                                longitude: tempLocation?.lng || 34.7818,
-                                latitudeDelta: 0.0922,
-                                longitudeDelta: 0.0421,
-                            }}
-                            onPress={(e: any) => {
-                                const { latitude, longitude } = e.nativeEvent.coordinate;
-                                setTempLocation({ lat: latitude, lng: longitude });
-                            }}
-                        >
-                            {tempLocation && (
-                                <Marker
-                                    draggable
-                                    coordinate={{ latitude: tempLocation.lat, longitude: tempLocation.lng }}
-                                    onDragEnd={(e: any) => setTempLocation({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}
-                                />
-                            )}
-                        </SchoolMap>
-                        <View style={styles.mapInstruction}>
-                            <Text style={[secondaryStyle, { textAlign: 'center', fontSize: 12 }]}>{t('schoolDetails.mapInstruction')}</Text>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
 
             <Modal visible={!!editingLog} transparent animationType="fade" onRequestClose={() => setEditingLog(null)}>
                 <View style={styles.modalOverlay}>
@@ -610,13 +522,13 @@ const styles = StyleSheet.create({
     statBox: { padding: 20, borderRadius: 16, borderWidth: 1, alignItems: 'center', marginBottom: 20 },
     statValue: { fontSize: 32, fontWeight: 'bold', marginBottom: 4 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
-    locationCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginBottom: 24 },
-    locationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-    navigateBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+    locationCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginBottom: 24, overflow: 'hidden' },
+    locationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    iconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    navigateBtn: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+    setBtnCompact: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', elevation: 2 },
+    editBtnSimple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
     mapPreviewContainer: { height: 150, borderRadius: 12, overflow: 'hidden', marginTop: 8 },
-    mapPreview: { ...StyleSheet.absoluteFillObject },
-    editLocationText: { position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.85)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-    setBtn: { paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, marginTop: 8, borderStyle: 'dotted' },
     scheduleItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderWidth: 1, borderRadius: 12, marginBottom: 8, alignItems: 'center' },
     empty: { fontStyle: 'italic' },
     fab: { position: 'absolute', right: 20, bottom: 30, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },

@@ -307,5 +307,15 @@
         "deleteStudentConfirm": "هل أنت متأكد من رغبتك في حذف {{studentName}} نهائياً؟ سيؤدي هذا إلى إزالة جميع بياناتهم من قائمة هذه المدرسة.",
         "addFailed": "فشل إضافة الطالب",
         "deleteFailed": "فشل حذف الطالب"
+    },
+    "locationPicker": {
+        "title": "اختيار الموقع",
+        "confirmLocation": "تأكيد الموقع",
+        "selectedLocation": "الموقع المحدد",
+        "locating": "جاري تحديد الموقع...",
+        "updatingAddress": "جاري تحديث العنوان...",
+        "panInstruction": "قم بتحريك الخريطة لاختيار الموقع",
+        "searchPlaceholder": "ابحث عن عنوان أو مكان...",
+        "useCurrentLocation": "استخدام موقعي الحالي"
     }
 }

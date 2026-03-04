@@ -90,18 +90,26 @@ export interface User {
     };
 }
 
+export interface SchoolLocation {
+    address: string;
+    lat: number;
+    lng: number;
+    label?: string;
+    placeName?: string;
+    placeId?: string;
+    updatedAt: number;
+}
+
 export interface School {
-    id: string; // school name acts as ID in many places, but this is the document ID
+    id: string;
     name: string;
-    addressLabel?: string;
-    locationLabel?: string;
-    location?: {
-        lat: number;
-        lng: number;
-    } | null;
+    location?: SchoolLocation | null;
     gallery?: string[];
     createdAt: number;
     updatedAt: number;
+    // Legacy fields for backward compatibility during migration
+    addressLabel?: string;
+    locationLabel?: string;
 }
 
 export interface Schedule {
@@ -195,5 +203,5 @@ export interface LessonContextType {
     refresh: () => Promise<void>;
     setTargetUid: (uid: string) => void;
     saveAttendance: (lessonId: string, records: AttendanceRecord[]) => Promise<void>;
-    updateSchoolLocation: (schoolId: string, payload: { addressLabel?: string; locationLabel?: string; location: { lat: number; lng: number } | null }) => Promise<void>;
+    updateSchoolLocation: (schoolId: string, payload: Partial<SchoolLocation> | { location: null }) => Promise<void>;
 }

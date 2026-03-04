@@ -3,7 +3,7 @@ import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, qu
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { db, storage } from '../lib/firebase';
-import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, School, TeacherData } from '../types';
+import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, School, SchoolLocation, TeacherData } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 import { useAuth } from './AuthContext';
 import { useOrg } from './OrgContext';
@@ -658,15 +658,36 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
-    const updateSchoolLocation = async (schoolId: string, payload: { addressLabel?: string; locationLabel?: string; location: { lat: number; lng: number } | null }) => {
+    const updateSchoolLocation = async (schoolId: string, payload: Partial<SchoolLocation> | { location: null }) => {
         if (!user) return;
         const now = Date.now();
         const updateData: any = {
-            location: payload.location,
             updatedAt: now
         };
-        if (payload.addressLabel !== undefined) updateData.addressLabel = payload.addressLabel;
-        if (payload.locationLabel !== undefined) updateData.locationLabel = payload.locationLabel;
+
+        if ('location' in payload && payload.location === null) {
+            updateData.location = null;
+        } else {
+            // It's a Partial<SchoolLocation>
+            const locationData = payload as Partial<SchoolLocation>;
+
+            // If any location field is provided, we wrap it in the 'location' object in Firestore
+            // But we also might want to keep addressLabel/locationLabel for backward compatibility if provided
+            if (locationData.address || locationData.lat !== undefined) {
+                updateData.location = {
+                    ...locationData,
+                    updatedAt: now
+                };
+
+                // Keep backward compatibility for title/address label
+                if (locationData.address) updateData.addressLabel = locationData.address;
+                if (locationData.label) updateData.locationLabel = locationData.label;
+            } else {
+                // Handle cases where only labels might be sent
+                if (locationData.label !== undefined) updateData.locationLabel = locationData.label;
+                if (locationData.address !== undefined) updateData.addressLabel = locationData.address;
+            }
+        }
 
         try {
             if (orgMode && activeOrgId) {

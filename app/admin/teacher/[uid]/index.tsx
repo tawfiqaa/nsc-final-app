@@ -177,9 +177,11 @@ export default function TeacherDetailsScreen() {
         const kmRate = teacherPayrollSettings?.kmRate || 0;
         const totalPay = (totalHours * hourlyRate) + (totalDistance * kmRate);
 
-        // Calculate Unique Schools
-        const uniqueSchools = new Set(schedules.map(s => s.school).filter(Boolean));
-        const schoolCount = uniqueSchools.size;
+        // Calculate Unique Schools (from both schedules and logs)
+        const schoolNames = new Set<string>();
+        schedules.forEach(s => { if (s.school) schoolNames.add(s.school); });
+        logs.forEach(l => { if (l.school) schoolNames.add(l.school); });
+        const schoolCount = schoolNames.size;
 
         return {
             totalPay: Number(totalPay || 0),

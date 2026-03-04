@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import React, { useEffect, useState } from 'react';
@@ -25,7 +26,9 @@ interface Organization {
 }
 
 export default function OrgManagementScreen() {
-    const { colors, fonts } = useTheme();
+    const router = useRouter();
+    const { colors, fonts, tokens } = useTheme();
+    const { interaction, radius } = tokens;
     const { user } = useAuth();
     const { t } = useTranslation();
     const [orgs, setOrgs] = useState<Organization[]>([]);
@@ -106,7 +109,17 @@ export default function OrgManagementScreen() {
                 renderItem={renderOrgItem}
                 contentContainerStyle={styles.list}
                 ListHeaderComponent={
-                    <Text style={[styles.header, boldStyle]}>Organization Management</Text>
+                    <View style={styles.headerContainer}>
+                        <Text style={[styles.header, boldStyle]}>Organization Management</Text>
+                        <TouchableOpacity
+                            activeOpacity={interaction.pressedOpacity}
+                            style={[styles.createOrgBtn, { backgroundColor: colors.primary, borderRadius: radius.medium }]}
+                            onPress={() => router.push('/create-org')}
+                        >
+                            <Ionicons name="business-outline" size={20} color="#fff" />
+                            <Text style={[styles.createOrgBtnText, { fontFamily: fonts.bold }]}>Create New Organization</Text>
+                        </TouchableOpacity>
+                    </View>
                 }
                 ListEmptyComponent={
                     <Text style={[styles.empty, { color: colors.secondaryText }]}>No organizations found.</Text>
@@ -174,7 +187,24 @@ export default function OrgManagementScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     list: { padding: 20 },
-    header: { fontSize: 24, marginBottom: 20 },
+    headerContainer: {
+        flexDirection: 'column',
+        marginBottom: 20,
+    },
+    header: { fontSize: 24, marginBottom: 12 },
+    createOrgBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 14,
+        gap: 10,
+        marginBottom: 10,
+    },
+    createOrgBtnText: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: 'bold',
+    },
     orgCard: {
         flexDirection: 'row',
         alignItems: 'center',

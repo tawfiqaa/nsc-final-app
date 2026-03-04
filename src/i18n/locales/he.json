@@ -307,5 +307,15 @@
         "deleteStudentConfirm": "האם אתה בטוח שברצונך למחוק לצמיתות את {{studentName}}? פעולה זו תחמחק את כל הנתונים שלהם מרשימת בית הספר הזה.",
         "addFailed": "הוספת התלמיד נכשלה",
         "deleteFailed": "מחיקת התלמיד נכשלה"
+    },
+    "locationPicker": {
+        "title": "בחירת מיקום",
+        "confirmLocation": "אישור מיקום",
+        "selectedLocation": "מיקום שנבחר",
+        "locating": "מאתר...",
+        "updatingAddress": "מעדכן כתובת...",
+        "panInstruction": "הזז את המפה כדי לבחור מיקום",
+        "searchPlaceholder": "חפש כתובת או מקום...",
+        "useCurrentLocation": "השתמש במיקום הנוכחי שלי"
     }
 }

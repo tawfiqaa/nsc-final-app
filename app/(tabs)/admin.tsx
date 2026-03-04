@@ -58,14 +58,55 @@ export default function AdminScreen() {
 
         // Fetch Org Stats (Schools count)
         const schoolsRef = collection(db, 'orgs', activeOrgId, 'schools');
+        const schedulesRef = collection(db, 'orgs', activeOrgId, 'schedules');
+        const lessonsRef = collection(db, 'orgs', activeOrgId, 'lessons');
+
+        let schoolDocs = new Set<string>();
+        let scheduleSchools = new Set<string>();
+        let lessonSchools = new Set<string>();
+
+        const updateTotalSchools = () => {
+            const combined = new Set([
+                ...Array.from(schoolDocs),
+                ...Array.from(scheduleSchools),
+                ...Array.from(lessonSchools)
+            ]);
+            setOrgStats(prev => ({ ...prev, schoolCount: combined.size }));
+        };
+
         const schoolsUnsub = onSnapshot(schoolsRef, (snap) => {
-            setOrgStats(prev => ({ ...prev, schoolCount: snap.size }));
+            const names = new Set<string>();
+            snap.forEach(d => names.add(d.id));
+            schoolDocs = names;
+            updateTotalSchools();
+        });
+
+        const schedulesUnsub = onSnapshot(schedulesRef, (snap) => {
+            const names = new Set<string>();
+            snap.forEach(d => {
+                const data = d.data();
+                if (data.school) names.add(data.school);
+            });
+            scheduleSchools = names;
+            updateTotalSchools();
+        });
+
+        const lessonsUnsub = onSnapshot(lessonsRef, (snap) => {
+            const names = new Set<string>();
+            snap.forEach(d => {
+                const data = d.data();
+                if (data.school) names.add(data.school);
+            });
+            lessonSchools = names;
+            updateTotalSchools();
         });
 
         return () => {
             pendingUnsub();
             approvedUnsub();
             schoolsUnsub();
+            schedulesUnsub();
+            lessonsUnsub();
         };
     }, [activeOrgId, isAdmin, isSuperAdmin]);
 
@@ -337,33 +378,7 @@ export default function AdminScreen() {
                             </>
                         )}
 
-                        {/* Super Admin Actions */}
-                        {isSuperAdmin && (
-                            <View style={[
-                                styles.superAdminSection,
-                                {
-                                    backgroundColor: colors.surface,
-                                    borderColor: colors.accentPrimary + '40',
-                                    borderRadius: radius.large,
-                                    marginTop: 24,
-                                    shadowColor: colors.accentPrimary,
-                                    shadowOffset: { width: 0, height: 4 },
-                                    shadowOpacity: 0.1,
-                                    shadowRadius: 8,
-                                    elevation: 4,
-                                }
-                            ]}>
-                                <Text style={[styles.sectionTitle, { color: colors.accentPrimary, marginBottom: 12, fontFamily: fonts.bold }]}>Super Admin Controls</Text>
-                                <TouchableOpacity
-                                    activeOpacity={interaction.pressedOpacity}
-                                    style={[styles.createOrgBtn, { backgroundColor: colors.accentPrimary, borderRadius: radius.medium }]}
-                                    onPress={() => router.push('/create-org' as any)}
-                                >
-                                    <Ionicons name="business-outline" size={20} color="#fff" />
-                                    <Text style={[styles.createOrgBtnText, { fontFamily: fonts.bold }]}>Create New Organization</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+
                     </>
                 }
                 contentContainerStyle={styles.list}
@@ -406,12 +421,6 @@ const styles = StyleSheet.create({
     statCard: { flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
     statValue: { fontSize: 24, fontWeight: 'bold' },
     statLabel: { fontSize: 12, marginTop: 4, fontWeight: '600' },
-    superAdminSection: {
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        marginBottom: 24,
-    },
     emptyState: {
         padding: 32,
         borderRadius: 16,
@@ -429,18 +438,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 20,
-    },
-    createOrgBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 14,
-        borderRadius: 10,
-        gap: 10,
-    },
-    createOrgBtnText: {
-        color: '#fff',
-        fontSize: 15,
-        fontWeight: 'bold',
     },
 });

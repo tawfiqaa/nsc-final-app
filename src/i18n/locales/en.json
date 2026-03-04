@@ -308,5 +308,15 @@
         "deleteStudentConfirm": "Are you sure you want to permanently delete {{studentName}}? This will remove all their data from this school's roster.",
         "addFailed": "Failed to add student",
         "deleteFailed": "Failed to delete student"
+    },
+    "locationPicker": {
+        "title": "Location Picker",
+        "confirmLocation": "Confirm Location",
+        "selectedLocation": "Selected Location",
+        "locating": "Locating...",
+        "updatingAddress": "Updating address...",
+        "panInstruction": "Pan the map to pick a location",
+        "searchPlaceholder": "Search for address or place...",
+        "useCurrentLocation": "Use my current location"
     }
 }
