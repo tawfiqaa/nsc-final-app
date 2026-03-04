@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import { createUserWithEmailAndPassword, User as FirebaseUser, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import i18n, { applyRTLLogic, LANGUAGE_KEY } from '../i18n/i18n';
 import { auth, db } from '../lib/firebase';
@@ -22,6 +22,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const initialLangSyncDone = useRef(false);
 
     useEffect(() => {
         loadCachedUser();
@@ -68,21 +69,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setUser(userData);
                     await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(userData));
 
-                    // Sync language from Firestore
+                    // Sync language from Firestore ONLY on first load (not on every snapshot)
+                    // This prevents race conditions where changing language in-app
+                    // triggers an onSnapshot that reverts the language back
                     const dbLang = userData.settings?.ui?.language;
-                    if (dbLang && i18n.language !== dbLang) {
-                        const currentIsRTL = i18n.language === 'he' || i18n.language === 'ar';
-                        const newIsRTL = dbLang === 'he' || dbLang === 'ar';
+                    if (dbLang && !initialLangSyncDone.current) {
+                        initialLangSyncDone.current = true;
+                        if (i18n.language !== dbLang) {
+                            const currentIsRTL = i18n.language === 'he' || i18n.language === 'ar';
+                            const newIsRTL = dbLang === 'he' || dbLang === 'ar';
 
-                        await i18n.changeLanguage(dbLang);
-                        await AsyncStorage.setItem(LANGUAGE_KEY, dbLang);
+                            await i18n.changeLanguage(dbLang);
+                            await AsyncStorage.setItem(LANGUAGE_KEY, dbLang);
 
-                        if (currentIsRTL !== newIsRTL && Platform.OS !== 'web') {
-                            applyRTLLogic(dbLang);
-                            Updates.reloadAsync();
-                        } else {
-                            applyRTLLogic(dbLang);
+                            if (currentIsRTL !== newIsRTL && Platform.OS !== 'web') {
+                                applyRTLLogic(dbLang);
+                                Updates.reloadAsync();
+                            } else {
+                                applyRTLLogic(dbLang);
+                            }
                         }
+                    } else if (!initialLangSyncDone.current) {
+                        initialLangSyncDone.current = true;
                     }
                 } else {
                     // Create new user if not exists (e.g. email/password login first time)
