@@ -1,0 +1,64 @@
+﻿
+> teachertracker@1.0.3 vercel-build
+> npx expo export && node scripts/fix-web-icons.js
+
+env: load .env
+env: export EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID
+React Compiler enabled
+Starting Metro Bundler
+iOS node_modules\expo-router\entry.js ÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæ  0.0% (0/1)
+iOS node_modules\expo-router\entry.js ÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûæÔûæ 92.8% (913/948)
+Android node_modules\expo-router\entry.js ÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûæ 99.8% (944/945)
+iOS node_modules\expo-router\entry.js ÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûæ 99.9% (1561/1568)
+Android node_modules\expo-router\entry.js ÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûæ 99.8% (1564/1572)
+iOS node_modules\expo-router\entry.js ÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûæ 99.9% (1592/1599)
+Android node_modules\expo-router\entry.js ÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûæ 99.8% (1597/1603)
+iOS Bundling failed 12459ms node_modules\expo-router\entry.js (1599 modules)
+node.exe : SyntaxError: 
+SyntaxError: 
+C:\projects\final app\app\adm
+in\teacher\[uid]\index.tsx: 
+Unexpected token (178:0)
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (SyntaxE  
+  rror: Sy...d token (178:   
+ 0):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+
+[0m [90m 176 |[39m
+ [90m 177 |[39m         
+[36mreturn[39m {
+[31m[1m>[22m[39m[90m 
+178 |[39m [33m<<[39m[33m<
+<[39m[33m<<[39m[33m<[39m
+ [33mHEAD[39m
+ [90m     |[39m 
+[31m[1m^[22m[39m
+ [90m 179 |[39m            
+ totalPay[33m:[39m 
+[33mNumber[39m(totalPay 
+[33m||[39m 
+[35m0[39m)[33m,[39m
+ [90m 180 |[39m            
+ schoolCount[33m,[39m
+ [90m 181 |[39m            
+ hasPayroll[33m:[39m [33m!
+[39m[33m![39mteacherPayrol
+lSettings [33m&&[39m (teach
+erPayrollSettings[33m.[39mh
+ourlyRate [33m>[39m 
+[35m0[39m [33m||[39m teac
+herPayrollSettings[33m.[39m
+kmRate [33m>[39m 
+[35m0[39m)[0m

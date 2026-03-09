@@ -36,7 +36,12 @@ service cloud.firestore {
 
     // ── USERS ───────────────────────────────────────────────
     match /users/{uid} {
-      allow read, create, update: if isAuth() && (isOwner(uid) || isSuperAdmin());
+      allow read: if isAuth() && (
+        isOwner(uid) || 
+        isSuperAdmin() || 
+        isOrgAdminOrOwner(resource.data.activeOrgId)
+      );
+      allow create, update: if isAuth() && (isOwner(uid) || isSuperAdmin());
       allow delete: if false;
 
       // User's org membership index (read by owner, written by org admin actions too)
@@ -62,7 +67,12 @@ service cloud.firestore {
         }
       }
       match /settings/{settingId} {
-        allow read, write: if isAuth() && (isOwner(uid) || isSuperAdmin());
+        allow read: if isAuth() && (
+          isOwner(uid) || 
+          isSuperAdmin() || 
+          isOrgAdminOrOwner(get(/databases/$(database)/documents/users/$(uid)).data.activeOrgId)
+        );
+        allow write: if isAuth() && (isOwner(uid) || isSuperAdmin());
       }
     }
 
@@ -131,6 +141,14 @@ service cloud.firestore {
           allow read: if isApprovedOrgMember(orgId) || isSuperAdmin();
           allow write: if isApprovedOrgMember(orgId) || isSuperAdmin();
         }
+      }
+
+      // ── ANNOUNCEMENTS ────────────────────────────────────
+      // Any approved member can read; only admins/owners can write.
+      match /announcements/{announcementId} {
+        allow read: if isApprovedOrgMember(orgId) || isSuperAdmin();
+        allow create, delete: if isOrgAdminOrOwner(orgId) || isSuperAdmin();
+        allow update: if false; // announcements are immutable once posted
       }
     }
 

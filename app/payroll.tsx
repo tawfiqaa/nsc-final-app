@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, I18nManager, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useLesson } from '../src/contexts/LessonContext';
 import { useOrg } from '../src/contexts/OrgContext';
@@ -69,6 +69,9 @@ export default function PayrollScreen() {
     const [kmRateInput, setKmRateInput] = useState('');
     const [currencyInput, setCurrencyInput] = useState('ILS');
 
+    const [hourlyError, setHourlyError] = useState('');
+    const [kmError, setKmError] = useState('');
+
     // Data
     const [logs, setLogs] = useState<AttendanceLog[]>([]);
 
@@ -103,13 +106,28 @@ export default function PayrollScreen() {
             return;
         }
 
-        const hRate = parseFloat(hourlyRateInput);
-        const kRate = parseFloat(kmRateInput);
+        const hRateStr = hourlyRateInput.trim();
+        const kRateStr = kmRateInput.trim();
+        let hasError = false;
 
-        if (isNaN(hRate) || isNaN(kRate)) {
-            Alert.alert(t('common.error'), t('payroll.invalidInput'));
-            return;
+        if (!hRateStr || isNaN(parseFloat(hRateStr))) {
+            setHourlyError(t('payroll.invalidNumber'));
+            hasError = true;
+        } else {
+            setHourlyError('');
         }
+
+        if (!kRateStr || isNaN(parseFloat(kRateStr))) {
+            setKmError(t('payroll.invalidNumber'));
+            hasError = true;
+        } else {
+            setKmError('');
+        }
+
+        if (hasError) return;
+
+        const hRate = parseFloat(hRateStr);
+        const kRate = parseFloat(kRateStr);
 
         setSavingSettings(true);
         try {
@@ -253,7 +271,15 @@ export default function PayrollScreen() {
         <View style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={[styles.headerRow, { marginBottom: 20 }]}>
-                    <Text style={[styles.title, boldStyle]}>{t('payroll.title')}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity
+                            onPress={() => router.back()}
+                            style={{ marginRight: 15, padding: 5 }}
+                        >
+                            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={[styles.title, boldStyle]}>{t('payroll.title')}</Text>
+                    </View>
                     <TouchableOpacity onPress={() => setShowSettingsModal(true)}>
                         <Ionicons name="settings-outline" size={24} color={colors.accentPrimary} />
                     </TouchableOpacity>
@@ -279,7 +305,6 @@ export default function PayrollScreen() {
                 <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: radius.large }]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                         <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold, marginBottom: 0 }]}>{t('payroll.dateRange')}</Text>
-                        <Text style={{ fontSize: 11, color: colors.textSecondary, fontFamily: fonts.medium }}>{summary.totalLessonsCount} {t('common.lessons')}</Text>
                     </View>
                     <View style={styles.rangeButtons}>
                         {(['this_month', 'last_month', 'custom'] as const).map((type) => (
@@ -327,8 +352,8 @@ export default function PayrollScreen() {
                 ) : (
                     <View style={styles.summaryContainer}>
                         <View style={styles.summaryRow}>
-                            <SummaryCard title={t('payroll.totalHours')} value={formatNumber(summary.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="h" color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
-                            <SummaryCard title={t('payroll.totalKm')} value={formatNumber(summary.totalDistance, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
+                            <SummaryCard title={t('payroll.totalHours')} value={formatNumber(summary.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit={t('payroll.unitHours')} color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
+                            <SummaryCard title={t('payroll.totalKm')} value={formatNumber(summary.totalDistance, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit={t('payroll.unitKm')} color={colors.textPrimary} cardColor={colors.surface} font={fonts} radius={radius.large} border={colors.borderSubtle} theme={theme} divider={colors.divider} />
                         </View>
                         {!ratesMissing && (
                             <>
@@ -356,11 +381,11 @@ export default function PayrollScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                         activeOpacity={interaction.pressedOpacity}
-                        style={[styles.exportBtn, { backgroundColor: colors.accentPrimary, borderRadius: radius.medium }]}
+                        style={[styles.exportBtn, { borderColor: colors.accentPrimary, borderWidth: 1, borderRadius: radius.medium }]}
                         onPress={() => handleExport('excel')}
                     >
-                        <Ionicons name="download-outline" size={20} color="#fff" />
-                        <Text style={[styles.exportBtnText, { color: '#fff', fontFamily: fonts.bold }]}>{t('payroll.exportExcel')}</Text>
+                        <Ionicons name="download-outline" size={20} color={colors.accentPrimary} />
+                        <Text style={[styles.exportBtnText, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{t('payroll.exportExcel')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -384,45 +409,81 @@ export default function PayrollScreen() {
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={[styles.inputLabel, { color: colors.textPrimary, fontFamily: fonts.bold }]}>{t('payroll.hourlyRate')}</Text>
+                        <Text style={[styles.modalSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                            {t('payroll.configSubtitle')}
+                        </Text>
+
+                        <Text style={[styles.inputLabel, { color: colors.textPrimary, fontFamily: fonts.bold }]}>
+                            {t('payroll.hourlyRate')} <Text style={{ color: colors.warning }}>*</Text>
+                        </Text>
                         <TextInput
                             style={[
                                 styles.input,
                                 {
                                     color: colors.textPrimary,
-                                    borderColor: colors.borderSubtle,
+                                    borderColor: hourlyError ? colors.warning : colors.borderSubtle,
                                     backgroundColor: colors.backgroundSecondary,
                                     fontFamily: fonts.regular,
-                                    borderRadius: radius.medium
+                                    borderRadius: radius.medium,
+                                    textAlign: I18nManager.isRTL ? 'right' : 'left'
                                 }
                             ]}
                             value={hourlyRateInput}
-                            onChangeText={setHourlyRateInput}
-                            keyboardType="numeric"
-                            placeholder="e.g. 100"
+                            onChangeText={(text) => {
+                                setHourlyRateInput(text);
+                                if (hourlyError) setHourlyError('');
+                            }}
+                            keyboardType="decimal-pad"
+                            placeholder={t('payroll.hourlyPlaceholder')}
                             placeholderTextColor={colors.textSecondary}
                         />
+                        {hourlyError ? (
+                            <Text style={{ color: colors.warning, fontSize: 12, marginTop: 4, fontFamily: fonts.regular, textAlign: 'left' }}>
+                                {hourlyError}
+                            </Text>
+                        ) : null}
 
-                        <Text style={[styles.inputLabel, { color: colors.textPrimary, marginTop: 16, fontFamily: fonts.bold }]}>{t('payroll.kmRate')}</Text>
+                        <Text style={[styles.inputLabel, { color: colors.textPrimary, marginTop: 16, fontFamily: fonts.bold }]}>
+                            {t('payroll.kmRate')} <Text style={{ color: colors.warning }}>*</Text>
+                        </Text>
                         <TextInput
                             style={[
                                 styles.input,
                                 {
                                     color: colors.textPrimary,
-                                    borderColor: colors.borderSubtle,
+                                    borderColor: kmError ? colors.warning : colors.borderSubtle,
                                     backgroundColor: colors.backgroundSecondary,
                                     fontFamily: fonts.regular,
-                                    borderRadius: radius.medium
+                                    borderRadius: radius.medium,
+                                    textAlign: I18nManager.isRTL ? 'right' : 'left'
                                 }
                             ]}
                             value={kmRateInput}
-                            onChangeText={setKmRateInput}
-                            keyboardType="numeric"
-                            placeholder="e.g. 2.0"
+                            onChangeText={(text) => {
+                                setKmRateInput(text);
+                                if (kmError) setKmError('');
+                            }}
+                            keyboardType="decimal-pad"
+                            placeholder={t('payroll.kmPlaceholder')}
                             placeholderTextColor={colors.textSecondary}
                         />
+                        {kmError ? (
+                            <Text style={{ color: colors.warning, fontSize: 12, marginTop: 4, fontFamily: fonts.regular, textAlign: 'left' }}>
+                                {kmError}
+                            </Text>
+                        ) : null}
 
-                        <Text style={[styles.inputLabel, { color: colors.textPrimary, marginTop: 16, fontFamily: fonts.bold }]}>{t('payroll.currency')}</Text>
+                        <Text style={[
+                            styles.inputLabel,
+                            {
+                                color: colors.textPrimary,
+                                marginTop: 24,
+                                fontFamily: fonts.regular,
+                                textAlign: 'left'
+                            }
+                        ]}>
+                            {t('payroll.currencyInstruction')}
+                        </Text>
                         <View style={styles.currencyRow}>
                             {CURRENCIES.map((curr) => (
                                 <TouchableOpacity
@@ -472,7 +533,7 @@ function SummaryCard({ title, value, unit, color, cardColor, font, radius, borde
             }
         ]}>
             <Text style={[styles.summaryTitle, { fontFamily: font.regular, color: '#888' }]}>{title}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
                 <Text style={[styles.summaryValue, { color, fontFamily: font.bold }]}>{value}</Text>
                 {unit ? <Text style={[styles.summaryUnit, { color, fontFamily: font.regular }]}>{unit}</Text> : null}
             </View>
@@ -497,10 +558,10 @@ const styles = StyleSheet.create({
     dateInput: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 8, padding: 8, width: 140 },
     summaryContainer: { marginBottom: 24 },
     summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-    summaryCard: { flex: 1, padding: 16, borderRadius: 16, marginHorizontal: 4, elevation: 2, shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
+    summaryCard: { flex: 1, padding: 16, borderRadius: 16, marginHorizontal: 4, elevation: 2, shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, alignItems: 'center', justifyContent: 'center' },
     summaryTitle: { fontSize: 12, color: '#666', marginBottom: 4 },
     summaryValue: { fontSize: 18, fontWeight: 'bold' },
-    summaryUnit: { fontSize: 12, marginLeft: 2 },
+    summaryUnit: { fontSize: 12 },
     totalCard: { padding: 20, borderRadius: 16, alignItems: 'center', marginTop: 12 },
     totalLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '600' },
     totalValue: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 4 },
@@ -509,8 +570,9 @@ const styles = StyleSheet.create({
     exportBtnText: { fontWeight: 'bold', marginLeft: 8, fontSize: 13 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
     modalContent: { borderRadius: 20, padding: 24, elevation: 5 },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
     modalTitle: { fontSize: 20, fontWeight: 'bold' },
+    modalSubtitle: { fontSize: 14, marginBottom: 24, lineHeight: 20 },
     inputLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 8 },
     input: { borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 16 },
     currencyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

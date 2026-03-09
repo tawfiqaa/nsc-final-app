@@ -255,7 +255,7 @@ export default function AdminScreen() {
                 <TouchableOpacity
                     activeOpacity={interaction.pressedOpacity}
                     style={[styles.detailsBtn, { backgroundColor: colors.accentPrimary, borderRadius: radius.small }]}
-                    onPress={() => router.push(`/admin/teacher/${item.uid}`)}
+                    onPress={() => router.push({ pathname: '/admin/teacher/[uid]', params: { uid: item.uid } })}
                 >
                     <Ionicons name="eye-outline" size={16} color="#fff" />
                     <Text style={styles.detailsBtnText}>Details</Text>
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     orgIdSection: {
         marginTop: 24, padding: 16, borderRadius: 10, borderWidth: 1, alignItems: 'center',
     },
-    orgIdLabel: { fontSize: 13, marginBottom: 6 },
+    orgIdLabel: { fontSize: 13, marginBottom: 6, textAlign: 'center' },
     orgIdText: { fontSize: 14, fontWeight: '600', fontFamily: 'monospace' },
     summaryContainer: { marginBottom: 20 },
     statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },

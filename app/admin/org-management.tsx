@@ -110,7 +110,15 @@ export default function OrgManagementScreen() {
                 contentContainerStyle={styles.list}
                 ListHeaderComponent={
                     <View style={styles.headerContainer}>
-                        <Text style={[styles.header, boldStyle]}>Organization Management</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                            <TouchableOpacity
+                                onPress={() => router.back()}
+                                style={{ marginRight: 15, padding: 5 }}
+                            >
+                                <Ionicons name="arrow-back" size={24} color={colors.text} />
+                            </TouchableOpacity>
+                            <Text style={[styles.header, boldStyle, { marginBottom: 0, flex: 1 }]} adjustsFontSizeToFit numberOfLines={1}>Organization Management</Text>
+                        </View>
                         <TouchableOpacity
                             activeOpacity={interaction.pressedOpacity}
                             style={[styles.createOrgBtn, { backgroundColor: colors.primary, borderRadius: radius.medium }]}

@@ -31,8 +31,6 @@
         "version": "גרסה",
         "saving": "שומר...",
         "viewAll": "הצג הכל",
-        "delete": "מחק",
-        "edit": "ערוך",
         "confirm": "אשר"
     },
     "settings": {
@@ -107,14 +105,17 @@
             "nextSevenDays": "7 הימים הבאים",
             "recentActivity": "פעילות אחרונה"
         },
-        "noUpcomingLessons": "אין שיעורים קרובים."
+        "noUpcomingLessons": "אין שיעורים קרובים.",
+        "createLesson": "צור שיעור חדש",
+        "viewCalendar": "עבור ליומן"
     },
     "tabs": {
         "dashboard": "ראשי",
         "schools": "בתי הספר שלי",
         "history": "היסטוריה",
         "admin": "ניהול",
-        "settings": "הגדרות"
+        "settings": "הגדרות",
+        "announcements": "הודעות"
     },
     "admin": {
         "title": "לוח ניהול",
@@ -164,16 +165,23 @@
         "custom": "מותאם אישית",
         "totalHours": "סה\"כ שעות",
         "totalKm": "סה\"כ ק\"מ",
+        "unitHours": "שעות",
+        "unitKm": "ק״מ",
         "hoursPay": "שכר שעות",
         "kmPay": "תשלום ק\"מ",
         "totalPayment": "תשלום כולל",
         "exportCsv": "ייצוא CSV",
         "exportExcel": "ייצוא Excel",
         "exportNotice": "הייצוא כולל את הרשימה המלאה של השיעורים בטווח התאריכים הנבחר.",
-        "configTitle": "הגדרת תעריפי שכר",
+        "configTitle": "הגדרת תעריפים חודשיים",
+        "configSubtitle": "יש להזין תעריף שעתי וק״מ לצורך חישוב שכר",
+        "hourlyPlaceholder": "לדוגמה: 100",
+        "kmPlaceholder": "לדוגמה: 2.0",
         "hourlyRate": "תעריף שעתי",
         "kmRate": "תעריף ק\"מ",
         "currency": "מטבע",
+        "currencyInstruction": "בחר/י מטבע לחישוב התעריפים",
+        "invalidNumber": "נא להזין מספר תקין",
         "saveConfig": "שמור הגדרות",
         "invalidInput": "נא להזין מספרים תקינים לתעריפים.",
         "saveSuccess": "הערות השכר נשמרו.",
@@ -242,47 +250,14 @@
         "updateSchedule": "עדכן מערכת"
     },
     "schoolDetails": {
-<<<<<<< HEAD
-        "overview": "סקירה",
-        "attendedLessons": "שיעורים שבוצעו",
-        "location": "מיקום",
-        "noLocationSet": "לא הוגדר מיקום",
-        "editLocation": "ערוך מיקום",
-        "noSchedule": "לא הוגדר לו\"ז",
-        "addressLabel": "תווית כתובת (למשל כניסה ראשית)",
-        "mapInstruction": "הקש על המפה כדי להגדיר את מיקום בית הספר",
-=======
-        "overview": "סקירה כללית",
->>>>>>> origin/master
         "gallery": "גלריה",
         "students": "תלמידים",
         "addPastLesson": "הוסף שיעור עבר",
         "deleteSchoolConfirmLong": "האם אתה בטוח שברצונך למחוק לצמיתות את \"{{schoolName}}\"? פעולה זו תמחק את כל המערכות, דוחות הנוכחות ורישומי התלמידים של בית הספר הזה. לא ניתן לבטל פעולה זו.",
         "deleteEverything": "מחק הכל",
-<<<<<<< HEAD
-        "weeklySchedule": "מערכת שעות שבועית",
-        "noRecurringSchedules": "אין מערכות שעות קבועות.",
-=======
-        "noRecurringSchedules": "אין מערכות קבועות.",
->>>>>>> origin/master
         "inactive": "לא פעיל",
         "noHistoryYet": "אין עדיין היסטוריה.",
-        "confirmDeletion": "אישור מחיקה",
-<<<<<<< HEAD
-        "deleteLogConfirm": "האם אתה בטוח שברצונך למחוק את הרישום הזה?"
-=======
-        "deleteLogConfirm": "האם אתה בטוח שברצונך למחוק את הרישום הזה?",
-        "location": "מיקום",
-        "noLocationSet": "לא הוגדר מיקום",
-        "editLocation": "עריכת מיקום בית הספר",
-        "addressLabel": "כתובת / תווית (לדוגמה: רחוב הרצל 1)",
-        "invalidCoordinates": "קואורדינטות לא תקינות",
-        "attendedLessons": "שיעורים שבוצעו (החודש)",
-        "mapInstruction": "לחץ על המפה כדי למקם את הנעץ או גרור את הנעץ הקיים למיקום המדויק.",
-        "noSchedule": "לא הוגדרו שיעורים קבועים לבית ספר זה.",
-        "recentHistory": "פעילות אחרונה",
-        "weeklySchedule": "מערכת שבועית"
->>>>>>> origin/master
+        "confirmDeletion": "אישור מחיקה"
     },
     "logCard": {
         "present": "נוכח",

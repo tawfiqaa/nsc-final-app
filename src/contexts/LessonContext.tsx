@@ -3,11 +3,7 @@ import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, qu
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { db, storage } from '../lib/firebase';
-<<<<<<< HEAD
 import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, School, SchoolLocation, TeacherData } from '../types';
-=======
-import { AttendanceLog, AttendanceRecord, AttendanceStatus, LessonContextType, Schedule, School, TeacherData } from '../types';
->>>>>>> origin/master
 import { STORAGE_KEYS } from '../utils/constants';
 import { useAuth } from './AuthContext';
 import { useOrg } from './OrgContext';
@@ -662,61 +658,87 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     };
 
-<<<<<<< HEAD
     const updateSchoolLocation = async (schoolId: string, payload: Partial<SchoolLocation> | { location: null }) => {
-        if (!user) return;
+        if (!user) {
+            throw new Error('updateSchoolLocation: no authenticated user');
+        }
+
         const now = Date.now();
-        const updateData: any = {
-            updatedAt: now
-        };
 
-        if ('location' in payload && payload.location === null) {
-            updateData.location = null;
-        } else {
-            // It's a Partial<SchoolLocation>
+        // Build the location object
+        let locationObj: SchoolLocation | null = null;
+        if (!('location' in payload && payload.location === null)) {
             const locationData = payload as Partial<SchoolLocation>;
-
-            // If any location field is provided, we wrap it in the 'location' object in Firestore
-            // But we also might want to keep addressLabel/locationLabel for backward compatibility if provided
-            if (locationData.address || locationData.lat !== undefined) {
-                updateData.location = {
-                    ...locationData,
-                    updatedAt: now
+            if (locationData.lat !== undefined || locationData.address) {
+                locationObj = {
+                    lat: locationData.lat ?? 0,
+                    lng: locationData.lng ?? 0,
+                    address: locationData.address ?? '',
+                    placeName: locationData.placeName ?? '',
+                    placeId: locationData.placeId ?? '',
+                    updatedAt: now,
                 };
-
-                // Keep backward compatibility for title/address label
-                if (locationData.address) updateData.addressLabel = locationData.address;
-                if (locationData.label) updateData.locationLabel = locationData.label;
-            } else {
-                // Handle cases where only labels might be sent
-                if (locationData.label !== undefined) updateData.locationLabel = locationData.label;
-                if (locationData.address !== undefined) updateData.addressLabel = locationData.address;
             }
         }
-=======
-    const updateSchoolLocation = async (schoolId: string, payload: { addressLabel?: string; locationLabel?: string; location: { lat: number; lng: number } | null }) => {
-        if (!user) return;
-        const now = Date.now();
-        const updateData: any = {
-            location: payload.location,
-            updatedAt: now
-        };
-        if (payload.addressLabel !== undefined) updateData.addressLabel = payload.addressLabel;
-        if (payload.locationLabel !== undefined) updateData.locationLabel = payload.locationLabel;
->>>>>>> origin/master
 
+        // schoolId in this app = school name = Firestore doc ID
+        // We always include `name` and `createdBy` so the doc remains in the
+        // snapshot query (where('createdBy', '==', user.uid)) even when the
+        // school doc was not previously written by the location feature.
+        const writeData: any = {
+            name: schoolId,
+            createdBy: user.uid,
+            updatedAt: now,
+            location: locationObj,
+            addressLabel: locationObj?.address ?? null,
+        };
+
+        let docPath = '';
         try {
             if (orgMode && activeOrgId) {
-                await setDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolId), updateData, { merge: true });
+                docPath = `orgs/${activeOrgId}/schools/${schoolId}`;
+                console.log('[updateSchoolLocation] ORG MODE | path:', docPath, '| lat:', locationObj?.lat, '| address:', locationObj?.address);
+                await setDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolId), writeData, { merge: true });
+
             } else if (isTargetMigrated) {
-                await setDoc(doc(db, 'users', targetUid!, 'schools', schoolId), updateData, { merge: true });
+                docPath = `users/${targetUid}/schools/${schoolId}`;
+                console.log('[updateSchoolLocation] V2 MODE | path:', docPath, '| lat:', locationObj?.lat, '| address:', locationObj?.address);
+                await setDoc(doc(db, 'users', targetUid!, 'schools', schoolId), writeData, { merge: true });
+
             } else {
-                // Legacy V1 doesn't explicitly store school docs with location, but we can try to support it if needed.
-                // For now, following instructions to focus on V2.
-                console.warn("Location updates not supported in V1 legacy mode.");
+                throw new Error('Cannot update school location: account not on V2.');
             }
-        } catch (error) {
-            console.error("Failed to update school location:", error);
+
+            console.log('[updateSchoolLocation] ✅ Firestore write success | path:', docPath);
+
+            // Optimistic local update — ensures the school detail page shows the
+            // new location immediately on navigate-back without waiting for snapshot.
+            setSchools(prev => {
+                const exists = prev.some(s => s.id === schoolId || s.name === schoolId);
+                if (exists) {
+                    return prev.map(s => {
+                        if (s.id === schoolId || s.name === schoolId) {
+                            console.log('[updateSchoolLocation] optimistic update for school:', s.name);
+                            return { ...s, location: locationObj ?? undefined, addressLabel: locationObj?.address };
+                        }
+                        return s;
+                    });
+                } else {
+                    // School not yet in local state (first time writing); add it
+                    console.log('[updateSchoolLocation] school not in local state, appending:', schoolId);
+                    return [...prev, {
+                        id: schoolId,
+                        name: schoolId,
+                        createdBy: user.uid,
+                        location: locationObj ?? undefined,
+                        addressLabel: locationObj?.address,
+                        updatedAt: now,
+                    } as any];
+                }
+            });
+
+        } catch (error: any) {
+            console.error('[updateSchoolLocation] ❌ FAILED | path:', docPath, '| error:', error?.message || error);
             throw error;
         }
     };

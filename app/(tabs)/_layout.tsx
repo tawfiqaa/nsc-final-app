@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { TouchableOpacity } from 'react-native';
+import { Platform, TouchableOpacity } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -29,6 +29,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
+        headerTitleAlign: 'center',
         headerStyle: {
           backgroundColor: 'transparent',
         },
@@ -46,10 +47,18 @@ export default function TabsLayout() {
           color: colors.textPrimary,
           fontSize: 18,
         },
+        headerRightContainerStyle: {
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 16,
+        },
+        headerLeftContainerStyle: {
+          paddingHorizontal: 16,
+        },
         headerRight: () => (
           <TouchableOpacity
             onPress={() => router.push('/settings' as any)}
-            style={{ marginRight: 15, padding: 5 }}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
             <Ionicons name="settings-outline" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -57,8 +66,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.borderSubtle,
-          height: 60,
-          paddingBottom: 8,
+          height: Platform.OS === 'web' ? 65 : 60,
+          paddingBottom: Platform.OS === 'web' ? 12 : 8,
           paddingTop: 8,
           elevation: 0,
           shadowOpacity: 0,
@@ -67,7 +76,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: {
           fontFamily: fonts.regular,
-          fontSize: 11,
+          fontSize: 10,
         }
       }}
     >
@@ -108,9 +117,21 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
+        name="announcements"
+        options={{
+          title: t('tabs.announcements'),
+          headerTitle: t('tabs.announcements'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="megaphone-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="school-history"
         options={{
           href: null,
+          headerShown: false,
         }}
       />
     </Tabs>

@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { addDays, endOfMonth, getDay, isAfter, isSameDay, startOfDay, startOfMonth } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { I18nManager, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { DashboardEmptyState } from '../../src/components/DashboardEmptyState';
 import { LogCard } from '../../src/components/LogCard';
 import { ScheduleCard } from '../../src/components/ScheduleCard';
@@ -21,7 +21,7 @@ import { computePayrollTotals } from '../../src/utils/payroll';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { schedules, logs, markAttendance, deleteLog, refresh, loading, updateLogNotes } = useLesson();
+  const { schedules, logs, markAttendance, deleteLog, refresh, loading, updateLogNotes, schools } = useLesson();
   const { colors, fonts, tokens, theme } = useTheme();
   const { spacing, radius, interaction } = tokens;
   const { membershipRole } = useOrg();
@@ -195,12 +195,34 @@ export default function Dashboard() {
             onPress={() => router.push('/payroll' as any)}
           >
             <Text style={[styles.totalLabelHome, secondaryStyle]}>{t('dashboard.totalMonth')}</Text>
-            <Text style={[styles.totalValueHome, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
-              {monthlyStats.ratesMissing ? t('dashboard.setRates') : formatCurrency(monthlyStats.totalPay, payrollSettings?.currency || 'ILS')}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Text style={[secondaryStyle, { fontSize: 11 }]}>{t('dashboard.tapToViewDetails')}</Text>
-              <Ionicons name="chevron-forward" size={12} color={colors.textSecondary} style={{ marginLeft: 4 }} />
+            {monthlyStats.ratesMissing ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <FontAwesome5 name="coins" size={22} color={colors.accentPrimary} />
+                <Text style={[styles.totalValueHome, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
+                  {t('dashboard.setRates')}
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.totalValueHome, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
+                {formatCurrency(monthlyStats.totalPay, payrollSettings?.currency || 'ILS')}
+              </Text>
+            )}
+            <View style={[
+              styles.actionPill,
+              { backgroundColor: colors.backgroundSecondary, borderRadius: radius.medium }
+            ]}>
+              <Text style={[
+                secondaryStyle,
+                { fontSize: 12, fontFamily: fonts.medium, color: colors.accentPrimary }
+              ]}>
+                {t('dashboard.tapToViewDetails')}
+              </Text>
+              <Ionicons
+                name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+                size={16}
+                color={colors.accentPrimary}
+                style={I18nManager.isRTL ? { marginRight: 4 } : { marginLeft: 4 }}
+              />
             </View>
           </TouchableOpacity>
         </View>
@@ -210,13 +232,19 @@ export default function Dashboard() {
           subtitle={formatDate(today, { weekday: 'long', day: 'numeric', month: 'long' })}
         >
           {todaysLessons.length === 0 ? (
-            <DashboardEmptyState icon="calendar-outline" message={t('dashboard.noMoreLessonsToday')} />
+            <DashboardEmptyState
+              icon="calendar-outline"
+              message={t('dashboard.noMoreLessonsToday')}
+              action={() => router.push('/add-lesson' as any)}
+              actionText={t('dashboard.createLesson')}
+            />
           ) : (
             todaysLessons.map(schedule => (
               <ScheduleCard
                 key={schedule.id}
                 schedule={schedule}
                 onMark={(status) => handleMark(schedule.id, status)}
+                schoolLocation={schools.find(s => s.name === schedule.school)?.location}
               />
             ))
           )}
@@ -227,7 +255,12 @@ export default function Dashboard() {
           subtitle={t('dashboard.sections.nextSevenDays')}
         >
           {upcomingLessons.length === 0 ? (
-            <DashboardEmptyState icon="time-outline" message={t('dashboard.noUpcomingLessons')} />
+            <DashboardEmptyState
+              icon="time-outline"
+              message={t('dashboard.noUpcomingLessons')}
+              action={() => router.push('/add-lesson' as any)}
+              actionText={t('dashboard.createLesson')}
+            />
           ) : (
             upcomingLessons.slice(0, 3).map((item, idx) => (
               <View key={`${item.id}-${idx}`} style={{ opacity: 0.85, marginBottom: idx === 2 ? 0 : 12 }}>
@@ -235,8 +268,9 @@ export default function Dashboard() {
                   schedule={item}
                   isUpcoming={true}
                   upcomingDate={item.upcomingDate}
-                  onMark={() => { }} // Disabled for upcoming
+                  onMark={() => { }}
                   compact={true}
+                  schoolLocation={schools.find(s => s.name === item.school)?.location}
                 />
               </View>
             ))
@@ -246,15 +280,22 @@ export default function Dashboard() {
         <SectionContainer
           title={t('dashboard.sections.recentActivity')}
           rightAction={
-            <TouchableOpacity onPress={() => router.push('/school-history' as any)}>
-              <Text style={{ color: colors.accentPrimary, fontFamily: fonts.bold, fontSize: 13 }}>
-                {t('common.viewAll')}
-              </Text>
-            </TouchableOpacity>
+            recentLogs && recentLogs.length > 0 ? (
+              <TouchableOpacity onPress={() => router.push('/school-history' as any)}>
+                <Text style={{ color: colors.accentPrimary, fontFamily: fonts.bold, fontSize: 13 }}>
+                  {t('common.viewAll')}
+                </Text>
+              </TouchableOpacity>
+            ) : undefined
           }
         >
           {recentLogs.length === 0 ? (
-            <DashboardEmptyState icon="flash-outline" message={t('dashboard.noRecentActivity')} />
+            <DashboardEmptyState
+              icon="flash-outline"
+              message={t('dashboard.noRecentActivity')}
+              action={() => router.push('/history' as any)}
+              actionText={t('dashboard.viewCalendar')}
+            />
           ) : (
             recentLogs.map(log => (
               <LogCard
@@ -268,13 +309,6 @@ export default function Dashboard() {
         </SectionContainer>
       </ScrollView>
 
-      <TouchableOpacity
-        activeOpacity={interaction.pressedOpacity}
-        style={[styles.fab, { backgroundColor: colors.accentPrimary, borderRadius: radius.full, width: 64, height: 64, elevation: 8, shadowOpacity: 0.3 }]}
-        onPress={() => router.push('/add-lesson')}
-      >
-        <Ionicons name="add" size={36} color="#fff" />
-      </TouchableOpacity>
 
       {/* Modal for Notes (Add/Edit) */}
       <Modal
@@ -395,6 +429,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
   },
+  actionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -404,21 +445,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: 16,
   },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65,
-  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

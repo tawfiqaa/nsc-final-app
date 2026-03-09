@@ -78,20 +78,25 @@ export default function SchoolHistoryScreen() {
                     borderBottomColor: theme === 'light' ? colors.borderSubtle : colors.divider
                 }
             ]}>
-                <View>
-                    <TouchableOpacity
-                        activeOpacity={interaction.pressedOpacity}
-                        onPress={() => setShowFilter(true)}
-                        style={styles.filterButton}
-                    >
-                        <Text style={[styles.filterText, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
-                            {selectedSchool}  <Ionicons name="chevron-down" size={12} />
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.stats}>
-                    <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{totalLessons}</Text>
-                    <Text style={[styles.statLabel, secondaryStyle]}>{t('history.lessons')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
+                            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            activeOpacity={interaction.pressedOpacity}
+                            onPress={() => setShowFilter(true)}
+                            style={styles.filterButton}
+                        >
+                            <Text style={[styles.filterText, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
+                                {selectedSchool}  <Ionicons name="chevron-down" size={12} />
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.stats}>
+                        <Text style={[styles.statValue, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{totalLessons}</Text>
+                        <Text style={[styles.statLabel, secondaryStyle]}>{t('history.lessons')}</Text>
+                    </View>
                 </View>
             </View>
 

@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DashboardEmptyState } from '../../../../src/components/DashboardEmptyState';
 import { LogCard } from '../../../../src/components/LogCard';
-import { ScheduleCard } from '../../../../src/components/ScheduleCard';
 import { SectionContainer } from '../../../../src/components/SectionContainer';
 import { useOrg } from '../../../../src/contexts/OrgContext';
 import { useTheme } from '../../../../src/contexts/ThemeContext';
@@ -18,7 +17,9 @@ import { useFormatting } from '../../../../src/utils/formatters';
 import { computePayrollTotals } from '../../../../src/utils/payroll';
 
 export default function TeacherDetailsScreen() {
-    const { uid } = useLocalSearchParams<{ uid: string }>();
+    const { uid: rawUid } = useLocalSearchParams<{ uid: string | string[] }>();
+    // On web, params can temporarily be undefined or arrive as string[]
+    const uid = Array.isArray(rawUid) ? rawUid[0] : rawUid;
     const router = useRouter();
     const { colors, fonts, tokens, theme } = useTheme();
     const { radius, spacing, interaction } = tokens;
@@ -35,16 +36,37 @@ export default function TeacherDetailsScreen() {
     const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
-        if (uid) fetchTeacherData(uid);
+        if (!uid) {
+            // uid not yet available (web hydration): keep showing spinner
+            setLoading(true);
+            return;
+        }
+        fetchTeacherData(uid);
     }, [uid, activeOrgId]);
 
     const fetchTeacherData = async (targetUid: string) => {
         try {
             setLoading(true);
-            // Fetch User Profile
-            const userSnap = await getDoc(doc(db, 'users', targetUid));
-            if (userSnap.exists()) {
-                setTeacher(userSnap.data() as User);
+            // Fetch User Profile with an explicit where clause to satisfy "Rules are not filters"
+            let fetchedUser: User | null = null;
+            if (activeOrgId) {
+                const userQ = query(
+                    collection(db, 'users'),
+                    where('uid', '==', targetUid),
+                    where('activeOrgId', '==', activeOrgId)
+                );
+                const userSnaps = await getDocs(userQ);
+                if (!userSnaps.empty) {
+                    fetchedUser = userSnaps.docs[0].data() as User;
+                    setTeacher(fetchedUser);
+                }
+            } else {
+                // Fallback for legacy / super admins without activeOrgId context
+                const userSnap = await getDoc(doc(db, 'users', targetUid));
+                if (userSnap.exists()) {
+                    fetchedUser = userSnap.data() as User;
+                    setTeacher(fetchedUser);
+                }
             }
 
             // Fetch Teacher Payroll Settings
@@ -161,6 +183,28 @@ export default function TeacherDetailsScreen() {
         );
     };
 
+    const parsedSchools = useMemo(() => {
+        const schoolMap = new Map<string, { name: string, lessonCount: number }>();
+
+        schedules.forEach(s => {
+            if (!schoolMap.has(s.school)) {
+                schoolMap.set(s.school, { name: s.school, lessonCount: 0 });
+            }
+        });
+
+        logs.forEach(l => {
+            if (l.status === 'present') {
+                if (!schoolMap.has(l.school)) {
+                    schoolMap.set(l.school, { name: l.school, lessonCount: 0 });
+                }
+                const data = schoolMap.get(l.school)!;
+                data.lessonCount += 1;
+            }
+        });
+
+        return Array.from(schoolMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [schedules, logs]);
+
     const stats = useMemo(() => {
         const now = new Date();
         const start = startOfMonth(now);
@@ -175,20 +219,11 @@ export default function TeacherDetailsScreen() {
         const schoolCount = schoolNames.size;
 
         return {
-<<<<<<< HEAD
-            totalPay: Number(totalPay || 0),
+            totalPay: payrollStats.totalPay || 0,
             schoolCount,
             hasPayroll: !!teacherPayrollSettings && (teacherPayrollSettings.hourlyRate > 0 || teacherPayrollSettings.kmRate > 0)
         };
     }, [logs, schedules, teacherPayrollSettings]);
-=======
-            totalHours: payrollStats.totalHours,
-            totalDistance: payrollStats.totalDistance,
-            totalPay: payrollStats.totalPay,
-            attendanceRate
-        };
-    }, [logs, teacherPayrollSettings]);
->>>>>>> origin/master
 
     if (loading) {
         return (
@@ -297,23 +332,47 @@ export default function TeacherDetailsScreen() {
                     </View>
                 </View>
 
-                {/* Active Schedules Section */}
+                {/* Active Schools Section */}
                 <SectionContainer
-                    title={t('teacherDetails.activeSchedules')}
-                    subtitle={`${schedules.length} ${t('teacherDetails.ongoingWorkloads')}`}
+                    title={t('tabs.schools')}
+                    subtitle={t('admin.stats.activeSchools')}
                 >
-                    {schedules.length === 0 ? (
-                        <DashboardEmptyState icon="calendar-outline" message={t('teacherDetails.noSchedules')} />
+                    {parsedSchools.length === 0 ? (
+                        <DashboardEmptyState icon="school-outline" message={t('schools.noSchoolsFound')} />
                     ) : (
-                        schedules.map((schedule, idx) => (
-                            <TouchableOpacity
-                                key={schedule.id}
-                                activeOpacity={interaction.pressedOpacity}
-                                onPress={() => router.push(`/admin/teacher/${uid}/school/${encodeURIComponent(schedule.school)}`)}
-                                style={{ marginBottom: idx === schedules.length - 1 ? 0 : 12 }}
+                        parsedSchools.map((item, idx) => (
+                            <View
+                                key={item.name}
+                                style={{
+                                    backgroundColor: colors.surface,
+                                    borderColor: theme === 'light' ? colors.borderSubtle : colors.divider,
+                                    borderRadius: radius.large,
+                                    borderWidth: 1,
+                                    marginBottom: idx === parsedSchools.length - 1 ? 0 : 12,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 4 },
+                                    shadowOpacity: theme === 'light' ? 0.05 : 0.1,
+                                    shadowRadius: 10,
+                                    elevation: theme === 'light' ? 2 : 4,
+                                }}
                             >
-                                <ScheduleCard schedule={schedule} readOnly={true} compact={true} />
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', padding: 16 }}
+                                    onPress={() => router.push(`/admin/teacher/${uid}/school/${encodeURIComponent(item.name)}`)}
+                                    activeOpacity={interaction.pressedOpacity}
+                                >
+                                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.accentPrimary + '10', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+                                        <Ionicons name="school" size={24} color={colors.accentPrimary} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ fontSize: 18, marginBottom: 4, color: colors.textPrimary, fontFamily: fonts.bold }}>{item.name}</Text>
+                                        <Text style={{ fontSize: 14, color: colors.textSecondary, fontFamily: fonts.regular }}>
+                                            {t('schools.lessonCount', { count: item.lessonCount })}
+                                        </Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} style={{ opacity: 0.5 }} />
+                                </TouchableOpacity>
+                            </View>
                         ))
                     )}
                 </SectionContainer>

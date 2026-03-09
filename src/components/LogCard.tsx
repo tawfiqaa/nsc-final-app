@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AttendanceLog } from '../types';
@@ -13,10 +13,9 @@ interface LogCardProps {
     onDelete?: () => void;
     onEditNote?: () => void;
     readOnly?: boolean;
-    deleteType?: 'text' | 'icon';
 }
 
-export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, readOnly, deleteType = 'text' }) => {
+export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, readOnly }) => {
     const { colors, fonts, tokens, theme } = useTheme();
     const { radius, interaction } = tokens;
     const { user } = useAuth();
@@ -75,15 +74,27 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
             ) : null}
 
             <View style={styles.actions}>
-                {!readOnly && (
-                    <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={onDelete}>
-                        {deleteType === 'icon' ? (
-                            <Ionicons name="trash-outline" size={20} color={colors.danger} />
-                        ) : (
-                            <Text style={[styles.actionLink, { color: colors.danger, fontFamily: fonts.bold }]}>
-                                {t('logCard.undo')}
-                            </Text>
-                        )}
+                {!readOnly && onDelete && (
+                    <TouchableOpacity
+                        activeOpacity={interaction.pressedOpacity}
+                        onPress={() => {
+                            if (Platform.OS === 'web') {
+                                if (window.confirm('Are you sure you want to delete this record?')) {
+                                    onDelete();
+                                }
+                            } else {
+                                Alert.alert(
+                                    'Delete Record',
+                                    'Are you sure you want to delete this?',
+                                    [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        { text: 'Delete', style: 'destructive', onPress: onDelete }
+                                    ]
+                                );
+                            }
+                        }}
+                    >
+                        <Ionicons name="trash-outline" size={20} color={colors.danger} />
                     </TouchableOpacity>
                 )}
                 {(user?.migratedToV2 || !!log.createdBy) && (

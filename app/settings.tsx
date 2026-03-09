@@ -212,80 +212,20 @@ export default function SettingsScreen() {
                     </View>
                 </View>
 
-                {/* Organization Section */}
-                <View style={cardStyle}>
-                    <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.organization')}</Text>
-                    {activeOrg && (
-                        <>
-                            <View style={styles.row}>
-                                <Text style={[styles.label, textStyle]}>{t('settings.activeOrg')}</Text>
-                                <Text style={[styles.value, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{activeOrg.name || 'Unknown'}</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={[styles.label, textStyle]}>{t('settings.orgRole')}</Text>
-                                <Text style={[styles.value, secondaryStyle]}>{membershipRole?.toUpperCase()}</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={[styles.label, textStyle]}>{t('settings.orgId')}</Text>
-                                <Text style={[styles.value, secondaryStyle, { fontSize: 10 }]} selectable>{activeOrgId}</Text>
-                            </View>
-                        </>
-                    )}
-                    {userOrgs.filter(o => o.status === 'approved' && o.orgId !== activeOrgId).length > 0 && (
-                        <View style={{ marginTop: 8 }}>
-                            <Text style={[secondaryStyle, { fontSize: 12, marginBottom: 8 }]}>{t('settings.switchOrg')}:</Text>
-                            {userOrgs.filter(o => o.status === 'approved' && o.orgId !== activeOrgId).map(org => (
-                                <TouchableOpacity
-                                    activeOpacity={interaction.pressedOpacity}
-                                    key={org.orgId}
-                                    style={[styles.row, { paddingVertical: 8, paddingHorizontal: 12, borderRadius: radius.medium, backgroundColor: colors.backgroundSecondary }]}
-                                    onPress={() => switchOrg(org.orgId)}
-                                >
-                                    <Text style={[styles.label, textStyle]}>{org.orgName || org.orgId}</Text>
-                                    <Ionicons name="swap-horizontal" size={18} color={colors.accentPrimary} />
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
-                    {showTeacherFeatures && (
-                        <View style={{ marginTop: 8, gap: 12 }}>
-                            <TouchableOpacity
-                                activeOpacity={interaction.pressedOpacity}
-                                style={[styles.row, { justifyContent: 'center', marginBottom: 0 }]}
-                                onPress={() => router.push('/join-org' as any)}
-                            >
-                                <Ionicons name="add-circle-outline" size={18} color={colors.accentPrimary} />
-                                <Text style={[styles.label, { color: colors.accentPrimary, marginLeft: 6, fontFamily: fonts.regular }]}>{t('settings.joinAnotherOrg')}</Text>
-                            </TouchableOpacity>
-
-                            {isSuperAdmin && (
-                                <TouchableOpacity
-                                    activeOpacity={interaction.pressedOpacity}
-                                    style={[styles.row, { justifyContent: 'center', marginBottom: 0 }]}
-                                    onPress={() => router.push('/create-org' as any)}
-                                >
-                                    <Ionicons name="business-outline" size={18} color={colors.accentPrimary} />
-                                    <Text style={[styles.label, { color: colors.accentPrimary, marginLeft: 6, fontFamily: fonts.regular }]}>{t('settings.createNewOrg')}</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    )}
-                </View>
-
                 {/* Show Reports only for Teachers & Super Admins */}
                 {showTeacherFeatures && (
-                    <View style={cardStyle}>
-                        <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.reports')}</Text>
+                    <View style={[cardStyle, { paddingVertical: 16, minHeight: 'auto' }]}>
+                        <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold, marginBottom: 8 }]}>{t('settings.reports')}</Text>
 
                         {/* Month Picker */}
-                        <View style={[styles.row, { justifyContent: 'center', marginBottom: 24 }]}>
-                            <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => changeMonth(-1)} style={{ padding: 8 }}>
+                        <View style={[styles.row, { justifyContent: 'center', marginBottom: 12 }]}>
+                            <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => changeMonth(-1)} style={{ padding: 4 }}>
                                 <Ionicons name="chevron-back" size={24} color={colors.accentPrimary} />
                             </TouchableOpacity>
-                            <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, marginHorizontal: 16, fontFamily: fonts.bold }}>
+                            <Text style={{ fontSize: 18, color: colors.textPrimary, marginHorizontal: 16, fontFamily: fonts.bold }}>
                                 {formatDate(exportDate, { month: 'long', year: 'numeric' })}
                             </Text>
-                            <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => changeMonth(1)} style={{ padding: 8 }}>
+                            <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => changeMonth(1)} style={{ padding: 4 }}>
                                 <Ionicons name="chevron-forward" size={24} color={colors.accentPrimary} />
                             </TouchableOpacity>
                         </View>
@@ -352,6 +292,55 @@ export default function SettingsScreen() {
                             </TouchableOpacity>
                         </View>
                     </View>
+                </View>
+
+                {/* Organization Section */}
+                <View style={cardStyle}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.organization')}</Text>
+                    {activeOrg && (
+                        <>
+                            <View style={styles.row}>
+                                <Text style={[styles.label, textStyle, { paddingRight: 8 }]}>{t('settings.activeOrg')}</Text>
+                                <Text style={[styles.value, { color: colors.accentPrimary, fontFamily: fonts.bold, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">{activeOrg.name || 'Unknown'}</Text>
+                            </View>
+                            <View style={styles.row}>
+                                <Text style={[styles.label, textStyle]}>{t('settings.orgRole')}</Text>
+                                <Text style={[styles.value, secondaryStyle]}>{membershipRole?.toUpperCase()}</Text>
+                            </View>
+                            <View style={styles.row}>
+                                <Text style={[styles.label, textStyle]}>{t('settings.orgId')}</Text>
+                                <Text style={[styles.value, secondaryStyle, { fontSize: 10 }]} selectable>{activeOrgId}</Text>
+                            </View>
+                        </>
+                    )}
+                    {userOrgs.filter(o => o.status === 'approved' && o.orgId !== activeOrgId).length > 0 && (
+                        <View style={{ marginTop: 8 }}>
+                            <Text style={[secondaryStyle, { fontSize: 12, marginBottom: 8 }]}>{t('settings.switchOrg')}:</Text>
+                            {userOrgs.filter(o => o.status === 'approved' && o.orgId !== activeOrgId).map(org => (
+                                <TouchableOpacity
+                                    activeOpacity={interaction.pressedOpacity}
+                                    key={org.orgId}
+                                    style={[styles.row, { paddingVertical: 8, paddingHorizontal: 12, borderRadius: radius.medium, backgroundColor: colors.backgroundSecondary }]}
+                                    onPress={() => switchOrg(org.orgId)}
+                                >
+                                    <Text style={[styles.label, textStyle]}>{org.orgName || org.orgId}</Text>
+                                    <Ionicons name="swap-horizontal" size={18} color={colors.accentPrimary} />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                    {showTeacherFeatures && (
+                        <View style={{ marginTop: 8, gap: 12 }}>
+                            <TouchableOpacity
+                                activeOpacity={interaction.pressedOpacity}
+                                style={[styles.row, { justifyContent: 'center', marginBottom: 0 }]}
+                                onPress={() => router.push('/join-org' as any)}
+                            >
+                                <Ionicons name="add-circle-outline" size={18} color={colors.accentPrimary} />
+                                <Text style={[styles.label, { color: colors.accentPrimary, marginLeft: 6, fontFamily: fonts.regular }]}>{t('settings.joinAnotherOrg')}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 {isSuperAdmin && (

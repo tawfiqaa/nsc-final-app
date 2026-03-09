@@ -131,6 +131,14 @@ export default function ManageStudentsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <View style={[styles.headerRow, { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={24} color={colors.text} />
+                </TouchableOpacity>
+                <Text style={[styles.title, boldStyle]}>{t('students.title')}</Text>
+                <View style={{ width: 44 }} />
+            </View>
+
             <View style={styles.addSection}>
                 <TextInput
                     style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card, fontFamily: fonts.regular }]}
@@ -204,6 +212,25 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         marginBottom: 12,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 50,
+        paddingBottom: 16,
+    },
+    backBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
     studentCard: {
         flexDirection: 'row',

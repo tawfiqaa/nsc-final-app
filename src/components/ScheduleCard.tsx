@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { AttendanceStatus, Schedule } from '../types';
+import { AttendanceStatus, Schedule, SchoolLocation } from '../types';
 import { formatDateDMY } from '../utils/datetime';
+import { openNavigation } from '../utils/navigation';
 
 interface ScheduleCardProps {
     schedule: Schedule;
@@ -13,6 +14,8 @@ interface ScheduleCardProps {
     isUpcoming?: boolean;
     upcomingDate?: Date;
     compact?: boolean;
+    /** If provided, shows a navigate icon button that opens maps */
+    schoolLocation?: SchoolLocation | null;
 }
 
 export const ScheduleCard: React.FC<ScheduleCardProps> = ({
@@ -22,7 +25,8 @@ export const ScheduleCard: React.FC<ScheduleCardProps> = ({
     lessonCount,
     isUpcoming,
     upcomingDate,
-    compact
+    compact,
+    schoolLocation,
 }) => {
     const { colors, theme, tokens, fonts } = useTheme();
     const { radius, interaction } = tokens;
@@ -34,7 +38,6 @@ export const ScheduleCard: React.FC<ScheduleCardProps> = ({
             borderRadius: compact ? radius.medium : radius.large,
             borderColor: compact ? 'transparent' : (theme === 'light' ? colors.borderSubtle : colors.divider),
             borderWidth: compact ? 0 : 1,
-            // Subtle shadow for light mode
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: theme === 'light' ? 0.05 : 0.1,
@@ -46,6 +49,14 @@ export const ScheduleCard: React.FC<ScheduleCardProps> = ({
     ];
 
     const showActions = !readOnly && !isUpcoming;
+
+    const handleNavigate = () => {
+        openNavigation(
+            schoolLocation ?? null,
+            schedule.school,   // school name as the Maps label
+            'No location has been set for this school yet.'
+        );
+    };
 
     return (
         <View style={cardStyle}>
@@ -60,11 +71,32 @@ export const ScheduleCard: React.FC<ScheduleCardProps> = ({
                 >
                     {schedule.school}
                 </Text>
-                {!compact && (
-                    <Text style={[styles.time, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
-                        {schedule.startTime}
-                    </Text>
-                )}
+
+                <View style={styles.headerRight}>
+                    {!compact && (
+                        <Text style={[styles.time, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
+                            {schedule.startTime}
+                        </Text>
+                    )}
+                    {/* Navigate icon — shown when not compact (Today card) or compact (Upcoming) */}
+                    {!isUpcoming && (
+                        <TouchableOpacity
+                            activeOpacity={interaction.pressedOpacity}
+                            style={[
+                                styles.navBtn,
+                                { backgroundColor: colors.accentPrimary + (schoolLocation ? 'FF' : '40') }
+                            ]}
+                            onPress={handleNavigate}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Ionicons
+                                name="navigate"
+                                size={16}
+                                color={schoolLocation ? '#fff' : colors.accentPrimary}
+                            />
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
 
             <View style={[styles.details, compact && { marginBottom: 0 }]}>
@@ -140,6 +172,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 12,
     },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
     school: {
         fontSize: 18,
         fontWeight: '600',
@@ -148,6 +185,13 @@ const styles = StyleSheet.create({
     time: {
         fontSize: 16,
         fontWeight: '700',
+    },
+    navBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     details: {
         flexDirection: 'row',

@@ -59,6 +59,8 @@ const styles = StyleSheet.create({
     valueContainer: {
         flexDirection: 'row',
         alignItems: 'baseline',
+        justifyContent: 'center',
+        gap: 4,
     },
     value: {
         fontSize: 24,
@@ -67,6 +69,5 @@ const styles = StyleSheet.create({
     unit: {
         fontSize: 14,
         fontWeight: '500',
-        marginLeft: 2,
     },
 });

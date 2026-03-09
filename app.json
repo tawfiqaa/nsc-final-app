@@ -2,7 +2,7 @@
   "expo": {
     "name": "TeacherTracker",
     "slug": "TeacherTracker",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "updates": {
       "url": "https://u.expo.dev/2140d059-9907-4d61-8a91-7e8f46908732"
@@ -59,7 +59,17 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow ${PRODUCT_NAME} to use your location to help set school locations."
+          "locationAlwaysAndWhenInUsePermission": "Allow ${PRODUCT_NAME} to use your location to help set school locations.",
+          "locationWhenInUsePermission": "Allow ${PRODUCT_NAME} to use your location to help set school locations.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow ${PRODUCT_NAME} to access your calendar to sync lessons.",
+          "remindersPermission": "Allow ${PRODUCT_NAME} to access your reminders."
         }
       ]
     ],

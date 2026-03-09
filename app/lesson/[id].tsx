@@ -216,7 +216,15 @@ export default function LessonDetailsScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.headerRow}>
-                <Text style={[styles.title, boldStyle]}>{t('attendance.title')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={{ marginRight: 15, padding: 5 }}
+                    >
+                        <Ionicons name="arrow-back" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                    <Text style={[styles.title, boldStyle]}>{t('attendance.title')}</Text>
+                </View>
                 {canEdit && (
                     <TouchableOpacity onPress={markAllPresent} style={[styles.quickBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('attendance.markAllPresent')}</Text>

@@ -31,8 +31,6 @@
         "version": "الإصدار",
         "saving": "جاري الحفظ...",
         "viewAll": "عرض الكل",
-        "delete": "حذف",
-        "edit": "تعديل",
         "confirm": "تأكيد"
     },
     "admin": {
@@ -145,14 +143,17 @@
             "nextSevenDays": "الأيام السبعة القادمة",
             "recentActivity": "النشاط الأخير"
         },
-        "noUpcomingLessons": "لا توجد دروس قادمة."
+        "noUpcomingLessons": "لا توجد دروس قادمة.",
+        "createLesson": "إضافة درس جديد",
+        "viewCalendar": "الذهاب إلى التقويم"
     },
     "tabs": {
         "dashboard": "الرئيسية",
         "schools": "مدارسي",
         "history": "السجل",
         "admin": "الإدارة",
-        "settings": "الإعدادات"
+        "settings": "الإعدادات",
+        "announcements": "الإعلانات"
     },
     "payroll": {
         "title": "تقرير الرواتب",
@@ -164,16 +165,23 @@
         "custom": "مخصص",
         "totalHours": "إجمالي الساعات",
         "totalKm": "إجمالي الكيلومترات",
+        "unitHours": "ساعات",
+        "unitKm": "كم",
         "hoursPay": "راتب الساعات",
         "kmPay": "راتب الكيلومترات",
         "totalPayment": "إجمالي الدفع",
         "exportCsv": "تصدير CSV",
         "exportExcel": "تصدير Excel",
         "exportNotice": "تشمل الصادرات القائمة الكاملة للدروس ضمن هذا النطاق الزمني.",
-        "configTitle": "تكوين أسعار الرواتب",
+        "configTitle": "إعدادات التعريفة الشهرية",
+        "configSubtitle": "أدخل معدل الساعة والمسافة لحساب الراتب",
+        "hourlyPlaceholder": "على سبيل المثال: 100",
+        "kmPlaceholder": "على سبيل المثال: 2.0",
         "hourlyRate": "سعر الساعة",
         "kmRate": "سعر الكيلومتر",
         "currency": "العملة",
+        "currencyInstruction": "اختر العملة لحساب التعرفة",
+        "invalidNumber": "الرجاء إدخال رقم صحيح",
         "saveConfig": "حفظ التكوين",
         "invalidInput": "يرجى إدخال أرقام صالحة للأسعار.",
         "saveSuccess": "تم حفظ إعدادات الرواتب.",
@@ -243,16 +251,6 @@
     },
     "schoolDetails": {
         "overview": "نظرة عامة",
-<<<<<<< HEAD
-        "attendedLessons": "الدروس التي تم حضورها",
-        "location": "الموقع",
-        "noLocationSet": "لم يتم تعيين موقع",
-        "editLocation": "تعديل الموقع",
-        "noSchedule": "لم يتم تعيين جدول",
-        "addressLabel": "تسمية العنوان (مثل المدخل الرئيسي)",
-        "mapInstruction": "انقر على الخريطة لتعيين موقع المدرسة",
-=======
->>>>>>> origin/master
         "gallery": "المعرض",
         "students": "الطلاب",
         "addPastLesson": "إضافة درس سابق",

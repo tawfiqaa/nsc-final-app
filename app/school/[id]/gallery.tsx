@@ -100,9 +100,14 @@ export default function SchoolGalleryScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-                <Text style={[styles.title, boldStyle]}>
-                    {t('gallery.title', { schoolName })}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
+                        <Ionicons name="arrow-back" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                    <Text style={[styles.title, boldStyle]} numberOfLines={1}>
+                        {t('gallery.title', { schoolName })}
+                    </Text>
+                </View>
                 <TouchableOpacity
                     style={[styles.addButton, { backgroundColor: colors.primary }]}
                     onPress={handleAddPhoto}

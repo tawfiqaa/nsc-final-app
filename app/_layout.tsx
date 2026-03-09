@@ -6,6 +6,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { LessonProvider } from '../src/contexts/LessonContext';
@@ -102,6 +103,7 @@ function OrgGuard({ children }: { children: React.ReactNode }) {
 
 function RootLayoutNav() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Stack screenOptions={{
@@ -120,9 +122,14 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="add-lesson" options={{ title: 'Add Lesson', presentation: 'modal' }} />
       <Stack.Screen name="edit-lesson" options={{ title: 'Edit Lesson', presentation: 'modal' }} />
-      <Stack.Screen name="payroll" options={{ title: 'Payroll Report' }} />
-      <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-      <Stack.Screen name="admin/org-management" options={{ title: 'Organization Management' }} />
+      <Stack.Screen name="location-picker" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="school/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="payroll" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ title: t('settings.title') }} />
+      <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="school/[id]/students" options={{ headerShown: false }} />
+      <Stack.Screen name="school/[id]/gallery" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/org-management" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -141,18 +148,28 @@ export default function RootLayout() {
     NotoSansHebrew_500Medium,
     NotoSansHebrew_700Bold,
   });
+  const segments = useSegments();
 
   useEffect(() => {
     initPromise?.then(() => setI18nReady(true)).catch(() => setI18nReady(true));
   }, []);
 
+  const [fontsTimedOut, setFontsTimedOut] = useState(false);
+
+  // Safety valve: if fonts or i18n never resolve in 5 s, unblock the app
   useEffect(() => {
-    if ((loaded || error || Platform.OS === 'web') && i18nReady) {
+    const t = setTimeout(() => setFontsTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const ready = (loaded || error || fontsTimedOut || Platform.OS === 'web') && (i18nReady || fontsTimedOut);
+    if (ready) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, error, i18nReady]);
+  }, [loaded, error, i18nReady, fontsTimedOut]);
 
-  if ((!loaded || !i18nReady) && Platform.OS !== 'web') return null;
+  if ((!loaded && !fontsTimedOut && !error) && (!i18nReady && !fontsTimedOut) && Platform.OS !== 'web') return null;
 
   return (
     <ThemeProvider>

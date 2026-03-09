@@ -175,23 +175,26 @@ export default function LoginScreen() {
                         )}
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        activeOpacity={interaction.pressedOpacity}
-                        style={[
-                            styles.googleButton,
-                            {
-                                borderColor: colors.borderSubtle,
-                                backgroundColor: colors.surface,
-                                borderRadius: radius.large
-                            }
-                        ]}
-                        onPress={() => promptAsync()}
-                        disabled={!request || isLoading}
-                    >
-                        <Text style={[styles.googleButtonText, boldStyle, { color: colors.textPrimary }]}>
-                            {t('auth.signInGoogle')}
-                        </Text>
-                    </TouchableOpacity>
+                    {/* Temporarily hidden: Google Sign In */}
+                    {false && (
+                        <TouchableOpacity
+                            activeOpacity={interaction.pressedOpacity}
+                            style={[
+                                styles.googleButton,
+                                {
+                                    borderColor: colors.borderSubtle,
+                                    backgroundColor: colors.surface,
+                                    borderRadius: radius.large
+                                }
+                            ]}
+                            onPress={() => promptAsync()}
+                            disabled={!request || isLoading}
+                        >
+                            <Text style={[styles.googleButtonText, boldStyle, { color: colors.textPrimary }]}>
+                                {t('auth.signInGoogle')}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)} style={styles.switchContainer}>
                         <Text style={[styles.switchText, secondaryStyle]}>

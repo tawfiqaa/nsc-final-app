@@ -97,22 +97,30 @@ export default function AddLessonScreen() {
     const handleSave = async () => {
         if (isSaving) return;
 
+        const showAlert = (title: string, message: string) => {
+            if (Platform.OS === 'web') {
+                window.alert(`${title ? title + ': ' : ''}${message}`);
+            } else {
+                Alert.alert(title, message);
+            }
+        };
+
         if (!school.trim()) {
-            Alert.alert(t('addLesson.validationError'), t('addLesson.schoolRequired'));
+            showAlert(t('addLesson.validationError'), t('addLesson.schoolRequired'));
             return;
         }
         if (!isOneTime && selectedDays.length === 0) {
-            Alert.alert(t('addLesson.validationError'), t('addLesson.selectDay'));
+            showAlert(t('addLesson.validationError'), t('addLesson.selectDay'));
             return;
         }
         const dur = parseFloat(duration);
         if (isNaN(dur) || dur <= 0) {
-            Alert.alert(t('addLesson.validationError'), t('addLesson.invalidDuration'));
+            showAlert(t('addLesson.validationError'), t('addLesson.invalidDuration'));
             return;
         }
         const dist = parseFloat(distance);
         if (isNaN(dist) || dist < 0) {
-            Alert.alert(t('addLesson.validationError'), t('addLesson.invalidDistance'));
+            showAlert(t('addLesson.validationError'), t('addLesson.invalidDistance'));
             return;
         }
 
@@ -129,7 +137,7 @@ export default function AddLessonScreen() {
                     distance: dist,
                     isActive: true
                 });
-                Alert.alert(t('common.success'), t('addLesson.updateSuccess'));
+                showAlert(t('common.success'), t('addLesson.updateSuccess'));
             } else if (isOneTime) {
                 const finalDateTime = new Date(oneTimeDate);
                 finalDateTime.setHours(startTime.getHours());
@@ -149,7 +157,7 @@ export default function AddLessonScreen() {
                     notes: notes.trim() ? notes.trim() : undefined,
                     isOneTime: true
                 });
-                Alert.alert(t('common.success'), t('addLesson.oneTimeSuccess'));
+                showAlert(t('common.success'), t('addLesson.oneTimeSuccess'));
             } else {
                 const newSchedules = selectedDays.map(day => ({
                     school: school.trim(),
@@ -159,11 +167,11 @@ export default function AddLessonScreen() {
                     distance: dist,
                 }));
                 await addSchedules(newSchedules);
-                Alert.alert(t('common.success'), t('addLesson.schedulesSaved', { count: selectedDays.length }));
+                showAlert(t('common.success'), t('addLesson.schedulesSaved', { count: selectedDays.length }));
             }
             router.back();
         } catch (e: any) {
-            Alert.alert(t('common.error'), e.message || t('common.error'));
+            showAlert(t('common.error'), e.message || t('common.error'));
         } finally {
             setIsSaving(false);
         }

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -26,7 +27,6 @@ import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { db } from '../../src/lib/firebase';
 import { Student } from '../../src/types';
-import { openNavigation } from '../../src/utils/navigation';
 
 const { width } = Dimensions.get('window');
 const IMAGE_MARGIN = 2;
@@ -121,43 +121,53 @@ export default function SchoolDetailsScreen() {
 
     const handleOpenEditLocation = () => {
         setShowMoreMenu(false);
-        // convention: school name IS the doc ID
-        console.log('[School] opening location picker | schoolName/docId:', schoolName);
+        const schoolId = stats.schoolDoc?.id || schoolIdParam!;
         router.push({
             pathname: '/location-picker' as any,
-            params: { schoolId: schoolName }
+            params: { schoolId }
         });
     };
 
     const handleNavigate = () => {
-        openNavigation(
-            stats.schoolDoc?.location,
-            schoolName,  // school name is the label shown in Maps
-            t('schoolDetails.noLocationSet')
-        );
-    };
+        const school = stats.schoolDoc;
+        const loc = school?.location;
+        const fallbackLabel = school?.locationLabel || school?.addressLabel;
 
-    const handleDeleteLocationConfirm = () => {
-        setShowMoreMenu(false);
-        Alert.alert(
-            t('common.confirm'),
-            'Are you sure you want to remove the location for this school?',
-            [
-                { text: t('common.cancel'), style: 'cancel' },
-                {
-                    text: t('common.delete'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            // Passing { location: null } to clear the field in Firestore
-                            await updateSchoolLocation(schoolName, { location: null } as any);
-                        } catch (e) {
-                            Alert.alert(t('common.error'), 'Failed to remove location');
-                        }
+        if (!loc && !fallbackLabel) {
+            Alert.alert(t('schoolDetails.noLocationSet'), t('schoolDetails.noLocationSet'));
+            return;
+        }
+
+        if (loc?.lat && loc?.lng) {
+            const label = fallbackLabel || schoolName;
+            const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+            const latLng = `${loc.lat},${loc.lng}`;
+            const url = Platform.select({
+                ios: `${scheme}${encodeURIComponent(label || '')}@${latLng}`,
+                android: `${scheme}${latLng}(${encodeURIComponent(label || '')})`
+            });
+
+            const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${latLng}`;
+
+            if (url) {
+                Linking.canOpenURL(url).then(supported => {
+                    if (supported) {
+                        Linking.openURL(url);
+                    } else {
+                        Linking.openURL(fallbackUrl);
                     }
-                }
-            ]
-        );
+                }).catch(() => {
+                    Linking.openURL(fallbackUrl);
+                });
+            } else {
+                Linking.openURL(fallbackUrl);
+            }
+        } else if (fallbackLabel) {
+            const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fallbackLabel)}`;
+            Linking.openURL(fallbackUrl).catch(() => {
+                Alert.alert(t('common.error'), "Could not open maps");
+            });
+        }
     };
 
     const handleDeleteSchoolConfirm = () => {
@@ -265,231 +275,224 @@ export default function SchoolDetailsScreen() {
                         </Text>
                     </View>
 
-                    {
-                        (stats.schoolDoc?.location || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel) ? (
-                            <TouchableOpacity
-                                style={[styles.navigateBtn, { backgroundColor: colors.primary }]}
-                                onPress={handleNavigate}
-                            >
-                                <Ionicons name="paper-plane" size={20} color="#fff" />
-                            </TouchableOpacity>
-                        ) : (
-                            !isRestrictedAdmin && (
-                                <TouchableOpacity
-                                    style={[styles.setBtnCompact, { backgroundColor: colors.primary }]}
-                                    onPress={handleOpenEditLocation}
-                                >
-                                    <Ionicons name="add" size={24} color="#fff" />
-                                </TouchableOpacity>
-                            )
-                        )
-                    }
+    {
+        (stats.schoolDoc?.location || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel) ? (
+            <TouchableOpacity
+                style={[styles.navigateBtn, { backgroundColor: colors.primary }]}
+                onPress={handleNavigate}
+            >
+                <Ionicons name="paper-plane" size={20} color="#fff" />
+            </TouchableOpacity>
+        ) : (
+        !isRestrictedAdmin && (
+            <TouchableOpacity
+                style={[styles.setBtnCompact, { backgroundColor: colors.primary }]}
+                onPress={handleOpenEditLocation}
+            >
+                <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+        )
+    )
+    }
                 </View >
 
-                {(!isRestrictedAdmin && (stats.schoolDoc?.location || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel)) && (
-                    <TouchableOpacity
-                        style={[styles.editBtnSimple, { borderTopColor: colors.border }]}
-                        onPress={handleOpenEditLocation}
-                    >
-                        <Ionicons name="create-outline" size={16} color={colors.primary} />
-                        <Text style={{ color: colors.primary, fontFamily: fonts.bold, marginLeft: 6, fontSize: 13 }}>
-                            {t('schoolDetails.editLocation')}
-                        </Text>
-                    </TouchableOpacity>
-                )
-                }
+        {(!isRestrictedAdmin && (stats.schoolDoc?.location || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel)) && (
+            <TouchableOpacity
+                style={[styles.editBtnSimple, { borderTopColor: colors.border }]}
+                onPress={handleOpenEditLocation}
+            >
+                <Ionicons name="create-outline" size={16} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontFamily: fonts.bold, marginLeft: 6, fontSize: 13 }}>
+                    {t('schoolDetails.editLocation')}
+                </Text>
+            </TouchableOpacity>
+        )
+}
             </View >
 
-            {/* Schedule Section */}
-            <Text style={[styles.sectionTitle, boldStyle]}>{t('schoolDetails.weeklySchedule')}</Text>
-            {
-                stats.schoolSchedules.length === 0 ? (
-                    <Text style={[secondaryStyle, styles.empty]}>{t('schoolDetails.noSchedule')}</Text>
-                ) : (
-                    stats.schoolSchedules.map(sch => (
-                        <View key={sch.id} style={[styles.scheduleItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                            <View>
-                                <Text style={[boldStyle, { fontSize: 16 }]}>{t(`days.${DAY_MAP[sch.dayOfWeek]}`)}</Text>
-                                <Text style={secondaryStyle}>{sch.startTime} - {sch.duration}h</Text>
-                            </View>
-                            {!isRestrictedAdmin && (
-                                <TouchableOpacity onPress={() => deleteSchedule(sch.id)}>
-                                    <Ionicons name="trash-outline" size={20} color={colors.error} />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    ))
-                )
-            }
+    {/* Schedule Section */ }
+    < Text style = { [styles.sectionTitle, boldStyle]} > { t('schoolDetails.weeklySchedule') }</Text >
+    {
+        stats.schoolSchedules.length === 0 ? (
+            <Text style={[secondaryStyle, styles.empty]}>{t('schoolDetails.noSchedule')}</Text>
+        ) : (
+            stats.schoolSchedules.map(sch => (
+                <View key={sch.id} style={[styles.scheduleItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View>
+                        <Text style={[boldStyle, { fontSize: 16 }]}>{t(`days.${DAY_MAP[sch.dayOfWeek]}`)}</Text>
+                        <Text style={secondaryStyle}>{sch.startTime} - {sch.duration}h</Text>
+                    </View>
+                    {!isRestrictedAdmin && (
+                        <TouchableOpacity onPress={() => deleteSchedule(sch.id)}>
+                            <Ionicons name="trash-outline" size={20} color={colors.error} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+            ))
+        )
+    }
 
-            {/* History Section */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
-                <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 0 }]}>{t('schoolDetails.recentHistory')}</Text>
-                {stats.schoolLogs.length > 5 && (
-                    <TouchableOpacity onPress={() => router.push({ pathname: '/school-history' as any, params: { school: schoolName } })}>
-                        <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('common.viewAll')}</Text>
-                    </TouchableOpacity>
-                )}
+{/* History Section */ }
+<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
+    <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 0 }]}>{t('schoolDetails.recentHistory')}</Text>
+    {stats.schoolLogs.length > 5 && (
+        <TouchableOpacity onPress={() => router.push({ pathname: '/school-history' as any, params: { school: schoolName } })}>
+            <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>{t('common.viewAll')}</Text>
+        </TouchableOpacity>
+    )}
+</View>
+
+{
+    stats.schoolLogs.length === 0 ? (
+        <Text style={[secondaryStyle, { textAlign: 'center', marginTop: 10 }]}>{t('schoolDetails.noHistoryYet')}</Text>
+    ) : (
+    stats.schoolLogs.slice(0, 5).map(log => (
+        <LogCard
+            key={log.id}
+            log={log}
+            onDelete={() => deleteLog(log.id)}
+            onEditNote={() => { setEditingLog(log); setNotesInput(log.notes || ''); }}
+            readOnly={isRestrictedAdmin}
+        />
+    ))
+)
+}
+        </ScrollView >
+    );
+
+const renderStudents = () => (
+    <View style={{ flex: 1 }}>
+        {!isRestrictedAdmin && (
+            <View style={styles.addSection}>
+                <TextInput
+                    style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
+                    placeholder={t('students.newName')}
+                    placeholderTextColor={colors.secondaryText}
+                    value={newStudentName}
+                    onChangeText={setNewStudentName}
+                />
+                <TouchableOpacity
+                    style={[styles.addBtn, { backgroundColor: colors.primary }]}
+                    onPress={handleAddStudent}
+                    disabled={isSavingStudent}
+                >
+                    {isSavingStudent ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="add" size={24} color="#fff" />}
+                </TouchableOpacity>
             </View>
+        )}
+        <FlatList
+            data={students.filter(s => s.isActive)}
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => (
+                <View style={[styles.studentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Text style={[styles.studentName, { color: colors.text, fontFamily: fonts.bold }]}>{item.fullName}</Text>
+                    {!isRestrictedAdmin && (
+                        <TouchableOpacity onPress={() => deleteStudent(schoolIdParam!, item.id)}>
+                            <Ionicons name="trash-outline" size={20} color={colors.error} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
+            ListEmptyComponent={<Text style={[secondaryStyle, { textAlign: 'center', marginTop: 40 }]}>{t('students.noStudents')}</Text>}
+        />
+    </View>
+);
 
-            {
-                stats.schoolLogs.length === 0 ? (
-                    <Text style={[secondaryStyle, { textAlign: 'center', marginTop: 10 }]}>{t('schoolDetails.noHistoryYet')}</Text>
-                ) : (
-                    stats.schoolLogs.slice(0, 5).map(log => (
-                        <LogCard
-                            key={log.id}
-                            log={log}
-                            onDelete={() => deleteLog(log.id)}
-                            onEditNote={() => { setEditingLog(log); setNotesInput(log.notes || ''); }}
-                            readOnly={isRestrictedAdmin}
-                        />
-                    ))
-                )
-            }
+const renderGallery = () => {
+    const photos = schoolGalleries[schoolName!] || [];
+    return (
+        <ScrollView contentContainerStyle={styles.tabContent}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 0 }]}>{t('schoolDetails.gallery')}</Text>
+                <TouchableOpacity
+                    style={[styles.miniAddBtn, { backgroundColor: colors.primary }]}
+                    onPress={handleAddPhoto}
+                    disabled={uploadingPhoto}
+                >
+                    {uploadingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="add" size={18} color="#fff" />}
+                </TouchableOpacity>
+            </View>
+            {photos.length === 0 ? (
+                <View style={styles.emptyGallery}>
+                    <Ionicons name="images-outline" size={64} color={colors.secondaryText} />
+                    <Text style={[secondaryStyle, { marginTop: 12, textAlign: 'center' }]}>{t('gallery.noPhotos')}</Text>
+                </View>
+            ) : (
+                <View style={styles.galleryGrid}>
+                    {photos.map((url, index) => (
+                        <TouchableOpacity key={index} onPress={() => setSelectedImage(url)} style={styles.imageContainer}>
+                            <Image source={{ uri: url }} style={styles.thumbnail} />
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
         </ScrollView>
     );
+};
 
-    const renderStudents = () => (
-        <View style={{ flex: 1 }}>
-            {!isRestrictedAdmin && (
-                <View style={styles.addSection}>
-                    <TextInput
-                        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border, fontFamily: fonts.regular }]}
-                        placeholder={t('students.newName')}
-                        placeholderTextColor={colors.secondaryText}
-                        value={newStudentName}
-                        onChangeText={setNewStudentName}
-                    />
-                    <TouchableOpacity
-                        style={[styles.addBtn, { backgroundColor: colors.primary }]}
-                        onPress={handleAddStudent}
-                        disabled={isSavingStudent}
-                    >
-                        {isSavingStudent ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="add" size={24} color="#fff" />}
-                    </TouchableOpacity>
-                </View>
-            )}
-            <FlatList
-                data={students.filter(s => s.isActive)}
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                    <View style={[styles.studentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={[styles.studentName, { color: colors.text, fontFamily: fonts.bold }]}>{item.fullName}</Text>
-                        {!isRestrictedAdmin && (
-                            <TouchableOpacity onPress={() => deleteStudent(schoolIdParam!, item.id)}>
-                                <Ionicons name="trash-outline" size={20} color={colors.error} />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                )}
-                ListEmptyComponent={<Text style={[secondaryStyle, { textAlign: 'center', marginTop: 40 }]}>{t('students.noStudents')}</Text>}
-            />
+return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerIcon}>
+                <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[boldStyle, { fontSize: 20, flex: 1, textAlign: 'center' }]} numberOfLines={1}>{schoolName}</Text>
+            <TouchableOpacity onPress={() => setShowMoreMenu(true)} style={styles.headerIcon}>
+                <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
+            </TouchableOpacity>
         </View>
-    );
 
-    const renderGallery = () => {
-        const photos = schoolGalleries[schoolName!] || [];
-        return (
-            <ScrollView contentContainerStyle={styles.tabContent}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                    <Text style={[styles.sectionTitle, boldStyle, { marginBottom: 0 }]}>{t('schoolDetails.gallery')}</Text>
-                    <TouchableOpacity
-                        style={[styles.miniAddBtn, { backgroundColor: colors.primary }]}
-                        onPress={handleAddPhoto}
-                        disabled={uploadingPhoto}
-                    >
-                        {uploadingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="add" size={18} color="#fff" />}
-                    </TouchableOpacity>
-                </View>
-                {photos.length === 0 ? (
-                    <View style={styles.emptyGallery}>
-                        <Ionicons name="images-outline" size={64} color={colors.secondaryText} />
-                        <Text style={[secondaryStyle, { marginTop: 12, textAlign: 'center' }]}>{t('gallery.noPhotos')}</Text>
-                    </View>
-                ) : (
-                    <View style={styles.galleryGrid}>
-                        {photos.map((url, index) => (
-                            <TouchableOpacity key={index} onPress={() => setSelectedImage(url)} style={styles.imageContainer}>
-                                <Image source={{ uri: url }} style={styles.thumbnail} />
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            </ScrollView>
-        );
-    };
-
-    return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerIcon}>
-                    <Ionicons name="arrow-back" size={24} color={colors.text} />
-                </TouchableOpacity>
-                <Text style={[boldStyle, { fontSize: 20, flex: 1, textAlign: 'center' }]} numberOfLines={1}>{schoolName}</Text>
-                <TouchableOpacity onPress={() => setShowMoreMenu(true)} style={styles.headerIcon}>
-                    <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
-                </TouchableOpacity>
-            </View>
-
-            <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-                {(['overview', 'students', 'gallery'] as TabType[]).map(tab => (
-                    <TouchableOpacity
-                        key={tab}
-                        onPress={() => setActiveTab(tab)}
-                        style={[styles.tabItem, activeTab === tab && { borderBottomColor: colors.primary }]}
-                    >
-                        <Text style={[
-                            styles.tabText,
-                            { fontFamily: activeTab === tab ? fonts.bold : fonts.regular },
-                            { color: activeTab === tab ? colors.primary : colors.secondaryText }
-                        ]}>
-                            {t(`schoolDetails.${tab}`)}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            <View style={{ flex: 1 }}>
-                {activeTab === 'overview' && renderOverview()}
-                {activeTab === 'students' && renderStudents()}
-                {activeTab === 'gallery' && renderGallery()}
-            </View>
-
-            {activeTab === 'overview' && (
+        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+            {(['overview', 'students', 'gallery'] as TabType[]).map(tab => (
                 <TouchableOpacity
-                    style={[styles.fab, { backgroundColor: colors.primary }]}
-                    onPress={() => router.push({ pathname: '/add-lesson', params: { school: schoolName, mode: 'log' } })}
+                    key={tab}
+                    onPress={() => setActiveTab(tab)}
+                    style={[styles.tabItem, activeTab === tab && { borderBottomColor: colors.primary }]}
                 >
-                    <Ionicons name="add" size={30} color="#fff" />
+                    <Text style={[
+                        styles.tabText,
+                        { fontFamily: activeTab === tab ? fonts.bold : fonts.regular },
+                        { color: activeTab === tab ? colors.primary : colors.secondaryText }
+                    ]}>
+                        {t(`schoolDetails.${tab}`)}
+                    </Text>
                 </TouchableOpacity>
-            )}
+            ))}
+        </View>
 
-            {/* Modals */}
-            <Modal visible={showMoreMenu} transparent animationType="fade" onRequestClose={() => setShowMoreMenu(false)}>
-                <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setShowMoreMenu(false)}>
-                    <View style={[styles.menuContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <TouchableOpacity style={styles.menuItem} onPress={handleOpenEditLocation}>
-                            <Ionicons name="create-outline" size={20} color={colors.text} />
-                            <Text style={[textStyle, { fontSize: 16 }]}>{t('schoolDetails.editLocation')}</Text>
+        <View style={{ flex: 1 }}>
+            {activeTab === 'overview' && renderOverview()}
+            {activeTab === 'students' && renderStudents()}
+            {activeTab === 'gallery' && renderGallery()}
+        </View>
+
+        {activeTab === 'overview' && (
+            <TouchableOpacity
+                style={[styles.fab, { backgroundColor: colors.primary }]}
+                onPress={() => router.push({ pathname: '/add-lesson', params: { school: schoolName, mode: 'log' } })}
+            >
+                <Ionicons name="add" size={30} color="#fff" />
+            </TouchableOpacity>
+        )}
+
+        {/* Modals */}
+        <Modal visible={showMoreMenu} transparent animationType="fade" onRequestClose={() => setShowMoreMenu(false)}>
+            <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setShowMoreMenu(false)}>
+                <View style={[styles.menuContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <TouchableOpacity style={styles.menuItem} onPress={handleOpenEditLocation}>
+                        <Ionicons name="create-outline" size={20} color={colors.text} />
+                        <Text style={[textStyle, { fontSize: 16 }]}>{t('schoolDetails.editLocation')}</Text>
+                    </TouchableOpacity>
+                    {(isOrgAdmin || isSuperAdmin) && (
+                        <TouchableOpacity style={styles.menuItem} onPress={handleDeleteSchoolConfirm}>
+                            <Ionicons name="trash-outline" size={20} color={colors.error} />
+                            <Text style={[textStyle, { fontSize: 16, color: colors.error }]}>{t('schools.deleteSchool')}</Text>
                         </TouchableOpacity>
+                    )}
+                    </View >
+                </TouchableOpacity >
+            </Modal >
 
-                        {(stats.schoolDoc?.location || stats.schoolDoc?.locationLabel || stats.schoolDoc?.addressLabel) && (
-                            <TouchableOpacity style={styles.menuItem} onPress={handleDeleteLocationConfirm}>
-                                <Ionicons name="location-outline" size={20} color={colors.error} />
-                                <Text style={[textStyle, { fontSize: 16, color: colors.error }]}>Remove Location</Text>
-                            </TouchableOpacity>
-                        )}
-
-                        {(isOrgAdmin || isSuperAdmin) && (
-                            <TouchableOpacity style={styles.menuItem} onPress={handleDeleteSchoolConfirm}>
-                                <Ionicons name="trash-outline" size={20} color={colors.error} />
-                                <Text style={[textStyle, { fontSize: 16, color: colors.error }]}>{t('schools.deleteSchool')}</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </TouchableOpacity>
-            </Modal>
 
             <Modal visible={!!editingLog} transparent animationType="fade" onRequestClose={() => setEditingLog(null)}>
                 <View style={styles.modalOverlay}>
@@ -531,7 +534,7 @@ export default function SchoolDetailsScreen() {
                     {selectedImage && <Image source={{ uri: selectedImage }} style={styles.fullImage} resizeMode="contain" />}
                 </View>
             </Modal>
-        </View>
+        </View >
     );
 }
 

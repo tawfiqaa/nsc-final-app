@@ -1,3 +1,11 @@
+export interface Announcement {
+    id: string;
+    title: string;
+    content: string;
+    authorName: string;
+    createdAt: any; // Firestore Timestamp
+}
+
 export interface Student {
     id: string; // Document ID (UUID or generated)
     fullName: string;
@@ -103,16 +111,7 @@ export interface SchoolLocation {
 export interface School {
     id: string; // school name acts as ID in many places, but this is the document ID
     name: string;
-<<<<<<< HEAD
     location?: SchoolLocation | null;
-=======
-    addressLabel?: string;
-    locationLabel?: string;
-    location?: {
-        lat: number;
-        lng: number;
-    } | null;
->>>>>>> origin/master
     gallery?: string[];
     createdAt: number;
     updatedAt: number;
@@ -212,9 +211,5 @@ export interface LessonContextType {
     refresh: () => Promise<void>;
     setTargetUid: (uid: string) => void;
     saveAttendance: (lessonId: string, records: AttendanceRecord[]) => Promise<void>;
-<<<<<<< HEAD
     updateSchoolLocation: (schoolId: string, payload: Partial<SchoolLocation> | { location: null }) => Promise<void>;
-=======
-    updateSchoolLocation: (schoolId: string, payload: { addressLabel?: string; locationLabel?: string; location: { lat: number; lng: number } | null }) => Promise<void>;
->>>>>>> origin/master
 }

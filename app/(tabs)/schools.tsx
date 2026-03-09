@@ -140,6 +140,13 @@ export default function SchoolsScreen() {
                     <Text style={[styles.empty, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('schools.noSchoolsFound')}</Text>
                 }
             />
+            <TouchableOpacity
+                activeOpacity={interaction.pressedOpacity}
+                style={[styles.fab, { backgroundColor: colors.accentPrimary, borderRadius: radius.full, width: 64, height: 64, elevation: 8, shadowOpacity: 0.3 }]}
+                onPress={() => router.push('/add-lesson' as any)}
+            >
+                <Ionicons name="add" size={36} color="#fff" />
+            </TouchableOpacity>
         </View>
     );
 }
@@ -198,5 +205,20 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 40,
         fontSize: 16,
+    },
+    fab: {
+        position: 'absolute',
+        bottom: 24,
+        right: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.27,
+        shadowRadius: 4.65,
     }
 });
