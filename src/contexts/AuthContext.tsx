@@ -53,25 +53,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
 
+            // Safety timeout: unblock loading if offline/Firestore hangs
+            const timeout = setTimeout(() => {
+                setLoading(false);
+            }, 3000);
+
             // Subscribe to real-time updates for role changes
             const unsubscribe = onSnapshot(userDocRef, async (docSnap) => {
+                clearTimeout(timeout);
                 if (docSnap.exists()) {
                     const userData = docSnap.data() as User;
 
                     // If authEmail is missing, sync it
                     if (!userData.authEmail && firebaseUser.email) {
-                        await setDoc(userDocRef, {
-                            authEmail: firebaseUser.email,
-                            updatedAt: serverTimestamp()
-                        }, { merge: true });
+                        try {
+                            await setDoc(userDocRef, {
+                                authEmail: firebaseUser.email,
+                                updatedAt: serverTimestamp()
+                            }, { merge: true });
+                        } catch (e) {
+                            console.log("Offline: sync authEmail deferred");
+                        }
                     }
 
                     setUser(userData);
                     await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(userData));
 
                     // Sync language from Firestore ONLY on first load (not on every snapshot)
-                    // This prevents race conditions where changing language in-app
-                    // triggers an onSnapshot that reverts the language back
                     const dbLang = userData.settings?.ui?.language;
                     if (dbLang && !initialLangSyncDone.current) {
                         initialLangSyncDone.current = true;
@@ -112,8 +120,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     };
                     const userToSave = { ...newUser };
                     if (!isSuperAdmin) delete (userToSave as any).isSuperAdmin;
-                    await setDoc(userDocRef, { ...userToSave, updatedAt: serverTimestamp() });
+                    try {
+                        await setDoc(userDocRef, { ...userToSave, updatedAt: serverTimestamp() });
+                    } catch (e) {
+                        console.log("Offline: Create user doc deferred");
+                    }
                 }
+                setLoading(false);
+            }, (err) => {
+                console.error('Error fetching user role snapshot:', err);
+                clearTimeout(timeout);
                 setLoading(false);
             });
             return unsubscribe;

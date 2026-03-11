@@ -26,7 +26,7 @@ export const ThemeToggle = () => {
     const switchValue = (isRTL && Platform.OS !== 'web') ? !isDark : isDark;
 
     return (
-        <View>
+        <View style={Platform.OS === 'web' && isRTL ? { direction: 'ltr' } as any : undefined}>
             <Switch
                 value={switchValue}
                 onValueChange={toggleSwitch}

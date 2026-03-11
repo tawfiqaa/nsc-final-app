@@ -240,9 +240,9 @@ export default function AdminScreen() {
         ]}>
             <View style={{ flex: 1 }}>
                 <Text style={[styles.memberName, { color: colors.textPrimary, fontFamily: fonts.bold, textAlign: textAlignment }]}>{item.displayName || item.email || item.uid}</Text>
-                <View style={[styles.roleContainer, { justifyContent: textAlignment === 'right' ? 'flex-end' : 'flex-start' }]}>
-                    <Text style={[styles.memberRole, { color: colors.accentPrimary, fontFamily: fonts.regular }]}>{roleLabel(item.role)}</Text>
-                    {item.uid === user?.uid && <Text style={[styles.youBadge, { backgroundColor: colors.accentPrimary + '15', color: colors.accentPrimary }]}>YOU</Text>}
+                <View style={[styles.roleContainer, { justifyContent: 'flex-start' }]}>
+                    <Text style={[styles.memberRole, { color: colors.accentPrimary, fontFamily: fonts.regular, textAlign: textAlignment }]}>{roleLabel(item.role)}</Text>
+                    {item.uid === user?.uid && <Text style={[styles.youBadge, { backgroundColor: colors.accentPrimary + '15', color: colors.accentPrimary, textAlign: textAlignment }]}>YOU</Text>}
                 </View>
             </View>
             <View style={styles.actionRow}>

@@ -67,6 +67,11 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const unsubs: (() => void)[] = [];
 
+        // Safety timeout for org loading
+        const timeout = setTimeout(() => {
+            setOrgLoading(false);
+        }, 3000);
+
         // Org doc
         const orgUnsub = onSnapshot(doc(db, 'orgs', activeOrgId), (snap) => {
             if (snap.exists()) {
@@ -81,6 +86,7 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // Membership doc
         const memberUnsub = onSnapshot(doc(db, 'orgs', activeOrgId, 'members', user.uid), (snap) => {
+            clearTimeout(timeout);
             if (snap.exists()) {
                 const data = snap.data();
                 setMembershipStatus(data.status as MembershipStatus);
@@ -92,6 +98,7 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setOrgLoading(false);
         }, (err) => {
             console.error('Error listening to membership doc', err);
+            clearTimeout(timeout);
             setOrgLoading(false);
         });
         unsubs.push(memberUnsub);
