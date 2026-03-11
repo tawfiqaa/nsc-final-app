@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, I18nManager, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LogCard } from '../../src/components/LogCard';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLesson } from '../../src/contexts/LessonContext';
@@ -80,8 +80,8 @@ export default function SchoolHistoryScreen() {
             ]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
-                            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+                        <TouchableOpacity onPress={() => router.back()} style={{ marginEnd: 15 }}>
+                            <Ionicons name={I18nManager.isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.textPrimary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             activeOpacity={interaction.pressedOpacity}
@@ -240,7 +240,9 @@ const styles = StyleSheet.create({
         fontSize: 12,
     },
     list: {
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingTop: 20,
+        paddingBottom: 60,
     },
     empty: {
         textAlign: 'center',

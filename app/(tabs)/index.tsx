@@ -1,10 +1,10 @@
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { addDays, endOfMonth, getDay, isAfter, isSameDay, startOfDay, startOfMonth } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { I18nManager, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { DashboardEmptyState } from '../../src/components/DashboardEmptyState';
 import { LogCard } from '../../src/components/LogCard';
 import { ScheduleCard } from '../../src/components/ScheduleCard';
@@ -171,8 +171,8 @@ export default function Dashboard() {
         </View>
 
         <View style={styles.statsRow}>
-          <StatsWidget title={t('dashboard.hoursMonth')} value={formatNumber(monthlyStats.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="h" />
-          <StatsWidget title={t('dashboard.distanceMonth')} value={formatNumber(monthlyStats.totalDistance, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" />
+          <StatsWidget title={t('dashboard.hoursMonth')} value={formatNumber(monthlyStats.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit={t('dashboard.unitHours')} />
+          <StatsWidget title={t('dashboard.distanceMonth')} value={formatNumber(monthlyStats.totalDistance, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit={t('dashboard.unitKm')} />
         </View>
 
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
@@ -181,49 +181,34 @@ export default function Dashboard() {
             style={[
               styles.totalCardHome,
               {
-                backgroundColor: colors.surface,
-                borderColor: colors.borderSubtle,
-                borderWidth: 1,
+                backgroundColor: colors.accentPrimary,
                 borderRadius: radius.large,
-                shadowColor: '#000',
+                shadowColor: colors.accentPrimary,
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: theme === 'light' ? 0.05 : 0.1,
-                shadowRadius: 12,
-                elevation: theme === 'light' ? 2 : 4,
+                shadowOpacity: 0.3,
+                shadowRadius: 10,
+                elevation: 6,
+                paddingVertical: 24,
+                width: '100%',
               }
             ]}
             onPress={() => router.push('/payroll' as any)}
           >
-            <Text style={[styles.totalLabelHome, secondaryStyle]}>{t('dashboard.totalMonth')}</Text>
+            <Text style={[styles.totalLabelHome, { fontFamily: fonts.medium, color: '#ffffff', opacity: 0.8 }]}>
+              {t('dashboard.totalMonth')}
+            </Text>
             {monthlyStats.ratesMissing ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <FontAwesome5 name="coins" size={22} color={colors.accentPrimary} />
-                <Text style={[styles.totalValueHome, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
+                <FontAwesome5 name="coins" size={22} color="#ffffff" />
+                <Text style={[styles.totalValueHome, { color: '#ffffff', fontFamily: fonts.bold }]}>
                   {t('dashboard.setRates')}
                 </Text>
               </View>
             ) : (
-              <Text style={[styles.totalValueHome, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
+              <Text style={[styles.totalValueHome, { color: '#ffffff', fontFamily: fonts.bold }]}>
                 {formatCurrency(monthlyStats.totalPay, payrollSettings?.currency || 'ILS')}
               </Text>
             )}
-            <View style={[
-              styles.actionPill,
-              { backgroundColor: colors.backgroundSecondary, borderRadius: radius.medium }
-            ]}>
-              <Text style={[
-                secondaryStyle,
-                { fontSize: 12, fontFamily: fonts.medium, color: colors.accentPrimary }
-              ]}>
-                {t('dashboard.tapToViewDetails')}
-              </Text>
-              <Ionicons
-                name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
-                size={16}
-                color={colors.accentPrimary}
-                style={I18nManager.isRTL ? { marginRight: 4 } : { marginLeft: 4 }}
-              />
-            </View>
           </TouchableOpacity>
         </View>
 
@@ -376,7 +361,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 20,
     paddingBottom: 100, // Space for FAB
   },
   header: {

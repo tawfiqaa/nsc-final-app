@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+    import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';

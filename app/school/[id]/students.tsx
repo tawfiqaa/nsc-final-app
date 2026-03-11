@@ -185,7 +185,8 @@ const styles = StyleSheet.create({
     },
     addSection: {
         flexDirection: 'row',
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 20,
         gap: 12,
         alignItems: 'center',
     },
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     listContent: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
         paddingBottom: 40,
     },
     sectionTitle: {

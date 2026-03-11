@@ -326,7 +326,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     content: {
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingTop: 20,
     },
     formGroup: {
         marginBottom: 20,
@@ -362,7 +363,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
     footer: {
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 20,
         borderTopWidth: 1,
     },
     saveButton: {

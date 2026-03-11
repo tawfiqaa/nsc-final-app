@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, I18nManager, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AttendanceLog } from '../types';
@@ -34,29 +34,34 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onEditNote, rea
             borderRadius: radius.medium,
             borderColor: theme === 'light' ? colors.borderSubtle : colors.divider,
             borderWidth: 1,
-            // Subtle shadow for light mode
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: theme === 'light' ? 0.05 : 0.1,
             shadowRadius: 10,
             elevation: theme === 'light' ? 2 : 4,
-            borderLeftColor: isPresent ? colors.success : colors.danger,
+            // Flip accent border to the correct side for RTL
+            borderLeftColor: I18nManager.isRTL ? 'transparent' : (isPresent ? colors.success : colors.danger),
+            borderRightColor: I18nManager.isRTL ? (isPresent ? colors.success : colors.danger) : 'transparent',
+            borderRightWidth: I18nManager.isRTL ? 4 : 0,
         }
     ];
 
     return (
         <View style={cardStyle}>
+            {/* Main content row — same layout for both LTR and RTL, React Native handles mirroring */}
             <View style={styles.row}>
                 <View style={styles.info}>
-                    <Text style={[styles.school, boldStyle]}>{log.school}</Text>
-                    <Text style={[styles.date, secondaryStyle]}>
+                    <Text style={[styles.school, boldStyle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+                        {log.school}
+                    </Text>
+                    <Text style={[styles.date, secondaryStyle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
                         {formatDateDMY(new Date(log.dateISO))} {formatTime24(new Date(log.dateISO))}
                     </Text>
                 </View>
 
                 <View style={styles.statusContainer}>
                     <Ionicons
-                        name={isPresent ? "checkmark-circle" : "close-circle"}
+                        name={isPresent ? 'checkmark-circle' : 'close-circle'}
                         size={24}
                         color={isPresent ? colors.success : colors.danger}
                     />
@@ -133,6 +138,8 @@ const styles = StyleSheet.create({
     },
     info: {
         flex: 1,
+        // Align text to the leading edge (left in LTR, right in RTL)
+        alignItems: 'flex-start',
     },
     school: {
         fontSize: 16,
@@ -143,7 +150,8 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     statusContainer: {
-        alignItems: 'flex-end',
+        alignItems: 'center',
+        marginStart: 12,
     },
     status: {
         fontSize: 12,
@@ -152,7 +160,7 @@ const styles = StyleSheet.create({
     actions: {
         flexDirection: 'row',
         marginTop: 8,
-        justifyContent: 'flex-end',
+        justifyContent: I18nManager.isRTL ? 'flex-start' : 'flex-end',
         gap: 16,
     },
     actionLink: {
@@ -169,7 +177,7 @@ const styles = StyleSheet.create({
     },
     notesText: {
         fontSize: 13,
-        marginLeft: 6,
+        marginStart: 6,
         flex: 1,
         fontStyle: 'italic',
     },

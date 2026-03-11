@@ -107,7 +107,9 @@
         },
         "noUpcomingLessons": "No upcoming lessons.",
         "createLesson": "Create Lesson",
-        "viewCalendar": "View Calendar"
+        "viewCalendar": "View Calendar",
+        "unitHours": "h",
+        "unitKm": "km"
     },
     "tabs": {
         "dashboard": "Home",

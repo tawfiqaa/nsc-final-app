@@ -107,7 +107,9 @@
         },
         "noUpcomingLessons": "אין שיעורים קרובים.",
         "createLesson": "צור שיעור חדש",
-        "viewCalendar": "עבור ליומן"
+        "viewCalendar": "עבור ליומן",
+        "unitHours": "שעות",
+        "unitKm": "ק״מ"
     },
     "tabs": {
         "dashboard": "ראשי",

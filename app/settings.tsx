@@ -5,7 +5,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, I18nManager, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ThemeToggle } from '../src/components/ThemeToggle';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useLesson } from '../src/contexts/LessonContext';
@@ -151,10 +151,10 @@ export default function SettingsScreen() {
                         onPress={() => router.push('/profile' as any)}
                     >
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Ionicons name="person-circle-outline" size={24} color={colors.accentPrimary} style={{ marginRight: 12 }} />
+                            <Ionicons name="person-circle-outline" size={24} color={colors.accentPrimary} style={{ marginEnd: 12 }} />
                             <Text style={[styles.label, textStyle]}>{t('profile.title')}</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                        <Ionicons name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"} size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
 
                     <View style={styles.row}>
@@ -178,21 +178,21 @@ export default function SettingsScreen() {
                                 <TouchableOpacity
                                     activeOpacity={interaction.pressedOpacity}
                                     onPress={saveName}
-                                    style={{ marginLeft: 8 }}
+                                    style={{ marginStart: 8 }}
                                 >
                                     <Ionicons name="checkmark-circle" size={24} color={colors.success} />
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     activeOpacity={interaction.pressedOpacity}
                                     onPress={() => setEditingName(false)}
-                                    style={{ marginLeft: 8 }}
+                                    style={{ marginStart: 8 }}
                                 >
                                     <Ionicons name="close-circle" size={24} color={colors.danger} />
                                 </TouchableOpacity>
                             </View>
                         ) : (
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Text style={[styles.value, secondaryStyle, { marginRight: 8 }]}>{user?.name || 'N/A'}</Text>
+                                <Text style={[styles.value, secondaryStyle, { marginEnd: 8 }]}>{user?.name || 'N/A'}</Text>
                                 <TouchableOpacity
                                     activeOpacity={interaction.pressedOpacity}
                                     onPress={() => { setTempName(user?.name || ''); setEditingName(true); }}
@@ -220,13 +220,13 @@ export default function SettingsScreen() {
                         {/* Month Picker */}
                         <View style={[styles.row, { justifyContent: 'center', marginBottom: 12 }]}>
                             <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => changeMonth(-1)} style={{ padding: 4 }}>
-                                <Ionicons name="chevron-back" size={24} color={colors.accentPrimary} />
+                                <Ionicons name={I18nManager.isRTL ? "chevron-forward" : "chevron-back"} size={24} color={colors.accentPrimary} />
                             </TouchableOpacity>
                             <Text style={{ fontSize: 18, color: colors.textPrimary, marginHorizontal: 16, fontFamily: fonts.bold }}>
                                 {formatDate(exportDate, { month: 'long', year: 'numeric' })}
                             </Text>
                             <TouchableOpacity activeOpacity={interaction.pressedOpacity} onPress={() => changeMonth(1)} style={{ padding: 4 }}>
-                                <Ionicons name="chevron-forward" size={24} color={colors.accentPrimary} />
+                                <Ionicons name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"} size={24} color={colors.accentPrimary} />
                             </TouchableOpacity>
                         </View>
 
@@ -241,7 +241,7 @@ export default function SettingsScreen() {
                             ) : (
                                 <>
                                     <Text style={[styles.label, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>{t('settings.quickMonthlyExport')}</Text>
-                                    <Ionicons name="download-outline" size={24} color={colors.accentPrimary} style={{ marginLeft: 8 }} />
+                                    <Ionicons name="download-outline" size={24} color={colors.accentPrimary} style={{ marginStart: 8 }} />
                                 </>
                             )}
                         </TouchableOpacity>
@@ -256,7 +256,7 @@ export default function SettingsScreen() {
                                 name={theme === 'dark' ? "moon" : "sunny"}
                                 size={22}
                                 color={colors.accentPrimary}
-                                style={{ marginRight: 12 }}
+                                style={{ marginEnd: 12 }}
                             />
                             <Text style={[styles.label, textStyle]}>{t('settings.darkMode')}</Text>
                         </View>
@@ -265,7 +265,7 @@ export default function SettingsScreen() {
 
                     <View style={[styles.row, { marginBottom: 0 }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Ionicons name="language-outline" size={22} color={colors.accentPrimary} style={{ marginRight: 12 }} />
+                            <Ionicons name="language-outline" size={22} color={colors.accentPrimary} style={{ marginEnd: 12 }} />
                             <Text style={[styles.label, textStyle]}>{t('settings.language')}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -300,7 +300,7 @@ export default function SettingsScreen() {
                     {activeOrg && (
                         <>
                             <View style={styles.row}>
-                                <Text style={[styles.label, textStyle, { paddingRight: 8 }]}>{t('settings.activeOrg')}</Text>
+                                <Text style={[styles.label, textStyle, { paddingEnd: 8 }]}>{t('settings.activeOrg')}</Text>
                                 <Text style={[styles.value, { color: colors.accentPrimary, fontFamily: fonts.bold, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">{activeOrg.name || 'Unknown'}</Text>
                             </View>
                             <View style={styles.row}>
@@ -337,7 +337,7 @@ export default function SettingsScreen() {
                                 onPress={() => router.push('/join-org' as any)}
                             >
                                 <Ionicons name="add-circle-outline" size={18} color={colors.accentPrimary} />
-                                <Text style={[styles.label, { color: colors.accentPrimary, marginLeft: 6, fontFamily: fonts.regular }]}>{t('settings.joinAnotherOrg')}</Text>
+                                <Text style={[styles.label, { color: colors.accentPrimary, marginStart: 6, fontFamily: fonts.regular }]}>{t('settings.joinAnotherOrg')}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -352,10 +352,10 @@ export default function SettingsScreen() {
                             onPress={() => router.push('/admin/org-management' as any)}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Ionicons name="business" size={24} color={colors.accentPrimary} style={{ marginRight: 12 }} />
+                                <Ionicons name="business" size={24} color={colors.accentPrimary} style={{ marginEnd: 12 }} />
                                 <Text style={[styles.label, textStyle]}>{t('settings.orgManagement')}</Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                            <Ionicons name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"} size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -368,10 +368,10 @@ export default function SettingsScreen() {
                         onPress={() => setShowDeleteModal(true)}
                     >
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Ionicons name="trash-outline" size={24} color={colors.danger} style={{ marginRight: 12 }} />
+                            <Ionicons name="trash-outline" size={24} color={colors.danger} style={{ marginEnd: 12 }} />
                             <Text style={[styles.label, { color: colors.danger, fontFamily: fonts.regular }]}>{t('settings.deleteAccount')}</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={20} color={colors.danger + '80'} />
+                        <Ionicons name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"} size={20} color={colors.danger + '80'} />
                     </TouchableOpacity>
                 </View>
 
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     content: {
-        padding: 20,
+        paddingHorizontal: 16,
         paddingTop: 10,
     },
     title: {
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
         padding: 4,
         paddingHorizontal: 8,
         width: 150,
-        marginRight: 8,
+        marginEnd: 8,
     },
     langButton: {
         paddingVertical: 6,

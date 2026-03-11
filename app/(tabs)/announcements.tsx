@@ -348,7 +348,7 @@ const modalStyles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
     headerTitle: { fontSize: 18 },
-    body: { padding: 20, paddingBottom: 40 },
+    body: { paddingHorizontal: 16, paddingVertical: 20, paddingBottom: 40 },
     label: { fontSize: 12, letterSpacing: 1, marginBottom: 8 },
     input: {
         borderWidth: 1,

@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, query, serverTimestamp, where, writeBatch } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next'; // Added this import based on the instruction's intent
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, FlatList, I18nManager, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -16,7 +16,7 @@ export default function AdminScreen() {
     const { radius, interaction } = tokens;
     const { user } = useAuth();
     const { activeOrgId, activeOrg, membershipRole } = useOrg();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     const [pendingMembers, setPendingMembers] = useState<OrgMembership[]>([]);
     const [approvedMembers, setApprovedMembers] = useState<OrgMembership[]>([]);
@@ -26,6 +26,11 @@ export default function AdminScreen() {
     const isOwner = membershipRole === 'owner';
     const isAdmin = membershipRole === 'admin' || isOwner;
     const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+
+    const isAppRTL = Platform.OS === 'web' 
+        ? (i18n.language === 'he' || i18n.language === 'ar') 
+        : I18nManager.isRTL;
+    const textAlignment = isAppRTL ? 'right' : 'left';
 
     // Listen to org members
     useEffect(() => {
@@ -197,8 +202,8 @@ export default function AdminScreen() {
             }
         ]}>
             <View style={{ flex: 1 }}>
-                <Text style={[styles.memberName, { color: colors.textPrimary, fontFamily: fonts.bold }]}>{item.displayName || item.email || item.uid}</Text>
-                <Text style={[styles.memberEmail, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{item.email}</Text>
+                <Text style={[styles.memberName, { color: colors.textPrimary, fontFamily: fonts.bold, textAlign: textAlignment }]}>{item.displayName || item.email || item.uid}</Text>
+                <Text style={[styles.memberEmail, { color: colors.textSecondary, fontFamily: fonts.regular, textAlign: textAlignment }]}>{item.email}</Text>
             </View>
             <View style={styles.actionRow}>
                 <TouchableOpacity
@@ -234,8 +239,8 @@ export default function AdminScreen() {
             }
         ]}>
             <View style={{ flex: 1 }}>
-                <Text style={[styles.memberName, { color: colors.textPrimary, fontFamily: fonts.bold }]}>{item.displayName || item.email || item.uid}</Text>
-                <View style={styles.roleContainer}>
+                <Text style={[styles.memberName, { color: colors.textPrimary, fontFamily: fonts.bold, textAlign: textAlignment }]}>{item.displayName || item.email || item.uid}</Text>
+                <View style={[styles.roleContainer, { justifyContent: textAlignment === 'right' ? 'flex-end' : 'flex-start' }]}>
                     <Text style={[styles.memberRole, { color: colors.accentPrimary, fontFamily: fonts.regular }]}>{roleLabel(item.role)}</Text>
                     {item.uid === user?.uid && <Text style={[styles.youBadge, { backgroundColor: colors.accentPrimary + '15', color: colors.accentPrimary }]}>YOU</Text>}
                 </View>
@@ -386,7 +391,7 @@ export default function AdminScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { padding: 20, paddingTop: 50, borderBottomWidth: 1 },
+    header: { paddingHorizontal: 16, paddingTop: 50, paddingBottom: 20, borderBottomWidth: 1 },
     headerTitle: { fontSize: 24, fontWeight: '700' },
     orgName: { fontSize: 14, marginTop: 4 },
     list: { padding: 16, paddingTop: 8, paddingBottom: 32 },

@@ -194,7 +194,7 @@ export default function OrgManagementScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    list: { padding: 20 },
+    list: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 20 },
     headerContainer: {
         flexDirection: 'column',
         marginBottom: 20,

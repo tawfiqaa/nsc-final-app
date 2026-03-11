@@ -192,7 +192,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 20,
         paddingTop: 60,
         borderBottomWidth: 1,
         flexDirection: 'row',
@@ -217,7 +218,8 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     content: {
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 20,
         minHeight: '100%',
     },
     grid: {

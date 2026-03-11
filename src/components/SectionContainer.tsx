@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { I18nManager, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface SectionContainerProps {
@@ -17,6 +17,7 @@ export const SectionContainer: React.FC<SectionContainerProps> = ({
 }) => {
     const { colors, fonts, tokens, theme } = useTheme();
     const { radius } = tokens;
+    const isRTL = I18nManager.isRTL;
 
     return (
         <View style={[
@@ -28,12 +29,18 @@ export const SectionContainer: React.FC<SectionContainerProps> = ({
                 borderWidth: 1,
             }
         ]}>
-            {/* Left Accent Indicator */}
+            {/* Accent bar — always on the leading edge */}
             <View style={[
                 styles.accentBar,
                 {
                     backgroundColor: colors.accentPrimary,
-                    opacity: 0.4
+                    opacity: 0.4,
+                    left: isRTL ? undefined : 0,
+                    right: isRTL ? 0 : undefined,
+                    borderTopRightRadius: isRTL ? 0 : 2,
+                    borderBottomRightRadius: isRTL ? 0 : 2,
+                    borderTopLeftRadius: isRTL ? 2 : 0,
+                    borderBottomLeftRadius: isRTL ? 2 : 0,
                 }
             ]} />
 
@@ -73,7 +80,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         overflow: 'hidden',
         position: 'relative',
-        // Subtle shadow
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
@@ -84,17 +90,14 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 16,
         bottom: 16,
-        left: 0,
         width: 3,
-        borderTopRightRadius: 2,
-        borderBottomRightRadius: 2,
     },
     headerTint: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: 60, // Approximate header height
+        height: 60,
     },
     content: {
         padding: 16,
@@ -104,7 +107,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 12,
-        paddingLeft: 4, // Space for accent bar
+        paddingStart: 4, // Space for accent bar — respects RTL
     },
     titleContainer: {
         flex: 1,
@@ -118,7 +121,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     rightAction: {
-        marginLeft: 12,
+        marginStart: 12, // Replaces marginLeft — respects RTL
     },
     divider: {
         height: 1,

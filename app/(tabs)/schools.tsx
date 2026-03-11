@@ -156,8 +156,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     list: {
-        padding: 20,
-        paddingTop: 10,
+        paddingHorizontal: 16,
+        paddingTop: 20,
+        paddingBottom: 100, // For FAB
     },
     header: {
         fontSize: 28,

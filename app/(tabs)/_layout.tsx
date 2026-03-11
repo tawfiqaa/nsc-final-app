@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, TouchableOpacity } from 'react-native';
+import { I18nManager, Platform, TouchableOpacity } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useOrg } from '../../src/contexts/OrgContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -25,11 +25,20 @@ export default function TabsLayout() {
   // Show teacher tabs if not an org admin OR if a super admin
   const showTeacherTabs = !isOrgAdmin || isSuperAdmin;
 
+  const settingsButton = (
+    <TouchableOpacity
+      onPress={() => router.push('/settings' as any)}
+      hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+    >
+      <Ionicons name="settings-outline" size={24} color={colors.textPrimary} />
+    </TouchableOpacity>
+  );
+
   return (
     <Tabs
       screenOptions={{
         headerShown: true,
-        headerTitleAlign: 'center',
+        headerTitleAlign: 'left',
         headerStyle: {
           backgroundColor: 'transparent',
         },
@@ -46,23 +55,19 @@ export default function TabsLayout() {
           fontFamily: fonts.bold,
           color: colors.textPrimary,
           fontSize: 18,
+          // In RTL, if headerTitleAlign is 'left', it is physically left.
+          // To get it to the right, we either use 'right' (invalid) or center it with text align.
+          // Actually, 'left' on Android is 'Start'. On Web/iOS it might be literal left.
+          textAlign: I18nManager.isRTL ? 'right' : 'left',
         },
         headerRightContainerStyle: {
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: I18nManager.isRTL ? 0 : 16,
         },
         headerLeftContainerStyle: {
-          paddingHorizontal: 16,
+          paddingHorizontal: I18nManager.isRTL ? 16 : 0,
         },
-        headerRight: () => (
-          <TouchableOpacity
-            onPress={() => router.push('/settings' as any)}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-          >
-            <Ionicons name="settings-outline" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-        ),
+        headerLeft: () => I18nManager.isRTL ? settingsButton : null,
+        headerRight: () => !I18nManager.isRTL ? settingsButton : null,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.borderSubtle,

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { I18nManager, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { AttendanceStatus, Schedule, SchoolLocation } from '../types';
 import { formatDateDMY } from '../utils/datetime';
@@ -61,42 +61,43 @@ export const ScheduleCard: React.FC<ScheduleCardProps> = ({
     return (
         <View style={cardStyle}>
             <View style={[styles.header, compact && { marginBottom: 4 }]}>
+                {/* In RTL the row is mirrored: navBtn appears on the left, school name on the right */}
+                {/* We render navBtn first so in RTL it naturally sits on the leading (left) edge */}
+                {!isUpcoming && (
+                    <TouchableOpacity
+                        activeOpacity={interaction.pressedOpacity}
+                        style={[
+                            styles.navBtn,
+                            { backgroundColor: colors.accentPrimary + (schoolLocation ? 'FF' : '40') }
+                        ]}
+                        onPress={handleNavigate}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                        <Ionicons
+                            name="navigate"
+                            size={16}
+                            color={schoolLocation ? '#fff' : colors.accentPrimary}
+                        />
+                    </TouchableOpacity>
+                )}
+
                 <Text
                     numberOfLines={1}
                     style={[
                         styles.school,
-                        { color: colors.textPrimary, fontFamily: fonts.bold },
-                        compact && { fontSize: 16 }
+                        { color: colors.textPrimary, fontFamily: fonts.bold, textAlign: I18nManager.isRTL ? 'right' : 'left' },
+                        compact && { fontSize: 16 },
+                        !isUpcoming && { marginStart: 8 }
                     ]}
                 >
                     {schedule.school}
                 </Text>
 
-                <View style={styles.headerRight}>
-                    {!compact && (
-                        <Text style={[styles.time, { color: colors.accentPrimary, fontFamily: fonts.bold }]}>
-                            {schedule.startTime}
-                        </Text>
-                    )}
-                    {/* Navigate icon — shown when not compact (Today card) or compact (Upcoming) */}
-                    {!isUpcoming && (
-                        <TouchableOpacity
-                            activeOpacity={interaction.pressedOpacity}
-                            style={[
-                                styles.navBtn,
-                                { backgroundColor: colors.accentPrimary + (schoolLocation ? 'FF' : '40') }
-                            ]}
-                            onPress={handleNavigate}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                            <Ionicons
-                                name="navigate"
-                                size={16}
-                                color={schoolLocation ? '#fff' : colors.accentPrimary}
-                            />
-                        </TouchableOpacity>
-                    )}
-                </View>
+                {!compact && !isUpcoming && (
+                    <Text style={[styles.time, { color: colors.accentPrimary, fontFamily: fonts.bold, marginStart: 8 }]}>
+                        {schedule.startTime}
+                    </Text>
+                )}
             </View>
 
             <View style={[styles.details, compact && { marginBottom: 0 }]}>
@@ -195,15 +196,17 @@ const styles = StyleSheet.create({
     },
     details: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         marginBottom: 16,
+        justifyContent: I18nManager.isRTL ? 'flex-end' : 'flex-start',
     },
     detailItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginRight: 16,
+        marginEnd: 16,
     },
     detailText: {
-        marginLeft: 4,
+        marginStart: 4,
         fontSize: 14,
     },
     actions: {
@@ -220,7 +223,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     buttonText: {
-        marginLeft: 6,
+        marginStart: 6,
         fontWeight: '600',
     },
 });

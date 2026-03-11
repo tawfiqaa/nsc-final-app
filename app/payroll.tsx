@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useIsFocused } from '@react-navigation/native';
 import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
@@ -281,7 +281,7 @@ export default function PayrollScreen() {
                         <Text style={[styles.title, boldStyle]}>{t('payroll.title')}</Text>
                     </View>
                     <TouchableOpacity onPress={() => setShowSettingsModal(true)}>
-                        <Ionicons name="settings-outline" size={24} color={colors.accentPrimary} />
+                        <FontAwesome5 name="coins" size={24} color={colors.accentPrimary} />
                     </TouchableOpacity>
                 </View>
 
@@ -544,7 +544,7 @@ function SummaryCard({ title, value, unit, color, cardColor, font, radius, borde
 const styles = StyleSheet.create({
     container: { flex: 1 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
+    content: { paddingHorizontal: 16, paddingTop: 60, paddingBottom: 40 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     title: { fontSize: 32, fontWeight: 'bold' },
     warningBox: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1 },

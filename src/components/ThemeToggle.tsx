@@ -16,13 +16,14 @@ export const ThemeToggle = () => {
         : I18nManager.isRTL;
 
     const toggleSwitch = (value: boolean) => {
-        // In RTL the Switch's visual ON/OFF is mirrored by the OS, so we invert the value
-        const newValue = isRTL ? !value : value;
+        // In native RTL the Switch's visual ON/OFF is mirrored by the OS, so we invert the value
+        // On Web, do not invert to prevent the ball from being outside the switch area
+        const newValue = (isRTL && Platform.OS !== 'web') ? !value : value;
         setTheme(newValue ? 'dark' : 'light');
     };
 
     // In RTL, pass the inverted value so the thumb sits on the correct side visually
-    const switchValue = isRTL ? !isDark : isDark;
+    const switchValue = (isRTL && Platform.OS !== 'web') ? !isDark : isDark;
 
     return (
         <View>

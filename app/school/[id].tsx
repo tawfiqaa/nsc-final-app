@@ -537,12 +537,12 @@ export default function SchoolDetailsScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingTop: Platform.OS === 'ios' ? 60 : 20, paddingBottom: 15, borderBottomWidth: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 60 : 20, paddingBottom: 15, borderBottomWidth: 1 },
     headerIcon: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
     tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
     tabItem: { flex: 1, alignItems: 'center', paddingVertical: 15, borderBottomWidth: 2, borderBottomColor: 'transparent' },
     tabText: { fontSize: 14 },
-    tabContent: { padding: 20, paddingBottom: 100 },
+    tabContent: { paddingHorizontal: 16, paddingVertical: 20, paddingBottom: 100 },
     statBox: { padding: 20, borderRadius: 16, borderWidth: 1, alignItems: 'center', marginBottom: 20 },
     statValue: { fontSize: 32, fontWeight: 'bold', marginBottom: 4 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
     textInput: { borderWidth: 1, borderRadius: 8, padding: 12, minHeight: 100, fontSize: 16, marginBottom: 20 },
     modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
     modalBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, minWidth: 80, alignItems: 'center' },
-    addSection: { flexDirection: 'row', padding: 20, gap: 12, alignItems: 'center' },
+    addSection: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 20, gap: 12, alignItems: 'center' },
     input: { flex: 1, height: 50, borderRadius: 8, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
     addBtn: { height: 50, width: 50, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
     studentCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 8, borderWidth: 1, marginHorizontal: 20, marginBottom: 8 },

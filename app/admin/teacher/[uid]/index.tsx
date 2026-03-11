@@ -459,7 +459,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     profileCard: {
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 20,
         marginBottom: 20,
     },
     profileHeaderRow: {
@@ -539,7 +540,8 @@ const styles = StyleSheet.create({
         opacity: 0.8,
     },
     adminActions: {
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 20,
         marginTop: 10,
     },
     sectionTitle: {
