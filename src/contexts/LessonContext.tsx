@@ -557,24 +557,27 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (orgMode && activeOrgId) {
                 // Resolve the actual Firestore doc ID — the school doc ID may be a slug
                 // (e.g. "my-school") while schoolName is the display name ("My School").
-                // Using the wrong ID causes updateDoc to target a non-existent document.
+                // Using the wrong ID causes writes to target a non-existent document.
                 const schoolDoc = schools.find(s => s.name === schoolName);
                 const schoolDocId = schoolDoc?.id || schoolName;
-                // Only touch gallery + updatedAt so the teacher-level Firestore rule
-                // (affectedKeys must be subset of ['gallery','updatedAt','galleryVersion'])
-                // is satisfied.
-                await updateDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolDocId), {
+                // Use setDoc+merge so this works whether the school doc already exists or not.
+                // Only write gallery-scoped fields to satisfy the teacher Firestore rule
+                // (update: affectedKeys hasOnly ['gallery','updatedAt','galleryVersion'],
+                //  create: keys hasOnly ['gallery','updatedAt','galleryVersion','name','createdBy']).
+                await setDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolDocId), {
                     gallery: arrayUnion(downloadUrl),
                     updatedAt: Date.now(),
-                });
+                    name: schoolName,
+                    createdBy: user.uid,
+                }, { merge: true });
             } else if (isTargetMigrated) {
                 // Same slug-vs-name issue: look up the actual doc ID from loaded schools
                 const schoolDoc = schools.find(s => s.name === schoolName);
                 const schoolDocId = schoolDoc?.id || schoolName;
-                await updateDoc(doc(db, 'users', targetUid!, 'schools', schoolDocId), {
+                await setDoc(doc(db, 'users', targetUid!, 'schools', schoolDocId), {
                     gallery: arrayUnion(downloadUrl),
                     updatedAt: Date.now(),
-                });
+                }, { merge: true });
             } else {
                 // V1: dotted key keeps write scoped to one gallery field only
                 await updateDoc(doc(db, 'teacherData', user.uid), {

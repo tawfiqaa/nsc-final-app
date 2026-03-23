@@ -119,8 +119,13 @@ service cloud.firestore {
         // Admins and Super Admins can do anything
         allow write: if isOrgAdminOrOwner(orgId) || isSuperAdmin();
         // Teachers can update gallery-related fields but not location or name
-        allow update: if isApprovedOrgMember(orgId) && 
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gallery', 'updatedAt', 'galleryVersion']);
+        allow update: if isApprovedOrgMember(orgId) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['gallery', 'updatedAt', 'galleryVersion', 'name', 'createdBy']);
+        // Teachers can create a school doc when it doesn't exist yet (e.g. first gallery upload)
+        // Allowed fields mirror the update rule plus the minimum identity fields
+        allow create: if isApprovedOrgMember(orgId) &&
+          request.resource.data.keys().hasOnly(['gallery', 'updatedAt', 'galleryVersion', 'name', 'createdBy']);
 
         match /students/{studentId} {
           allow read: if isApprovedOrgMember(orgId) || isSuperAdmin();
