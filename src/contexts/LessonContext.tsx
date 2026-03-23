@@ -555,15 +555,23 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }));
 
             if (orgMode && activeOrgId) {
+                // Resolve the actual Firestore doc ID — the school doc ID may be a slug
+                // (e.g. "my-school") while schoolName is the display name ("My School").
+                // Using the wrong ID causes updateDoc to target a non-existent document.
+                const schoolDoc = schools.find(s => s.name === schoolName);
+                const schoolDocId = schoolDoc?.id || schoolName;
                 // Only touch gallery + updatedAt so the teacher-level Firestore rule
                 // (affectedKeys must be subset of ['gallery','updatedAt','galleryVersion'])
-                // is satisfied. Writing name/createdBy here caused silent permission denials.
-                await updateDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolName), {
+                // is satisfied.
+                await updateDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolDocId), {
                     gallery: arrayUnion(downloadUrl),
                     updatedAt: Date.now(),
                 });
             } else if (isTargetMigrated) {
-                await updateDoc(doc(db, 'users', targetUid!, 'schools', schoolName), {
+                // Same slug-vs-name issue: look up the actual doc ID from loaded schools
+                const schoolDoc = schools.find(s => s.name === schoolName);
+                const schoolDocId = schoolDoc?.id || schoolName;
+                await updateDoc(doc(db, 'users', targetUid!, 'schools', schoolDocId), {
                     gallery: arrayUnion(downloadUrl),
                     updatedAt: Date.now(),
                 });
@@ -588,15 +596,27 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             await deleteObject(fileRef);
 
             if (orgMode && activeOrgId) {
+                const schoolDoc = schools.find(s => s.name === schoolName);
+                const schoolDocId = schoolDoc?.id || schoolName;
                 const updatedGallery = (schoolGalleries[schoolName] || []).filter(url => url !== photoUrl);
-                await setDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolName), { gallery: updatedGallery, updatedAt: Date.now() }, { merge: true });
+                // Use arrayRemove equivalent: set the whole filtered array.
+                // Only touch gallery + updatedAt to satisfy teacher Firestore rule.
+                await updateDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolDocId), {
+                    gallery: updatedGallery,
+                    updatedAt: Date.now(),
+                });
                 return;
             }
             if (user?.migratedToV2) {
+                const schoolDoc = schools.find(s => s.name === schoolName);
+                const schoolDocId = schoolDoc?.id || schoolName;
                 const newGalleries = { ...schoolGalleries };
                 if (newGalleries[schoolName]) {
                     const updatedGallery = newGalleries[schoolName].filter(url => url !== photoUrl);
-                    await setDoc(doc(db, 'users', targetUid!, 'schools', schoolName), { gallery: updatedGallery, updatedAt: Date.now() }, { merge: true });
+                    await updateDoc(doc(db, 'users', targetUid!, 'schools', schoolDocId), {
+                        gallery: updatedGallery,
+                        updatedAt: Date.now(),
+                    });
                 }
             } else {
                 setSchoolGalleries(prev => {
