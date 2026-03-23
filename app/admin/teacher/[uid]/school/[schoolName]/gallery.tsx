@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useOrg } from '../../../../../../src/contexts/OrgContext';
@@ -26,46 +26,61 @@ export default function AdminSchoolGalleryScreen() {
     const decodedSchoolName = schoolName ? decodeURIComponent(schoolName) : '';
 
     useEffect(() => {
-        if (uid && decodedSchoolName) {
-            fetchGallery(uid, decodedSchoolName);
-        }
-    }, [uid, decodedSchoolName]);
+        if (!uid || !decodedSchoolName) return;
 
-    const fetchGallery = async (targetUid: string, targetSchool: string) => {
-        try {
-            setLoading(true);
+        setLoading(true);
+        let unsubscribe: (() => void) | undefined;
 
-            if (activeOrgId) {
-                // --- ORG MODE ---
-                const schoolSnap = await getDoc(doc(db, 'orgs', activeOrgId, 'schools', targetSchool));
-                if (schoolSnap.exists()) {
-                    setPhotos(schoolSnap.data().gallery || []);
-                }
-            } else {
-                // --- LEGACY or V2 ---
-                const targetUserSnap = await getDoc(doc(db, 'users', targetUid));
-                const isMigrated = targetUserSnap.exists() && targetUserSnap.data()?.migratedToV2;
+        if (activeOrgId) {
+            // --- ORG MODE: listen to the school doc inside the org ---
+            const schoolRef = doc(db, 'orgs', activeOrgId, 'schools', decodedSchoolName);
+            unsubscribe = onSnapshot(schoolRef, (snap) => {
+                setPhotos(snap.exists() ? (snap.data().gallery || []) : []);
+                setLoading(false);
+            }, (error) => {
+                console.error(error);
+                setLoading(false);
+            });
+        } else {
+            // --- LEGACY / V2: first resolve migration status, then subscribe ---
+            const userRef = doc(db, 'users', uid);
+            unsubscribe = onSnapshot(userRef, (userSnap) => {
+                const isMigrated = userSnap.exists() && userSnap.data()?.migratedToV2;
 
                 if (isMigrated) {
-                    const schoolSnap = await getDoc(doc(db, 'users', targetUid, 'schools', targetSchool));
-                    if (schoolSnap.exists()) {
-                        setPhotos(schoolSnap.data().gallery || []);
-                    }
+                    // V2 — school subcollection doc
+                    const schoolRef = doc(db, 'users', uid, 'schools', decodedSchoolName);
+                    onSnapshot(schoolRef, (snap) => {
+                        setPhotos(snap.exists() ? (snap.data().gallery || []) : []);
+                        setLoading(false);
+                    }, (error) => {
+                        console.error(error);
+                        setLoading(false);
+                    });
                 } else {
-                    const dataSnap = await getDoc(doc(db, 'teacherData', targetUid));
-                    if (dataSnap.exists()) {
-                        const data = dataSnap.data() as TeacherData;
-                        const galleries = data.schoolGalleries || {};
-                        setPhotos(galleries[targetSchool] || []);
-                    }
+                    // V1 — teacherData doc, schoolGalleries map
+                    const dataRef = doc(db, 'teacherData', uid);
+                    onSnapshot(dataRef, (snap) => {
+                        if (snap.exists()) {
+                            const data = snap.data() as TeacherData;
+                            setPhotos((data.schoolGalleries || {})[decodedSchoolName] || []);
+                        } else {
+                            setPhotos([]);
+                        }
+                        setLoading(false);
+                    }, (error) => {
+                        console.error(error);
+                        setLoading(false);
+                    });
                 }
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
+            }, (error) => {
+                console.error(error);
+                setLoading(false);
+            });
         }
-    };
+
+        return () => unsubscribe?.();
+    }, [uid, decodedSchoolName, activeOrgId]);
 
     if (loading) {
         return (
