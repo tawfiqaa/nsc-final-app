@@ -548,20 +548,27 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             await uploadBytes(fileRef, blob);
             const downloadUrl = await getDownloadURL(fileRef);
 
+            // Optimistic update — show photo instantly in all paths
+            setSchoolGalleries(prev => ({
+                ...prev,
+                [schoolName]: [...(prev[schoolName] || []), downloadUrl],
+            }));
+
             if (orgMode && activeOrgId) {
-                const updatedGallery = [...(schoolGalleries[schoolName] || []), downloadUrl];
-                await setDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolName), { name: schoolName, gallery: updatedGallery, createdBy: user!.uid, updatedAt: Date.now() }, { merge: true });
+                // Only touch gallery + updatedAt so the teacher-level Firestore rule
+                // (affectedKeys must be subset of ['gallery','updatedAt','galleryVersion'])
+                // is satisfied. Writing name/createdBy here caused silent permission denials.
+                await updateDoc(doc(db, 'orgs', activeOrgId, 'schools', schoolName), {
+                    gallery: arrayUnion(downloadUrl),
+                    updatedAt: Date.now(),
+                });
             } else if (isTargetMigrated) {
-                const updatedGallery = [...(schoolGalleries[schoolName] || []), downloadUrl];
-                await setDoc(doc(db, 'users', targetUid!, 'schools', schoolName), { name: schoolName, gallery: updatedGallery, updatedAt: Date.now() }, { merge: true });
+                await updateDoc(doc(db, 'users', targetUid!, 'schools', schoolName), {
+                    gallery: arrayUnion(downloadUrl),
+                    updatedAt: Date.now(),
+                });
             } else {
-                // Optimistic local state update so the photo displays immediately
-                setSchoolGalleries(prev => ({
-                    ...prev,
-                    [schoolName]: [...(prev[schoolName] || []), downloadUrl],
-                }));
-                // Use updateDoc with a dotted key + arrayUnion so that only this
-                // specific gallery field is written — no role/isApproved fields included.
+                // V1: dotted key keeps write scoped to one gallery field only
                 await updateDoc(doc(db, 'teacherData', user.uid), {
                     [`schoolGalleries.${schoolName}`]: arrayUnion(downloadUrl),
                     updatedAt: Date.now(),
