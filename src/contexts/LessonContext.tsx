@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
+import { arrayUnion, collection, deleteDoc, doc, doc as firestoreDoc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { db, storage } from '../lib/firebase';
@@ -555,14 +555,16 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const updatedGallery = [...(schoolGalleries[schoolName] || []), downloadUrl];
                 await setDoc(doc(db, 'users', targetUid!, 'schools', schoolName), { name: schoolName, gallery: updatedGallery, updatedAt: Date.now() }, { merge: true });
             } else {
-                setSchoolGalleries(prev => {
-                    const newGalleries = { ...prev };
-                    if (!newGalleries[schoolName]) {
-                        newGalleries[schoolName] = [];
-                    }
-                    newGalleries[schoolName] = [...newGalleries[schoolName], downloadUrl];
-                    syncToFirestore({ schoolGalleries: newGalleries });
-                    return newGalleries;
+                // Optimistic local state update so the photo displays immediately
+                setSchoolGalleries(prev => ({
+                    ...prev,
+                    [schoolName]: [...(prev[schoolName] || []), downloadUrl],
+                }));
+                // Use updateDoc with a dotted key + arrayUnion so that only this
+                // specific gallery field is written — no role/isApproved fields included.
+                await updateDoc(doc(db, 'teacherData', user.uid), {
+                    [`schoolGalleries.${schoolName}`]: arrayUnion(downloadUrl),
+                    updatedAt: Date.now(),
                 });
             }
         } catch (error) {
